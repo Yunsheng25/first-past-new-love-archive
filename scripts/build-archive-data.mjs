@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import crypto from "node:crypto";
 
 import { parseCanvasArchive } from "./web-data-utils.mjs";
 
@@ -95,6 +96,7 @@ function validateMediaOutputDirectory(mediaOutputDir, workspace, canvasPath, obs
   const resolved = path.resolve(mediaOutputDir);
   if (
     resolved.toLowerCase() === path.parse(resolved).root.toLowerCase()
+    || !isSameOrDescendant(resolved, workspace)
     || isSameOrDescendant(workspace, resolved)
     || pathsOverlap(resolved, canvasPath)
     || pathsOverlap(resolved, obsidianRoot)
@@ -109,6 +111,7 @@ function validateOutputPath(outputPath, workspace, mediaOutputDir, canvasPath, o
   const resolved = path.resolve(outputPath);
   if (
     pathsOverlap(resolved, mediaOutputDir)
+    || !isSameOrDescendant(resolved, workspace)
     || isSameOrDescendant(workspace, resolved)
     || pathsOverlap(resolved, canvasPath)
     || pathsOverlap(resolved, obsidianRoot)
@@ -126,7 +129,45 @@ function temporarySibling(targetPath, label) {
   );
 }
 
-function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath }) {
+function backupSiblings(targetPath) {
+  const directory = path.dirname(targetPath);
+  const prefix = `.${path.basename(targetPath)}.backup-`;
+  try {
+    return fs.readdirSync(directory)
+      .filter((name) => name.startsWith(prefix))
+      .map((name) => path.join(directory, name));
+  } catch {
+    return [];
+  }
+}
+
+function cleanupAfterPromotion(targetPath, options, operations, warnings) {
+  const exists = operations.exists || fs.existsSync;
+  const remove = operations.remove || fs.rmSync;
+  const onCleanupWarning = operations.onCleanupWarning || (() => {});
+  if (!exists(targetPath)) return true;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      remove(targetPath, options);
+      return !exists(targetPath);
+    } catch (error) {
+      const warning = new Error(`Archive backup cleanup attempt ${attempt} failed for ${targetPath}: ${error.message}`);
+      warnings.push(warning);
+      onCleanupWarning(warning);
+    }
+  }
+  return !exists(targetPath);
+}
+
+export function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath }, operations = {}) {
+  const exists = operations.exists || fs.existsSync;
+  const rename = operations.rename || fs.renameSync;
+  const remove = operations.remove || fs.rmSync;
+  const warnings = [];
+  for (const stale of [...backupSiblings(mediaOutputDir), ...backupSiblings(outputPath)]) {
+    const cleaned = cleanupAfterPromotion(stale, { recursive: fs.statSync(stale).isDirectory(), force: true }, operations, warnings);
+    if (!cleaned) throw new Error(`Unable to clean stale archive backup before promotion: ${stale}`);
+  }
   const mediaBackup = temporarySibling(mediaOutputDir, "backup");
   const outputBackup = temporarySibling(outputPath, "backup");
   let mediaBackedUp = false;
@@ -134,27 +175,44 @@ function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, tempora
   let outputBackedUp = false;
   let outputPromoted = false;
   try {
-    if (fs.existsSync(mediaOutputDir)) {
-      fs.renameSync(mediaOutputDir, mediaBackup);
+    if (exists(mediaOutputDir)) {
+      rename(mediaOutputDir, mediaBackup);
       mediaBackedUp = true;
     }
-    fs.renameSync(temporaryMediaDir, mediaOutputDir);
+    rename(temporaryMediaDir, mediaOutputDir);
     mediaPromoted = true;
-    if (fs.existsSync(outputPath)) {
-      fs.renameSync(outputPath, outputBackup);
+    if (exists(outputPath)) {
+      rename(outputPath, outputBackup);
       outputBackedUp = true;
     }
-    fs.renameSync(temporaryOutputPath, outputPath);
+    rename(temporaryOutputPath, outputPath);
     outputPromoted = true;
   } catch (error) {
-    if (outputPromoted) fs.rmSync(outputPath, { force: true });
-    if (outputBackedUp) fs.renameSync(outputBackup, outputPath);
-    if (mediaPromoted) fs.rmSync(mediaOutputDir, { recursive: true, force: true });
-    if (mediaBackedUp) fs.renameSync(mediaBackup, mediaOutputDir);
+    if (outputPromoted) remove(outputPath, { force: true });
+    if (outputBackedUp) rename(outputBackup, outputPath);
+    if (mediaPromoted) remove(mediaOutputDir, { recursive: true, force: true });
+    if (mediaBackedUp) rename(mediaBackup, mediaOutputDir);
     throw error;
   }
-  if (mediaBackedUp) fs.rmSync(mediaBackup, { recursive: true, force: true });
-  if (outputBackedUp) fs.rmSync(outputBackup, { force: true });
+  if (mediaBackedUp) cleanupAfterPromotion(mediaBackup, { recursive: true, force: true }, operations, warnings);
+  if (outputBackedUp) cleanupAfterPromotion(outputBackup, { force: true }, operations, warnings);
+  return { cleanupWarnings: warnings };
+}
+
+function fileSha256(filePath) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function writeVerifiedJsonOnly(outputPath, payload) {
+  const previous = fs.existsSync(outputPath) ? fs.readFileSync(outputPath) : null;
+  try {
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, JSON.stringify(payload, null, 2), "utf8");
+  } catch (error) {
+    if (previous) fs.writeFileSync(outputPath, previous);
+    else fs.rmSync(outputPath, { force: true });
+    throw error;
+  }
 }
 
 export function writeArchiveData(options = {}) {
@@ -176,6 +234,40 @@ export function writeArchiveData(options = {}) {
   const sources = resolveImageSources(refs, obsidianRoot);
   validateMediaOutputDirectory(mediaOutputDir, workspace, canvasPath, obsidianRoot, [...sources.values()]);
   validateOutputPath(outputPath, workspace, mediaOutputDir, canvasPath, obsidianRoot, [...sources.values()]);
+  const imagesByRef = new Map();
+  for (const item of archive.cases) {
+    for (const image of item.images) {
+      if (!imagesByRef.has(image.originalRef)) imagesByRef.set(image.originalRef, image);
+    }
+  }
+  const payload = {
+    generatedAt: clock().toISOString(),
+    source: { canvas: path.basename(canvasPath), visualOrder: "y, x, nodeId" },
+    summary: { ...archive.summary, missingImages: 0 },
+    cases: archive.cases,
+  };
+
+  if (options.reuseExistingMedia) {
+    onProgress("verifying-existing-images", { uniqueImages: refs.length, mediaOutputDir });
+    if (!fs.existsSync(mediaOutputDir) || !fs.statSync(mediaOutputDir).isDirectory()) {
+      throw new Error(`Existing archive media directory is missing: ${mediaOutputDir}`);
+    }
+    const localFiles = fs.readdirSync(mediaOutputDir, { withFileTypes: true }).filter((entry) => entry.isFile());
+    if (localFiles.length !== refs.length) {
+      throw new Error(`Existing archive image count mismatch: expected ${refs.length}, got ${localFiles.length}`);
+    }
+    for (const ref of refs) {
+      const localPath = path.join(mediaOutputDir, path.basename(imagesByRef.get(ref).src));
+      if (!fs.existsSync(localPath)) throw new Error(`Existing archive image is missing: ${ref}`);
+      if (fileSha256(localPath) !== fileSha256(sources.get(ref))) {
+        throw new Error(`Existing archive image hash mismatch: ${ref}`);
+      }
+    }
+    writeVerifiedJsonOnly(outputPath, payload);
+    onProgress("written", { outputPath, reusedImages: refs.length });
+    return payload;
+  }
+
   onProgress("copying-images", { uniqueImages: refs.length, mediaOutputDir });
 
   const temporaryMediaDir = temporarySibling(mediaOutputDir, "tmp");
@@ -183,7 +275,7 @@ export function writeArchiveData(options = {}) {
   try {
     fs.mkdirSync(temporaryMediaDir, { recursive: true });
     for (const ref of refs) {
-      const image = archive.cases.flatMap((item) => item.images).find((candidate) => candidate.originalRef === ref);
+      const image = imagesByRef.get(ref);
       copyFile(sources.get(ref), path.join(temporaryMediaDir, path.basename(image.src)));
     }
     const copiedCount = fs.readdirSync(temporaryMediaDir).length;
@@ -191,16 +283,18 @@ export function writeArchiveData(options = {}) {
       throw new Error(`Copied archive image count mismatch: expected ${refs.length}, got ${copiedCount}`);
     }
 
-    const payload = {
-      generatedAt: clock().toISOString(),
-      source: { canvas: path.basename(canvasPath), visualOrder: "y, x, nodeId" },
-      summary: { ...archive.summary, missingImages: 0 },
-      cases: archive.cases,
-    };
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(temporaryOutputPath, JSON.stringify(payload, null, 2), "utf8");
-    replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath });
+    const replacement = replaceOutputs(
+      { mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath },
+      {
+        onCleanupWarning: options.onCleanupWarning || ((warning) => onProgress("cleanup-warning", { message: warning.message })),
+      },
+    );
     onProgress("written", { outputPath });
+    if (replacement.cleanupWarnings.length > 0) {
+      onProgress("cleanup-complete", { warnings: replacement.cleanupWarnings.length });
+    }
     return payload;
   } catch (error) {
     fs.rmSync(temporaryMediaDir, { recursive: true, force: true });

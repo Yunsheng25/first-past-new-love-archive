@@ -2,6 +2,7 @@ import path from "node:path";
 
 const embedPattern = /!\[\[([^\]]+)\]\]/g;
 const imageExtensionPattern = /\.(png|jpe?g|webp|gif|bmp|svg)$/i;
+const malformedImageEmbedPattern = /!\[\[([^\]\r\n]+?\.(?:png|jpe?g|webp|gif|bmp|svg))\](?!\])/gi;
 
 function cleanRef(rawRef) {
   return String(rawRef).split("|")[0].trim().replace(/\\/g, "/");
@@ -16,15 +17,22 @@ export function imageRefs(text = "") {
 export function stripEmbeds(text = "") {
   return String(text)
     .replace(embedPattern, (embed, rawRef) => (imageExtensionPattern.test(cleanRef(rawRef)) ? "" : embed))
+    .replace(malformedImageEmbedPattern, "")
     .trim();
+}
+
+function malformedImageEmbeds(text = "") {
+  return [...String(text).matchAll(malformedImageEmbedPattern)].map((match) => match[0]);
 }
 
 export function classifyPromptType(prompt = "", imageCount = 0) {
   const text = String(prompt).trim();
   if (!text) return "剪辑参考";
+  if (/这张图不是重画场景|调整.{0,20}(?:画面|视线|主体)/s.test(text)) return "生图";
   if (imageCount >= 2 && /首帧|尾帧/.test(text)) return "首尾帧";
   if (/转场|叠化|淡入|淡出/.test(text)) return "转场";
   if (/图生视频|生成.*视频|视频提示词|视频开始|镜头|动作要求/.test(text)) return "图生视频";
+  if (/(?:开始时|开头).*(?:随后|然后|最终|最后)|整个过程|动作(?:放缓|连贯|自然)/s.test(text)) return "图生视频";
   if (/剪辑|黑场|配乐|音乐|音效/.test(text)) return "剪辑参考";
   return "生图";
 }
@@ -33,9 +41,9 @@ export function classifyStage(prompt = "", refs = []) {
   const text = `${prompt} ${refs.join(" ")}`;
   if (/病房|医院|病床|病号服|医院走廊/.test(text)) return "病房";
   if (/婚礼|婚纱|教堂|新娘/.test(text)) return "婚礼";
-  if (/服装店|试衣间|商场|电子琴|帘子/.test(text)) return "商场";
+  if (/服装店|试衣间|商场|商城|店铺|电子琴|帘子/.test(text)) return "商场";
   if (/教室|课本|棒棒糖|校园|录像机/.test(text)) return "校园回忆";
-  if (/小区|雨夜|湿润路面|楼栋/.test(text)) return "雨夜小区";
+  if (/小区|雨夜|湿润路面|楼栋|老人.*(?:牵|相握|提着包)|(?:牵|相握).*老人/s.test(text)) return "雨夜小区";
   if (/钢琴|琴谱|镜子|领口|领带|老人/.test(text)) return "钢琴与回忆";
   if (/餐桌|吃饭|饭碗|筷子|孩子/.test(text)) return "家庭生活";
   if (/办公桌|电脑|键盘|办公室/.test(text)) return "办公室";
@@ -99,10 +107,14 @@ export function parseCanvasArchive(canvas) {
 
   const cases = orderedNodes.map((node, caseIndex) => {
     const refs = imageRefs(node.text || "");
+    const malformedEmbeds = malformedImageEmbeds(node.text || "");
     const prompt = stripEmbeds(node.text || "");
     const type = classifyPromptType(prompt, refs.length);
     const stage = classifyStage(prompt, refs);
     const id = `case-${String(caseIndex + 1).padStart(2, "0")}`;
+    const uncertainReasons = [];
+    if (!prompt) uncertainReasons.push("源节点没有提示词");
+    if (malformedEmbeds.length > 0) uncertainReasons.push("非标准图片嵌入已从展示文字清理");
     return {
       id,
       index: caseIndex + 1,
@@ -112,7 +124,8 @@ export function parseCanvasArchive(canvas) {
       tags: [...new Set([stage, type])],
       prompt,
       rawText: node.text || "",
-      uncertain: !prompt,
+      uncertain: uncertainReasons.length > 0,
+      uncertainReasons,
       images: refs.map((ref, imageIndex) => ({
         occurrence: imageIndex + 1,
         originalRef: ref,

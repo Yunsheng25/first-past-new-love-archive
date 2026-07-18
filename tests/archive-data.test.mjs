@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import crypto from "node:crypto";
 
 const canvasPath = "D:/黑曜石/canvas白板/《初恋旧爱新欢》视频制作.canvas";
 const obsidianRoot = "D:/黑曜石";
@@ -35,6 +36,16 @@ function writeFixture(root, nodes) {
   fs.mkdirSync(sourceDir, { recursive: true });
   fs.writeFileSync(sourcePath, JSON.stringify(fixtureCanvas(nodes)), "utf8");
   return { vault, sourcePath };
+}
+
+function independentImageRefs(text = "") {
+  return [...String(text).matchAll(/!\[\[([^\]\r\n]+?)\]\]/g)]
+    .map((match) => match[1].split("|")[0].trim().replace(/\\/g, "/"))
+    .filter((ref) => /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(ref));
+}
+
+function sha256(filePath) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
 test("resolves all 137 real source images with no missing or ambiguous names", () => {
@@ -129,6 +140,111 @@ test("rejects paths that could overwrite source or workspace boundaries", () => 
   }
 });
 
+test("rejects sibling media and JSON outputs before changing their markers", () => {
+  const writeArchiveData = required(archiveModule, "writeArchiveData");
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-workspace-boundary-"));
+  const { vault, sourcePath } = writeFixture(tempDir, [{ text: "![[asset.png]]\n水彩画面" }]);
+  fs.writeFileSync(path.join(vault, "asset.png"), "source", "utf8");
+  const workspace = path.join(tempDir, "workspace");
+  const externalMedia = path.join(tempDir, "external-media");
+  const externalOutput = path.join(tempDir, "external-output.json");
+  fs.mkdirSync(workspace, { recursive: true });
+  fs.mkdirSync(externalMedia, { recursive: true });
+  fs.writeFileSync(path.join(externalMedia, "marker.txt"), "media marker", "utf8");
+  fs.writeFileSync(externalOutput, "output marker", "utf8");
+
+  try {
+    assert.throws(() => writeArchiveData({
+      workspace,
+      canvasPath: sourcePath,
+      obsidianRoot: vault,
+      mediaOutputDir: externalMedia,
+    }), /Unsafe archive media output directory/);
+    assert.equal(fs.readFileSync(path.join(externalMedia, "marker.txt"), "utf8"), "media marker");
+
+    assert.throws(() => writeArchiveData({
+      workspace,
+      canvasPath: sourcePath,
+      obsidianRoot: vault,
+      outputPath: externalOutput,
+    }), /Unsafe archive output path/);
+    assert.equal(fs.readFileSync(externalOutput, "utf8"), "output marker");
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("rolls back both official outputs when JSON promotion fails", () => {
+  const replaceOutputs = required(archiveModule, "replaceOutputs");
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-promotion-failure-"));
+  const mediaOutputDir = path.join(tempDir, "media");
+  const temporaryMediaDir = path.join(tempDir, "media-next");
+  const outputPath = path.join(tempDir, "archive.json");
+  const temporaryOutputPath = path.join(tempDir, "archive-next.json");
+  fs.mkdirSync(mediaOutputDir);
+  fs.mkdirSync(temporaryMediaDir);
+  fs.writeFileSync(path.join(mediaOutputDir, "old.txt"), "old media", "utf8");
+  fs.writeFileSync(path.join(temporaryMediaDir, "new.txt"), "new media", "utf8");
+  fs.writeFileSync(outputPath, "old json", "utf8");
+  fs.writeFileSync(temporaryOutputPath, "new json", "utf8");
+
+  try {
+    assert.throws(() => replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath }, {
+      rename(source, target) {
+        if (source === temporaryOutputPath && target === outputPath) throw new Error("json promotion failed");
+        fs.renameSync(source, target);
+      },
+    }), /json promotion failed/);
+    assert.equal(fs.readFileSync(path.join(mediaOutputDir, "old.txt"), "utf8"), "old media");
+    assert.equal(fs.readFileSync(outputPath, "utf8"), "old json");
+    assert.ok(!fs.existsSync(path.join(mediaOutputDir, "new.txt")));
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("keeps promoted outputs successful when the first backup cleanup attempt fails", () => {
+  const replaceOutputs = required(archiveModule, "replaceOutputs");
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-cleanup-failure-"));
+  const mediaOutputDir = path.join(tempDir, "media");
+  const temporaryMediaDir = path.join(tempDir, "media-next");
+  const outputPath = path.join(tempDir, "archive.json");
+  const temporaryOutputPath = path.join(tempDir, "archive-next.json");
+  fs.mkdirSync(mediaOutputDir);
+  fs.mkdirSync(temporaryMediaDir);
+  fs.writeFileSync(path.join(mediaOutputDir, "old.txt"), "old media", "utf8");
+  fs.writeFileSync(path.join(temporaryMediaDir, "new.txt"), "new media", "utf8");
+  fs.writeFileSync(outputPath, "old json", "utf8");
+  fs.writeFileSync(temporaryOutputPath, "new json", "utf8");
+  const warnings = [];
+  let firstCleanup = true;
+
+  try {
+    replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath }, {
+      remove(target, options) {
+        if (target.includes(".backup-") && firstCleanup) {
+          firstCleanup = false;
+          throw new Error("cleanup temporarily unavailable");
+        }
+        fs.rmSync(target, options);
+      },
+      onCleanupWarning(warning) {
+        warnings.push(warning);
+      },
+    });
+    assert.equal(fs.readFileSync(path.join(mediaOutputDir, "new.txt"), "utf8"), "new media");
+    assert.equal(fs.readFileSync(outputPath, "utf8"), "new json");
+    assert.ok(warnings.some((warning) => /cleanup temporarily unavailable/.test(warning.message)));
+    assert.deepEqual(
+      fs.readdirSync(tempDir).filter((name) => name.includes(".backup-")),
+      [],
+      "successful promotion must not accumulate backup siblings",
+    );
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("keeps existing archive outputs intact when a copy fails", () => {
   const writeArchiveData = required(archiveModule, "writeArchiveData");
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-atomic-"));
@@ -211,6 +327,57 @@ test("writes stable local assets, UTF-8 JSON, and reproducible metadata", () => 
   }
 });
 
+test("can refresh archive JSON from already verified local assets without copying images", () => {
+  const writeArchiveData = required(archiveModule, "writeArchiveData");
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-reuse-"));
+  const { vault, sourcePath } = writeFixture(tempDir, [{ text: "![[one.png]]\n镜头缓慢转向前方" }]);
+  fs.writeFileSync(path.join(vault, "one.png"), "ONE", "utf8");
+  const workspace = path.join(tempDir, "workspace");
+
+  try {
+    writeArchiveData({ workspace, canvasPath: sourcePath, obsidianRoot: vault });
+    const refreshed = writeArchiveData({
+      workspace,
+      canvasPath: sourcePath,
+      obsidianRoot: vault,
+      reuseExistingMedia: true,
+      clock: () => new Date("2026-07-19T00:00:00.000Z"),
+      copyFile() {
+        throw new Error("reuse mode must not copy");
+      },
+    });
+    assert.equal(refreshed.generatedAt, "2026-07-19T00:00:00.000Z");
+    assert.equal(fs.readFileSync(path.join(workspace, "assets", "canvas-images", "001-one.png"), "utf8"), "ONE");
+    assert.equal(JSON.parse(fs.readFileSync(path.join(workspace, "data", "archive.json"), "utf8")).summary.cases, 1);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("JSON-only refresh does not depend on deleting a temporary sibling", () => {
+  const writeArchiveData = required(archiveModule, "writeArchiveData");
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-reuse-cleanup-"));
+  const { vault, sourcePath } = writeFixture(tempDir, [{ text: "![[one.png]]\n镜头缓慢转向前方" }]);
+  fs.writeFileSync(path.join(vault, "one.png"), "ONE", "utf8");
+  const workspace = path.join(tempDir, "workspace");
+  const originalRmSync = fs.rmSync;
+  let leftovers = [];
+
+  try {
+    writeArchiveData({ workspace, canvasPath: sourcePath, obsidianRoot: vault });
+    fs.rmSync = (target, options) => {
+      if (String(target).includes(".archive.json.tmp-")) return;
+      return originalRmSync(target, options);
+    };
+    writeArchiveData({ workspace, canvasPath: sourcePath, obsidianRoot: vault, reuseExistingMedia: true });
+    leftovers = fs.readdirSync(path.join(workspace, "data")).filter((name) => name.includes(".tmp-"));
+  } finally {
+    fs.rmSync = originalRmSync;
+    originalRmSync(tempDir, { recursive: true, force: true });
+  }
+  assert.deepEqual(leftovers, []);
+});
+
 test("the legacy build-web-data entry point performs a fixture archive build", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-entry-"));
   const entryPath = fileURLToPath(new URL("../build-web-data.mjs", import.meta.url));
@@ -236,5 +403,42 @@ test("the legacy build-web-data entry point performs a fixture archive build", (
     assert.equal(JSON.parse(fs.readFileSync(path.join(workspace, "data", "archive.json"), "utf8")).summary.cases, 1);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("every generated real asset is byte-identical to its independently resolved source", () => {
+  const raw = JSON.parse(fs.readFileSync(canvasPath, "utf8"));
+  const archive = JSON.parse(fs.readFileSync("data/archive.json", "utf8"));
+  const orderedNodes = raw.nodes
+    .filter((node) => node.type === "text")
+    .sort((left, right) => left.y - right.y || left.x - right.x || left.id.localeCompare(right.id));
+  const sourceRefs = orderedNodes.flatMap((node) => independentImageRefs(node.text || ""));
+  const uniqueRefs = [...new Set(sourceRefs)];
+  const wantedNames = new Set(uniqueRefs.map((ref) => path.posix.basename(ref).toLowerCase()));
+  const found = new Map();
+  const walk = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) walk(fullPath);
+      else if (wantedNames.has(entry.name.toLowerCase())) {
+        const key = entry.name.toLowerCase();
+        found.set(key, [...(found.get(key) || []), fullPath]);
+      }
+    }
+  };
+  walk(obsidianRoot);
+  const localByRef = new Map();
+  for (const item of archive.cases) {
+    for (const image of item.images) {
+      if (!localByRef.has(image.originalRef)) localByRef.set(image.originalRef, image.src);
+    }
+  }
+
+  assert.equal(uniqueRefs.length, 137);
+  for (const ref of uniqueRefs) {
+    const candidates = found.get(path.posix.basename(ref).toLowerCase()) || [];
+    assert.equal(candidates.length, 1, `independent source resolution for ${ref}`);
+    const localPath = path.resolve(localByRef.get(ref));
+    assert.equal(sha256(localPath), sha256(candidates[0]), `SHA-256 mismatch for ${ref}`);
   }
 });

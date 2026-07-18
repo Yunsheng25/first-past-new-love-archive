@@ -4,6 +4,14 @@ import fs from "node:fs";
 
 const canvasPath = "D:/黑曜石/canvas白板/《初恋旧爱新欢》视频制作.canvas";
 const utils = await import("../scripts/web-data-utils.mjs").catch(() => ({}));
+const independentValidEmbedPattern = /!\[\[([^\]\r\n]+?)\]\]/g;
+const independentMalformedImagePattern = /!\[\[([^\]\r\n]+?\.(?:png|jpe?g|webp|gif|bmp|svg))\](?!\])/gi;
+
+function independentlyParsedImageRefs(text = "") {
+  return [...String(text).matchAll(independentValidEmbedPattern)]
+    .map((match) => match[1].split("|")[0].trim().replace(/\\/g, "/"))
+    .filter((ref) => /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(ref));
+}
 
 function required(name) {
   assert.equal(typeof utils[name], "function", `${name} must be exported`);
@@ -41,10 +49,10 @@ test("parses the real canvas into stable coordinate-ordered cases", () => {
   assert.deepEqual(archive.summary.types.sort(), ["剪辑参考", "图生视频", "生图", "转场", "首尾帧"].sort());
   assert.deepEqual(archive.summary.typeCounts, {
     首尾帧: 44,
-    图生视频: 24,
+    图生视频: 25,
     剪辑参考: 1,
     转场: 1,
-    生图: 2,
+    生图: 1,
   });
   assert.equal(archive.cases[0].id, "case-01");
   assert.equal(archive.cases[0].source.nodeId, "e03bad1e478b6346");
@@ -58,23 +66,56 @@ test("parses the real canvas into stable coordinate-ordered cases", () => {
 
 test("preserves the exact prompt-to-image mapping and duplicate occurrences", () => {
   const parseCanvasArchive = required("parseCanvasArchive");
-  const imageRefs = required("imageRefs");
   const raw = JSON.parse(fs.readFileSync(canvasPath, "utf8"));
   const archive = parseCanvasArchive(raw);
   const orderedNodes = raw.nodes
     .filter((node) => node.type === "text")
     .sort((left, right) => left.y - right.y || left.x - right.x || left.id.localeCompare(right.id));
-  const sourceSequence = orderedNodes.flatMap((node) => imageRefs(node.text || ""));
+  const sourceSequence = orderedNodes.flatMap((node) => independentlyParsedImageRefs(node.text || ""));
   const archiveSequence = archive.cases.flatMap((item) => item.images.map((image) => image.originalRef));
 
   assert.deepEqual(archiveSequence, sourceSequence);
   assert.deepEqual(
     archive.cases.map((item) => item.prompt),
-    orderedNodes.map((node) => utils.stripEmbeds(node.text || "")),
+    orderedNodes.map((node) => String(node.text || "").replace(independentValidEmbedPattern, (embed, rawRef) => (
+      /\.(png|jpe?g|webp|gif|bmp|svg)(?:\|.*)?$/i.test(rawRef.trim()) ? "" : embed
+    )).replace(independentMalformedImagePattern, "").trim()),
   );
   const repeated = archive.cases.flatMap((item) => item.images).filter((image) => image.originalRef === "18.png");
   assert.equal(repeated.length, 2);
   assert.equal(repeated[0].src, repeated[1].src, "duplicate occurrences should reuse one physical asset");
+});
+
+test("cleans the known malformed case-04 embed from display text without counting or rewriting it", () => {
+  const parseCanvasArchive = required("parseCanvasArchive");
+  const raw = JSON.parse(fs.readFileSync(canvasPath, "utf8"));
+  const sourceNode = raw.nodes.find((node) => node.id === "a538b7cf85a1fb5e");
+  const malformed = [...sourceNode.text.matchAll(independentMalformedImagePattern)];
+  const validRefs = independentlyParsedImageRefs(sourceNode.text);
+  const item = parseCanvasArchive(raw).cases.find((candidate) => candidate.source.nodeId === sourceNode.id);
+
+  assert.equal(malformed.length, 1, "source sentinel must keep exactly one malformed image embed");
+  assert.equal(validRefs.length, 2, "the malformed source text must not become a 139th occurrence");
+  assert.deepEqual(item.images.map((image) => image.originalRef), validRefs);
+  assert.ok(item.rawText.includes(malformed[0][0]), "rawText remains an exact audit trail");
+  assert.ok(!item.prompt.includes(malformed[0][0]), "display prompt removes malformed markup");
+  assert.equal(item.uncertain, true);
+  assert.ok(item.uncertainReasons.includes("非标准图片嵌入已从展示文字清理"));
+});
+
+test("classifies known source sentinels by semantic wording instead of case ids", () => {
+  const parseCanvasArchive = required("parseCanvasArchive");
+  const raw = JSON.parse(fs.readFileSync(canvasPath, "utf8"));
+  const byId = new Map(parseCanvasArchive(raw).cases.map((item) => [item.id, item]));
+
+  assert.match(byId.get("case-62").prompt, /开始时.*随后.*整个过程/s);
+  assert.equal(byId.get("case-62").type, "图生视频");
+  assert.match(byId.get("case-32").prompt, /老人.*牵上手/s);
+  assert.equal(byId.get("case-32").stage, "雨夜小区");
+  assert.match(byId.get("case-34").prompt, /商城/);
+  assert.equal(byId.get("case-34").stage, "商场");
+  assert.match(byId.get("case-36").prompt, /店铺/);
+  assert.equal(byId.get("case-36").stage, "商场");
 });
 
 test("emits readable UTF-8 metadata and useful story stages", () => {
