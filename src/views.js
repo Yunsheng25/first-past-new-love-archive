@@ -25,6 +25,10 @@ export function buildIntroView() {
         aria-hidden="true"
       ></video>
       <div class="intro-shade" aria-hidden="true"></div>
+      <div class="media-status intro-media-status" role="status" aria-live="polite" hidden>
+        <span data-intro-media-message>背景影片未能自动播放</span>
+        <button type="button" data-retry-intro>播放背景</button>
+      </div>
 
       <header class="intro-header">
         <a class="wordmark" href="#" aria-label="返回片头">初恋 · 旧爱 · 新欢<i aria-hidden="true"></i></a>
@@ -65,6 +69,10 @@ export function buildFilmView() {
         playsinline
         preload="metadata"
       ></video>
+      <div class="media-status film-media-status" role="status" aria-live="polite" hidden>
+        <span data-film-media-message>影片加载失败</span>
+        <button type="button" data-retry-film>重新播放</button>
+      </div>
       <a href="#" class="film-back"><span aria-hidden="true">←</span> 返回片头</a>
       <p class="film-caption">《初恋 · 旧爱 · 新欢》<span>A FILM ARCHIVE · 2026</span></p>
     </section>`;

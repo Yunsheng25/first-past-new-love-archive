@@ -1,4 +1,5 @@
 import { parseRoute } from './src/router.js';
+import { bindFilmMedia, bindIntroMedia, focusRenderedView } from './src/media-ui.js';
 import { buildFilmView, buildIntroView, buildPendingView } from './src/views.js';
 
 const app = document.querySelector('#app');
@@ -19,25 +20,24 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
     film.addEventListener('ended', () => {
       // The post-film transition is intentionally owned by the next implementation task.
     });
-    if (playFilm) film.play().catch(() => {});
-    film.focus({ preventScroll: true });
+    bindFilmMedia(app, { playImmediately: playFilm });
+    focusRenderedView(app, { preferFilm: playFilm });
     return;
   }
 
   if (route.name === 'intro') {
     app.innerHTML = buildIntroView();
     document.title = '初恋 · 旧爱 · 新欢｜电影制作档案';
-    const backgroundFilm = app.querySelector('.intro-film');
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      backgroundFilm.pause();
-    } else {
-      backgroundFilm.play().catch(() => {});
-    }
+    bindIntroMedia(app, {
+      reduceMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+    });
+    focusRenderedView(app);
     return;
   }
 
   app.innerHTML = buildPendingView(route.name);
   document.title = '内容整理中｜初恋 · 旧爱 · 新欢';
+  focusRenderedView(app);
 }
 
 document.addEventListener('click', (event) => {
