@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>初恋旧爱新欢｜Canvas 节点档案</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <p>Canvas Archive</p>
+          <h1>初恋旧爱新欢｜图片提示词节点图</h1>
+        </div>
+        <section class="stats" aria-label="统计">
+          <div><strong id="statGroups">0</strong><span>节点组</span></div>
+          <div><strong id="statImages">0</strong><span>图片</span></div>
+          <div><strong id="statEdges">0</strong><span>连线</span></div>
+          <div><strong id="statUncertain">0</strong><span>待核</span></div>
+        </section>
+      </header>
+
+      <main class="workspace">
+        <aside class="control-panel" aria-label="筛选">
+          <label class="search-box">
+            <span>搜索节点</span>
+            <input id="searchInput" type="search" autocomplete="off" placeholder="图片名、提示词、节点 ID" />
+          </label>
+          <nav class="phase-tabs" id="phaseTabs" aria-label="阶段筛选"></nav>
+          <div class="result-line">
+            <strong id="resultCount">0</strong>
+            <span>个节点显示中</span>
+          </div>
+          <ol class="mini-list" id="recordList"></ol>
+        </aside>
+
+        <section class="canvas-panel" aria-label="节点白板">
+          <div class="canvas-toolbar">
+            <div>
+              <button id="fitView" type="button">适配全图</button>
+              <button id="zoomIn" type="button">放大</button>
+              <button id="zoomOut" type="button">缩小</button>
+            </div>
+            <p id="canvasHint">拖动画布移动视野，点击节点查看图片和提示词。</p>
+          </div>
+          <svg id="canvasSvg" class="canvas-svg" role="img" aria-label="图片提示词节点关系图"></svg>
+        </section>
+
+        <aside class="detail-panel" aria-live="polite" aria-label="节点详情">
+          <section class="detail-head">
+            <p class="phase-label" id="detailPhase">阶段</p>
+            <h2 id="detailTitle">载入中</h2>
+            <p id="detailSubtitle">点击左侧白板中的节点查看内容。</p>
+          </section>
+
+          <section class="detail-actions">
+            <button id="copyPrompt" type="button">复制提示词</button>
+            <button id="openMarkdown" type="button">打开整理文档</button>
+          </section>
+
+          <section class="image-strip" id="imageStrip" aria-label="图片"></section>
+
+          <section class="meta-grid" aria-label="节点信息">
+            <div><span>节点</span><strong id="metaNode">-</strong></div>
+            <div><span>坐标</span><strong id="metaPosition">-</strong></div>
+            <div><span>尺寸</span><strong id="metaSize">-</strong></div>
+            <div><span>状态</span><strong id="metaCertainty">-</strong></div>
+          </section>
+
+          <section class="prompt-panel">
+            <div class="section-title">
+              <h3>推测主提示词</h3>
+              <span id="promptLength">0 字</span>
+            </div>
+            <pre id="promptText"></pre>
+          </section>
+
+          <details class="detail-block" open>
+            <summary>图片路径</summary>
+            <ul id="pathList"></ul>
+          </details>
+          <details class="detail-block">
+            <summary>连接线</summary>
+            <ul id="connectionList"></ul>
+          </details>
+          <details class="detail-block">
+            <summary>空间近邻</summary>
+            <ul id="nearList"></ul>
+          </details>
+          <details class="detail-block">
+            <summary>原始文本</summary>
+            <pre id="rawText"></pre>
+          </details>
+        </aside>
+      </main>
+    </div>
+
+    <dialog class="image-dialog" id="imageDialog">
+      <button id="closeDialog" type="button" aria-label="关闭">x</button>
+      <img id="dialogImage" alt="" />
+      <p id="dialogCaption"></p>
+    </dialog>
+
+    <script src="canvas-data.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
