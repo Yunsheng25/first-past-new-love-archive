@@ -252,6 +252,28 @@ test("rejects a junction in the output path before writing outside the workspace
   assert.deepEqual(readdirSync(external), ["marker.txt"]);
 });
 
+test("rejects a junction above WorkspaceRoot before writing through it", (t) => {
+  const { source } = makeFixture(t);
+  const suffix = `${process.pid}-${Date.now()}-workspace-ancestor`;
+  const external = path.join(FIXTURE_PARENT, `${suffix}-target`);
+  const junction = path.join(FIXTURE_PARENT, `${suffix}-junction`);
+  const physicalWorkspace = path.join(external, "workspace");
+  const logicalWorkspace = path.join(junction, "workspace");
+  mkdirSync(physicalWorkspace, { recursive: true });
+  writeFileSync(path.join(external, "marker.txt"), "ancestor escape must remain untouched");
+  symlinkSync(external, junction, "junction");
+  t.after(() => {
+    removeFixtureTree(junction);
+    removeFixtureTree(external);
+  });
+
+  const result = runPowerShell(scriptArgs(logicalWorkspace, source));
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /reparse|junction|symbolic/i);
+  assert.equal(readFileSync(path.join(external, "marker.txt"), "utf8"), "ancestor escape must remain untouched");
+  assert.deepEqual(readdirSync(physicalWorkspace), []);
+});
+
 test("rejects output workspaces outside the checked-out project", (t) => {
   const { source } = makeFixture(t);
   const outside = path.join("C:\\tmp", `video-assets-outside-${process.pid}`);

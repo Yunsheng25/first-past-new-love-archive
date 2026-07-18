@@ -32,7 +32,7 @@ function Test-PathWithin([string]$Candidate, [string]$Parent) {
 
 function Assert-NoReparsePointInPath([string]$Candidate, [string]$Boundary) {
     $current = Get-FullPath $Candidate
-    $boundaryFull = Get-FullPath $Boundary
+    $boundaryFull = (Get-FullPath $Boundary).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
     if (-not (Test-PathWithin $current $boundaryFull)) {
         throw "Path escapes its workspace boundary: $current"
     }
@@ -170,15 +170,16 @@ $input = Get-FullPath $InputVideo
 $ffmpegPath = Get-FullPath $Ffmpeg
 
 if ($AllowTemporaryWorkspace) {
-    $temporaryRoot = Get-FullPath ([System.IO.Path]::GetTempPath())
-    $workspaceAllowed = Test-PathWithin $workspace $temporaryRoot
+    $allowedBoundary = Get-FullPath ([System.IO.Path]::GetTempPath())
 }
 else {
-    $workspaceAllowed = Test-PathWithin $workspace $projectRoot
+    $allowedBoundary = $projectRoot
 }
+$workspaceAllowed = Test-PathWithin $workspace $allowedBoundary
 if (-not $workspaceAllowed) {
-    throw "Output workspace must remain inside the project workspace: $projectRoot"
+    throw "Output workspace must remain inside the allowed boundary: $allowedBoundary"
 }
+$null = Assert-NoReparsePointInPath $workspace $allowedBoundary
 $testFailureRequested = $TestFailAfterInstall -or $TestFailSecondInstall -or
     $TestFailFirstRollbackAction -or $TestFailFirstBackupCleanup
 if ($testFailureRequested -and -not $AllowTemporaryWorkspace) {
@@ -199,9 +200,9 @@ if ($input.Equals((Get-FullPath $background), [System.StringComparison]::Ordinal
     throw 'Input/output overlap is not allowed.'
 }
 
-$null = Assert-NoReparsePointInPath $outputDirectory $workspace
+$null = Assert-NoReparsePointInPath $outputDirectory $allowedBoundary
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
-$null = Assert-NoReparsePointInPath $outputDirectory $workspace
+$null = Assert-NoReparsePointInPath $outputDirectory $allowedBoundary
 $transactionId = [Guid]::NewGuid().ToString('N')
 $backgroundTemp = Join-Path $outputDirectory "intro-background.tmp.$transactionId.mp4"
 $fullFilmTemp = Join-Path $outputDirectory "full-film.tmp.$transactionId.mp4"
@@ -211,10 +212,10 @@ $pairs = @(
     [pscustomobject]@{ Temporary = $backgroundTemp; Official = $background; Backup = $backgroundBackup; BackedUp = $false; Installed = $false },
     [pscustomobject]@{ Temporary = $fullFilmTemp; Official = $fullFilm; Backup = $fullFilmBackup; BackedUp = $false; Installed = $false }
 )
-$null = Assert-NoReparsePointInPath $outputDirectory $workspace
+$null = Assert-NoReparsePointInPath $outputDirectory $allowedBoundary
 foreach ($pair in $pairs) {
     foreach ($path in @($pair.Temporary, $pair.Official, $pair.Backup)) {
-        $null = Assert-NoReparsePointInPath $path $workspace
+        $null = Assert-NoReparsePointInPath $path $allowedBoundary
     }
 }
 $sourceBefore = Get-SourceState $input
@@ -254,10 +255,10 @@ try {
     }
 
     Assert-SourceUnchanged $input $sourceBefore
-    $null = Assert-NoReparsePointInPath $outputDirectory $workspace
+    $null = Assert-NoReparsePointInPath $outputDirectory $allowedBoundary
     foreach ($pair in $pairs) {
         foreach ($path in @($pair.Temporary, $pair.Official, $pair.Backup)) {
-            $null = Assert-NoReparsePointInPath $path $workspace
+            $null = Assert-NoReparsePointInPath $path $allowedBoundary
         }
     }
     Install-OutputsAtomically $pairs
