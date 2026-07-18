@@ -5,6 +5,7 @@ import {
   clearStoredLastFrame,
 } from './src/after-film.js';
 import { bindFilmMedia, bindIntroMedia, focusRenderedView } from './src/media-ui.js';
+import { mountReviewRoute } from './src/review-reader.js';
 import { buildAfterView, buildFilmView, buildIntroView, buildPendingView } from './src/views.js';
 
 const app = document.querySelector('#app');
@@ -49,6 +50,15 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
     app.innerHTML = buildAfterView();
     document.title = '影片已结束｜初恋 · 旧爱 · 新欢';
     applyStoredLastFrame(app);
+    focusRenderedView(app);
+    return;
+  }
+
+  if (route.name === 'review-index' || route.name === 'review-page') {
+    document.title = route.name === 'review-index'
+      ? '复盘手记｜初恋 · 旧爱 · 新欢'
+      : '阅读复盘｜初恋 · 旧爱 · 新欢';
+    currentViewCleanup = mountReviewRoute(app, route);
     focusRenderedView(app);
     return;
   }
