@@ -9,6 +9,7 @@ import { buildAfterView, buildFilmView, buildIntroView, buildPendingView } from 
 
 const app = document.querySelector('#app');
 let ignoreNextFilmHashChange = false;
+let currentViewCleanup = () => {};
 
 function currentRoute() {
   if (window.location.hash === '#about') return { name: 'about' };
@@ -16,13 +17,19 @@ function currentRoute() {
 }
 
 function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
+  currentViewCleanup();
+  currentViewCleanup = () => {};
+
   if (route.name === 'film') {
+    clearStoredLastFrame();
     app.innerHTML = buildFilmView();
     document.title = '观看完整成片｜初恋 · 旧爱 · 新欢';
 
     const film = app.querySelector('.film-video');
     film.muted = false;
-    bindFilmCompletion(app);
+    currentViewCleanup = bindFilmCompletion(app, {
+      isCurrent: () => window.location.hash === '#film' && app.querySelector('.film-video') === film,
+    });
     bindFilmMedia(app, { playImmediately: playFilm });
     focusRenderedView(app, { preferFilm: playFilm });
     return;

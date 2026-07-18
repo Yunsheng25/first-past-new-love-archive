@@ -8,6 +8,7 @@ import {
   LAST_FRAME_STORAGE_KEY,
   applyStoredLastFrame,
   bindFilmCompletion,
+  captureFilmFrame,
   clearStoredLastFrame,
 } from '../src/after-film.js';
 import { parseRoute } from '../src/router.js';
@@ -77,12 +78,16 @@ test('film completion captures one frame and navigates exactly once', () => {
     },
   };
 
-  bindFilmCompletion(root, {
+  const cleanup = bindFilmCompletion(root, {
     storage,
     documentRef: { createElement: () => canvas },
     navigate: (destination) => destinations.push(destination),
     matchMedia: () => ({ matches: false }),
-    schedule: (callback, delay) => scheduled.push({ callback, delay }),
+    schedule: (callback, delay) => {
+      scheduled.push({ callback, delay });
+      return 'ending-timer';
+    },
+    isCurrent: () => true,
   });
 
   video.dispatch('ended');
@@ -95,12 +100,61 @@ test('film completion captures one frame and navigates exactly once', () => {
   assert.equal(endingClasses.has('is-ending'), true);
   assert.equal(scheduled.length, 1);
   assert.equal(scheduled[0].delay, FILM_END_TRANSITION_MS);
+  assert.equal(typeof cleanup, 'function');
   assert.ok(FILM_END_TRANSITION_MS >= 900 && FILM_END_TRANSITION_MS <= 1000);
   assert.deepEqual(destinations, []);
 
   scheduled[0].callback();
   scheduled[0].callback();
   assert.deepEqual(destinations, ['#after']);
+});
+
+test('leaving the film cancels its pending transition and stale callbacks cannot navigate', () => {
+  const video = fakeVideo();
+  const destinations = [];
+  const scheduled = [];
+  const cancelled = [];
+  let isCurrent = true;
+
+  const cleanup = bindFilmCompletion(
+    { querySelector: () => video },
+    {
+      documentRef: null,
+      navigate: (destination) => destinations.push(destination),
+      matchMedia: () => ({ matches: false }),
+      isCurrent: () => isCurrent,
+      schedule: (callback, delay) => {
+        scheduled.push({ callback, delay });
+        return 41;
+      },
+      cancelSchedule: (timerId) => cancelled.push(timerId),
+    },
+  );
+
+  video.dispatch('ended');
+  assert.equal(scheduled.length, 1);
+
+  isCurrent = false;
+  cleanup();
+  scheduled[0].callback();
+  assert.deepEqual(cancelled, [41]);
+  assert.deepEqual(destinations, []);
+
+  const secondVideo = fakeVideo();
+  const secondScheduled = [];
+  bindFilmCompletion(
+    { querySelector: () => secondVideo },
+    {
+      documentRef: null,
+      navigate: (destination) => destinations.push(destination),
+      matchMedia: () => ({ matches: false }),
+      isCurrent: () => false,
+      schedule: (callback) => secondScheduled.push(callback),
+    },
+  );
+  secondVideo.dispatch('ended');
+  secondScheduled[0]();
+  assert.deepEqual(destinations, []);
 });
 
 test('frame capture failure never blocks the ended navigation', () => {
@@ -169,6 +223,47 @@ test('only valid stored frames are applied and replay clears the stale frame', (
   assert.equal(backdrop.style.backgroundImage, '');
 });
 
+test('a new capture invalidates stale frames before drawing or storing can fail', () => {
+  const staleStorage = fakeStorage({
+    [LAST_FRAME_STORAGE_KEY]: 'data:image/jpeg;base64,stale',
+  });
+  const backdrop = { style: {} };
+  const root = { querySelector: () => backdrop };
+
+  assert.equal(captureFilmFrame(fakeVideo(), {
+    storage: staleStorage,
+    documentRef: { createElement() { throw new Error('canvas unavailable'); } },
+  }), false);
+  assert.equal(applyStoredLastFrame(root, staleStorage), false);
+
+  const setFailureStorage = fakeStorage({
+    [LAST_FRAME_STORAGE_KEY]: 'data:image/jpeg;base64,another-old-frame',
+  });
+  setFailureStorage.setItem = () => { throw new Error('quota exceeded'); };
+  assert.equal(captureFilmFrame(fakeVideo(), {
+    storage: setFailureStorage,
+    documentRef: {
+      createElement: () => ({
+        getContext: () => ({ drawImage() {} }),
+        toDataURL: () => 'data:image/jpeg;base64,new-frame',
+      }),
+    },
+  }), false);
+  assert.equal(applyStoredLastFrame(root, setFailureStorage), false);
+});
+
+test('storage removal errors do not block invalidation or film completion', () => {
+  const throwingStorage = {
+    getItem: () => 'data:image/jpeg;base64,stale',
+    setItem() { throw new Error('storage denied'); },
+    removeItem() { throw new Error('storage denied'); },
+  };
+  const root = { querySelector: () => ({ style: {} }) };
+
+  assert.doesNotThrow(() => clearStoredLastFrame(throwingStorage));
+  assert.equal(applyStoredLastFrame(root, throwingStorage), false);
+});
+
 test('after screen stays within one viewport and stacks choices on mobile and short screens', async () => {
   const [css, script] = await Promise.all([
     readFile(new URL('style.css', projectRoot), 'utf8'),
@@ -186,4 +281,6 @@ test('after screen stays within one viewport and stacks choices on mobile and sh
   assert.match(script, /route\.name === 'after'/);
   assert.match(script, /bindFilmCompletion\(app/);
   assert.match(script, /applyStoredLastFrame\(app/);
+  assert.match(script, /currentViewCleanup\(\)[\s\S]*route\.name === 'film'/);
+  assert.match(script, /route\.name === 'film'[\s\S]*clearStoredLastFrame\(\)[\s\S]*bindFilmCompletion\(app/);
 });

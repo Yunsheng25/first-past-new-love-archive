@@ -2,6 +2,7 @@ import { filmEndedDestination } from './views.js';
 
 export const LAST_FRAME_STORAGE_KEY = 'film:last-frame';
 export const FILM_END_TRANSITION_MS = 950;
+const invalidatedFrameStores = new WeakSet();
 
 function availableStorage(storage) {
   if (storage) return storage;
@@ -12,7 +13,31 @@ function availableStorage(storage) {
   }
 }
 
+function canTrackStorage(storage) {
+  return storage !== null && (typeof storage === 'object' || typeof storage === 'function');
+}
+
+function invalidateFrameStore(storage) {
+  if (canTrackStorage(storage)) invalidatedFrameStores.add(storage);
+}
+
+function validateFrameStore(storage) {
+  if (canTrackStorage(storage)) invalidatedFrameStores.delete(storage);
+}
+
+function frameStoreIsInvalid(storage) {
+  return canTrackStorage(storage) && invalidatedFrameStores.has(storage);
+}
+
 export function captureFilmFrame(video, { documentRef = globalThis.document, storage } = {}) {
+  const frameStorage = availableStorage(storage);
+  invalidateFrameStore(frameStorage);
+  try {
+    frameStorage?.removeItem(LAST_FRAME_STORAGE_KEY);
+  } catch {
+    // The in-memory invalidation above prevents a stale frame from being reused.
+  }
+
   try {
     const width = Number(video?.videoWidth);
     const height = Number(video?.videoHeight);
@@ -30,7 +55,8 @@ export function captureFilmFrame(video, { documentRef = globalThis.document, sto
 
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     const frame = canvas.toDataURL('image/jpeg', 0.72);
-    availableStorage(storage)?.setItem(LAST_FRAME_STORAGE_KEY, frame);
+    frameStorage?.setItem(LAST_FRAME_STORAGE_KEY, frame);
+    validateFrameStore(frameStorage);
     return true;
   } catch {
     return false;
@@ -45,15 +71,25 @@ export function bindFilmCompletion(
     storage,
     matchMedia = (query) => globalThis.matchMedia?.(query),
     schedule = (callback, delay) => globalThis.setTimeout(callback, delay),
+    cancelSchedule = (timerId) => globalThis.clearTimeout(timerId),
+    isCurrent,
   } = {},
 ) {
   const video = root?.querySelector?.('.film-video');
-  if (!video) return false;
+  if (!video) return () => {};
 
   let completed = false;
   let navigated = false;
+  let active = true;
+  let timerId = null;
+  const viewIsCurrent = isCurrent ?? (() => root?.querySelector?.('.film-video') === video);
   const finish = () => {
-    if (navigated) return;
+    if (!active || navigated) return;
+    try {
+      if (!viewIsCurrent()) return;
+    } catch {
+      return;
+    }
     navigated = true;
     navigate(filmEndedDestination());
   };
@@ -82,12 +118,28 @@ export function bindFilmCompletion(
     }
 
     try {
-      schedule(finish, FILM_END_TRANSITION_MS);
+      const scheduledTimer = schedule(() => {
+        timerId = null;
+        finish();
+      }, FILM_END_TRANSITION_MS);
+      if (!navigated) timerId = scheduledTimer;
     } catch {
       finish();
     }
   }, { once: true });
-  return true;
+
+  return () => {
+    if (!active) return;
+    active = false;
+    if (timerId !== null && timerId !== undefined) {
+      try {
+        cancelSchedule(timerId);
+      } catch {
+        // The active guard still makes a stale callback harmless.
+      }
+    }
+    timerId = null;
+  };
 }
 
 function isStoredFrame(value) {
@@ -96,7 +148,9 @@ function isStoredFrame(value) {
 
 export function applyStoredLastFrame(root, storage) {
   try {
-    const frame = availableStorage(storage)?.getItem(LAST_FRAME_STORAGE_KEY);
+    const frameStorage = availableStorage(storage);
+    if (frameStoreIsInvalid(frameStorage)) return false;
+    const frame = frameStorage?.getItem(LAST_FRAME_STORAGE_KEY);
     const backdrop = root?.querySelector?.('.after-backdrop');
     if (!backdrop || !isStoredFrame(frame)) return false;
     backdrop.style.backgroundImage = `url("${frame}")`;
@@ -107,8 +161,10 @@ export function applyStoredLastFrame(root, storage) {
 }
 
 export function clearStoredLastFrame(storage) {
+  const frameStorage = availableStorage(storage);
+  invalidateFrameStore(frameStorage);
   try {
-    availableStorage(storage)?.removeItem(LAST_FRAME_STORAGE_KEY);
+    frameStorage?.removeItem(LAST_FRAME_STORAGE_KEY);
     return true;
   } catch {
     return false;
