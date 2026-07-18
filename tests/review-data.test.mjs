@@ -74,6 +74,17 @@ test("paginateBlocks only breaks at block boundaries without losing text", () =>
   );
 });
 
+test("paginateBlocks never returns an empty page after rebalancing", () => {
+  const blocks = [
+    { type: "text", text: "甲".repeat(500) },
+    { type: "text", text: "乙".repeat(500) },
+  ];
+  const pages = paginateBlocks(blocks, 900);
+
+  assert.ok(pages.every((page) => page.length > 0));
+  assert.deepEqual(pages.flat(), blocks);
+});
+
 test("paginateBlocks keeps headings with their first paragraph and text with following media", () => {
   const blocks = [
     { type: "heading", text: "小标题", level: 3 },
@@ -125,8 +136,10 @@ test("writeReviewData copies all media and writes readable UTF-8 pages", () => {
 test("writeReviewData reports every missing media filename", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-missing-"));
   const markdownDir = path.join(tempDir, "notes");
+  const vaultDir = path.join(tempDir, "vault");
   const fixturePath = path.join(markdownDir, "fixture.md");
   fs.mkdirSync(markdownDir);
+  fs.mkdirSync(vaultDir);
   fs.writeFileSync(fixturePath, `## ${originTitle}\n\n![[missing-image.png]] ![[missing-video.mp4]]`, "utf8");
 
   try {
@@ -134,7 +147,7 @@ test("writeReviewData reports every missing media filename", () => {
     assert.throws(
       () => writeReviewData({
         markdownPath: fixturePath,
-        obsidianRoot: tempDir,
+        obsidianRoot: vaultDir,
         outputPath: path.join(tempDir, "review.json"),
         mediaOutputDir: path.join(tempDir, "review-media"),
       }),
@@ -142,7 +155,7 @@ test("writeReviewData reports every missing media filename", () => {
     try {
       writeReviewData({
         markdownPath: fixturePath,
-        obsidianRoot: tempDir,
+        obsidianRoot: vaultDir,
         outputPath: path.join(tempDir, "review.json"),
         mediaOutputDir: path.join(tempDir, "review-media"),
       });
@@ -250,6 +263,62 @@ test("writeReviewData rejects unsafe media output paths", () => {
   }
 });
 
+test("writeReviewData protects workspace, source, and output path boundaries", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-path-boundaries-"));
+  const workspace = path.join(tempDir, "workspace");
+  const vaultDir = path.join(tempDir, "vault");
+  const markdownDir = path.join(tempDir, "notes");
+  const markdownPath = path.join(markdownDir, "fixture.md");
+  const sourceMedia = path.join(vaultDir, "asset.png");
+  const markerPath = path.join(workspace, "marker.txt");
+  const mediaOutputDir = path.join(workspace, "assets", "review-media");
+  const originalMarkdown = `## ${originTitle}\n\n![[asset.png]]`;
+  fs.mkdirSync(workspace, { recursive: true });
+  fs.mkdirSync(vaultDir, { recursive: true });
+  fs.mkdirSync(markdownDir, { recursive: true });
+  fs.writeFileSync(markerPath, "workspace marker", "utf8");
+  fs.writeFileSync(sourceMedia, "source media", "utf8");
+  fs.writeFileSync(markdownPath, originalMarkdown, "utf8");
+
+  const assertUnchanged = () => {
+    assert.equal(fs.readFileSync(markerPath, "utf8"), "workspace marker");
+    assert.equal(fs.readFileSync(markdownPath, "utf8"), originalMarkdown);
+  };
+  const options = { workspace, markdownPath, obsidianRoot: vaultDir, mediaOutputDir };
+
+  try {
+    const safe = writeReviewData(options);
+    assert.equal(mediaBlocks(safe).length, 1, "default workspace output layout remains allowed");
+    assertUnchanged();
+
+    for (const unsafeMediaDir of [
+      tempDir,
+      markdownPath,
+      vaultDir,
+      sourceMedia,
+      path.join(sourceMedia, "nested"),
+    ]) {
+      assert.throws(() => writeReviewData({ ...options, mediaOutputDir: unsafeMediaDir }), /Unsafe media output directory/);
+      assertUnchanged();
+    }
+
+    for (const unsafeOutputPath of [
+      markdownPath,
+      path.join(vaultDir, "review.json"),
+      sourceMedia,
+      mediaOutputDir,
+      path.join(mediaOutputDir, "review.json"),
+      path.join(workspace, "assets"),
+      workspace,
+    ]) {
+      assert.throws(() => writeReviewData({ ...options, outputPath: unsafeOutputPath }), /Unsafe review output path/);
+      assertUnchanged();
+    }
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("writeReviewData keeps existing output intact when copying fails", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-atomic-"));
   const sourceDir = path.join(tempDir, "source");
@@ -287,15 +356,17 @@ test("writeReviewData keeps existing output intact when copying fails", () => {
 test("writeReviewData accepts an injected clock for reproducible metadata", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-clock-"));
   const markdownDir = path.join(tempDir, "notes");
+  const vaultDir = path.join(tempDir, "vault");
   const fixturePath = path.join(markdownDir, "fixture.md");
   const outputPath = path.join(tempDir, "review.json");
   fs.mkdirSync(markdownDir);
+  fs.mkdirSync(vaultDir);
   fs.writeFileSync(fixturePath, `## ${originTitle}\n\n文字`, "utf8");
 
   try {
     writeReviewData({
       markdownPath: fixturePath,
-      obsidianRoot: tempDir,
+      obsidianRoot: vaultDir,
       outputPath,
       mediaOutputDir: path.join(tempDir, "review-media"),
       clock: () => new Date("2026-07-18T00:00:00.000Z"),

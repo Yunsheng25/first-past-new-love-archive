@@ -75,7 +75,7 @@ export function paginateBlocks(blocks, limit = 900) {
   }
   if (page.length > 0) pages.push(page);
   rebalancePages(pages, Math.max(limit, 1000));
-  return pages.map((unitsOnPage) => unitsOnPage.flat());
+  return pages.filter((unitsOnPage) => unitsOnPage.length > 0).map((unitsOnPage) => unitsOnPage.flat());
 }
 
 function semanticUnits(blocks) {
@@ -248,20 +248,38 @@ function resolveMediaSources(uniqueRefs, found) {
 function isSameOrDescendant(candidate, ancestor) {
   const normalizedCandidate = path.resolve(candidate).toLowerCase();
   const normalizedAncestor = path.resolve(ancestor).toLowerCase();
-  return normalizedCandidate === normalizedAncestor || normalizedCandidate.startsWith(`${normalizedAncestor}${path.sep}`);
+  const boundary = normalizedAncestor.endsWith(path.sep) ? normalizedAncestor : `${normalizedAncestor}${path.sep}`;
+  return normalizedCandidate === normalizedAncestor || normalizedCandidate.startsWith(boundary);
 }
 
-function validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath) {
+function pathsOverlap(left, right) {
+  return isSameOrDescendant(left, right) || isSameOrDescendant(right, left);
+}
+
+function validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath, obsidianRoot, sourcePaths = []) {
   const resolvedMediaDir = path.resolve(mediaOutputDir);
   const root = path.parse(resolvedMediaDir).root;
-  const markdownDirectory = path.dirname(path.resolve(markdownPath));
   if (
     resolvedMediaDir.toLowerCase() === root.toLowerCase()
-    || resolvedMediaDir.toLowerCase() === path.resolve(workspace).toLowerCase()
-    || isSameOrDescendant(resolvedMediaDir, markdownDirectory)
-    || isSameOrDescendant(markdownDirectory, resolvedMediaDir)
+    || isSameOrDescendant(workspace, resolvedMediaDir)
+    || pathsOverlap(resolvedMediaDir, markdownPath)
+    || pathsOverlap(resolvedMediaDir, obsidianRoot)
+    || sourcePaths.some((sourcePath) => pathsOverlap(resolvedMediaDir, sourcePath))
   ) {
     throw new Error(`Unsafe media output directory: ${resolvedMediaDir}`);
+  }
+}
+
+function validateReviewOutputPath(outputPath, mediaOutputDir, markdownPath, obsidianRoot, sourcePaths = []) {
+  const resolvedOutputPath = path.resolve(outputPath);
+  if (
+    pathsOverlap(resolvedOutputPath, mediaOutputDir)
+    || resolvedOutputPath.toLowerCase() === path.resolve(markdownPath).toLowerCase()
+    || isSameOrDescendant(resolvedOutputPath, obsidianRoot)
+    || sourcePaths.some((sourcePath) => isSameOrDescendant(resolvedOutputPath, sourcePath))
+    || (fs.existsSync(resolvedOutputPath) && fs.statSync(resolvedOutputPath).isDirectory())
+  ) {
+    throw new Error(`Unsafe review output path: ${resolvedOutputPath}`);
   }
 }
 
@@ -317,7 +335,8 @@ export function writeReviewData(options = {}) {
   const onProgress = typeof options.onProgress === "function" ? options.onProgress : () => {};
   const copyFile = options.copyFile || fs.copyFileSync;
   const clock = options.clock || (() => new Date());
-  validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath);
+  validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath, obsidianRoot);
+  validateReviewOutputPath(outputPath, mediaOutputDir, markdownPath, obsidianRoot);
   const review = parseReview(fs.readFileSync(markdownPath, "utf8"));
   const media = reviewMedia(review);
   const uniqueRefs = [...new Set(media.map((block) => block.ref))];
@@ -327,6 +346,8 @@ export function writeReviewData(options = {}) {
   onProgress("indexing-media", { wantedAssets: wantedNames.size, obsidianRoot });
   const found = walkMedia(obsidianRoot, wantedRelativePaths, wantedNames);
   const sources = resolveMediaSources(uniqueRefs, found);
+  validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath, obsidianRoot, [...sources.values()]);
+  validateReviewOutputPath(outputPath, mediaOutputDir, markdownPath, obsidianRoot, [...sources.values()]);
 
   onProgress("copying-media", { uniqueAssets: uniqueRefs.length, mediaOutputDir });
   const temporaryMediaDir = temporarySibling(mediaOutputDir, "tmp");
