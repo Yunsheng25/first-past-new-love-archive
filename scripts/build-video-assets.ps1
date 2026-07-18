@@ -7,7 +7,10 @@ param(
     [ValidatePattern('^\d+[kKmM]$')]
     [string]$BackgroundVideoBitrate = '2500k',
     [switch]$AllowTemporaryWorkspace,
-    [switch]$TestFailAfterInstall
+    [switch]$TestFailAfterInstall,
+    [switch]$TestFailSecondInstall,
+    [switch]$TestFailFirstRollbackAction,
+    [switch]$TestFailFirstBackupCleanup
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,6 +28,30 @@ function Test-PathWithin([string]$Candidate, [string]$Parent) {
     $prefix = $parentFull + [System.IO.Path]::DirectorySeparatorChar
     return $candidateFull.Equals($parentFull, [System.StringComparison]::OrdinalIgnoreCase) -or
         $candidateFull.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function Assert-NoReparsePointInPath([string]$Candidate, [string]$Boundary) {
+    $current = Get-FullPath $Candidate
+    $boundaryFull = Get-FullPath $Boundary
+    if (-not (Test-PathWithin $current $boundaryFull)) {
+        throw "Path escapes its workspace boundary: $current"
+    }
+    while ($true) {
+        if (Test-Path -LiteralPath $current) {
+            $item = Get-Item -LiteralPath $current -Force
+            if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                throw "Reparse point, junction, or symbolic link is not allowed in the output path: $current"
+            }
+        }
+        if ($current.Equals($boundaryFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+            break
+        }
+        $parent = [System.IO.Directory]::GetParent($current)
+        if ($null -eq $parent) {
+            throw "Could not resolve output path ancestry: $current"
+        }
+        $current = $parent.FullName
+    }
 }
 
 function Invoke-Ffmpeg([string[]]$Arguments, [string]$Purpose) {
@@ -53,47 +80,40 @@ function Assert-SourceUnchanged([string]$Path, $Before) {
 }
 
 function Install-OutputsAtomically($Pairs) {
-    $backedUp = [System.Collections.Generic.List[object]]::new()
-    $installed = [System.Collections.Generic.List[object]]::new()
-    try {
-        foreach ($pair in $Pairs) {
-            if (Test-Path -LiteralPath $pair.Official) {
-                Move-Item -LiteralPath $pair.Official -Destination $pair.Backup
-                $backedUp.Add($pair)
-            }
-        }
-        foreach ($pair in $Pairs) {
-            Move-Item -LiteralPath $pair.Temporary -Destination $pair.Official
-            $installed.Add($pair)
+    foreach ($pair in $Pairs) {
+        if (Test-Path -LiteralPath $pair.Official) {
+            Move-Item -LiteralPath $pair.Official -Destination $pair.Backup
+            $pair.BackedUp = $true
         }
     }
-    catch {
-        foreach ($pair in $installed) {
-            if (Test-Path -LiteralPath $pair.Official) {
-                Remove-Item -LiteralPath $pair.Official -Force
-            }
+    for ($index = 0; $index -lt $Pairs.Count; $index++) {
+        $pair = $Pairs[$index]
+        if ($TestFailSecondInstall -and $index -eq 1) {
+            throw 'Injected second-install failure.'
         }
-        foreach ($pair in $backedUp) {
-            if (Test-Path -LiteralPath $pair.Backup) {
-                Move-Item -LiteralPath $pair.Backup -Destination $pair.Official
-            }
-        }
-        throw
+        Move-Item -LiteralPath $pair.Temporary -Destination $pair.Official
+        $pair.Installed = $true
     }
 }
 
-function Restore-OutputsAfterInstall($Pairs) {
+function Restore-OutputTransaction($Pairs, [string]$OriginalFailure) {
     $rollbackErrors = [System.Collections.Generic.List[string]]::new()
-    foreach ($pair in $Pairs) {
+    for ($index = 0; $index -lt $Pairs.Count; $index++) {
+        $pair = $Pairs[$index]
         try {
-            if (Test-Path -LiteralPath $pair.Backup) {
+            if ($TestFailFirstRollbackAction -and $index -eq 0 -and ($pair.Installed -or $pair.BackedUp)) {
+                throw 'Injected first rollback action failure.'
+            }
+            if ($pair.Installed -and (Test-Path -LiteralPath $pair.Official)) {
+                Remove-Item -LiteralPath $pair.Official -Force
+                $pair.Installed = $false
+            }
+            if ($pair.BackedUp -and (Test-Path -LiteralPath $pair.Backup)) {
                 if (Test-Path -LiteralPath $pair.Official) {
                     Remove-Item -LiteralPath $pair.Official -Force
                 }
                 Move-Item -LiteralPath $pair.Backup -Destination $pair.Official
-            }
-            elseif (Test-Path -LiteralPath $pair.Official) {
-                Remove-Item -LiteralPath $pair.Official -Force
+                $pair.BackedUp = $false
             }
         }
         catch {
@@ -101,7 +121,36 @@ function Restore-OutputsAfterInstall($Pairs) {
         }
     }
     if ($rollbackErrors.Count -gt 0) {
-        throw "Output rollback failed; backups were preserved: $($rollbackErrors -join '; ')"
+        throw "$OriginalFailure Rollback errors (unrestored backups preserved): $($rollbackErrors -join '; ')"
+    }
+}
+
+function Remove-CommittedBackups($Pairs) {
+    for ($index = 0; $index -lt $Pairs.Count; $index++) {
+        $pair = $Pairs[$index]
+        if (-not (Test-Path -LiteralPath $pair.Backup)) {
+            continue
+        }
+        $deleted = $false
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+                if ($TestFailFirstBackupCleanup -and $index -eq 0) {
+                    throw 'Injected persistent backup cleanup failure.'
+                }
+                Remove-Item -LiteralPath $pair.Backup -Force
+                $pair.BackedUp = $false
+                $deleted = $true
+                break
+            }
+            catch {
+                if ($attempt -lt 3) {
+                    Start-Sleep -Milliseconds 50
+                }
+                else {
+                    Write-Warning "Backup cleanup warning: preserved $($pair.Backup): $($_.Exception.Message)"
+                }
+            }
+        }
     }
 }
 
@@ -130,8 +179,10 @@ else {
 if (-not $workspaceAllowed) {
     throw "Output workspace must remain inside the project workspace: $projectRoot"
 }
-if ($TestFailAfterInstall -and -not $AllowTemporaryWorkspace) {
-    throw 'TestFailAfterInstall is only allowed with a temporary test workspace.'
+$testFailureRequested = $TestFailAfterInstall -or $TestFailSecondInstall -or
+    $TestFailFirstRollbackAction -or $TestFailFirstBackupCleanup
+if ($testFailureRequested -and -not $AllowTemporaryWorkspace) {
+    throw 'Failure injection is only allowed with a temporary test workspace.'
 }
 if (-not (Test-Path -LiteralPath $input -PathType Leaf)) {
     throw "Input video was not found: $input"
@@ -148,18 +199,25 @@ if ($input.Equals((Get-FullPath $background), [System.StringComparison]::Ordinal
     throw 'Input/output overlap is not allowed.'
 }
 
+$null = Assert-NoReparsePointInPath $outputDirectory $workspace
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
+$null = Assert-NoReparsePointInPath $outputDirectory $workspace
 $transactionId = [Guid]::NewGuid().ToString('N')
 $backgroundTemp = Join-Path $outputDirectory "intro-background.tmp.$transactionId.mp4"
 $fullFilmTemp = Join-Path $outputDirectory "full-film.tmp.$transactionId.mp4"
 $backgroundBackup = Join-Path $outputDirectory "intro-background.backup.$transactionId.mp4"
 $fullFilmBackup = Join-Path $outputDirectory "full-film.backup.$transactionId.mp4"
 $pairs = @(
-    [pscustomobject]@{ Temporary = $backgroundTemp; Official = $background; Backup = $backgroundBackup },
-    [pscustomobject]@{ Temporary = $fullFilmTemp; Official = $fullFilm; Backup = $fullFilmBackup }
+    [pscustomobject]@{ Temporary = $backgroundTemp; Official = $background; Backup = $backgroundBackup; BackedUp = $false; Installed = $false },
+    [pscustomobject]@{ Temporary = $fullFilmTemp; Official = $fullFilm; Backup = $fullFilmBackup; BackedUp = $false; Installed = $false }
 )
+$null = Assert-NoReparsePointInPath $outputDirectory $workspace
+foreach ($pair in $pairs) {
+    foreach ($path in @($pair.Temporary, $pair.Official, $pair.Backup)) {
+        $null = Assert-NoReparsePointInPath $path $workspace
+    }
+}
 $sourceBefore = Get-SourceState $input
-$transactionInstalled = $false
 $transactionCommitted = $false
 
 try {
@@ -196,8 +254,13 @@ try {
     }
 
     Assert-SourceUnchanged $input $sourceBefore
+    $null = Assert-NoReparsePointInPath $outputDirectory $workspace
+    foreach ($pair in $pairs) {
+        foreach ($path in @($pair.Temporary, $pair.Official, $pair.Backup)) {
+            $null = Assert-NoReparsePointInPath $path $workspace
+        }
+    }
     Install-OutputsAtomically $pairs
-    $transactionInstalled = $true
     if ($TestFailAfterInstall) {
         throw 'Injected post-install failure.'
     }
@@ -210,8 +273,8 @@ try {
 }
 catch {
     $failure = $_
-    if ($transactionInstalled -and -not $transactionCommitted) {
-        Restore-OutputsAfterInstall $pairs
+    if (-not $transactionCommitted) {
+        Restore-OutputTransaction $pairs $failure.Exception.Message
     }
     throw $failure
 }
@@ -220,8 +283,8 @@ finally {
         if (Test-Path -LiteralPath $pair.Temporary) {
             Remove-Item -LiteralPath $pair.Temporary -Force
         }
-        if ($transactionCommitted -and (Test-Path -LiteralPath $pair.Backup)) {
-            Remove-Item -LiteralPath $pair.Backup -Force
-        }
+    }
+    if ($transactionCommitted) {
+        Remove-CommittedBackups $pairs
     }
 }

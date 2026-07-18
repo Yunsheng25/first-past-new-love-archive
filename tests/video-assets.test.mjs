@@ -2,7 +2,7 @@ import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -72,6 +72,10 @@ function makeFixture(t) {
 function assertNoTransactionFiles(outputDirectory) {
   const leftovers = readdirSync(outputDirectory).filter((name) => /\.(?:tmp|backup)\./.test(name));
   assert.deepEqual(leftovers, []);
+}
+
+function transactionFiles(outputDirectory) {
+  return readdirSync(outputDirectory).filter((name) => /\.(?:tmp|backup)\./.test(name));
 }
 
 function assertFastStart(file) {
@@ -172,6 +176,80 @@ test("a post-install failure restores both previous official outputs", (t) => {
   assert.match(`${result.stdout}\n${result.stderr}`, /Injected post-install failure/i);
   assert.deepEqual({ background: sha256(backgroundPath), fullFilm: sha256(fullFilmPath) }, before);
   assertNoTransactionFiles(outputDirectory);
+});
+
+test("partial install rollback continues after one recovery action fails", (t) => {
+  const { fixtureRoot, source } = makeFixture(t);
+  const outputDirectory = path.join(fixtureRoot, "assets", "video");
+  mkdirSync(outputDirectory, { recursive: true });
+  const backgroundPath = path.join(outputDirectory, "intro-background.mp4");
+  const fullFilmPath = path.join(outputDirectory, "full-film.mp4");
+  writeFileSync(backgroundPath, "recoverable only from preserved backup");
+  writeFileSync(fullFilmPath, "full film must be restored");
+  const oldBackgroundHash = sha256(backgroundPath);
+  const oldFullFilmHash = sha256(fullFilmPath);
+
+  const result = runPowerShell(scriptArgs(fixtureRoot, source, [
+    "-TestFailSecondInstall",
+    "-TestFailFirstRollbackAction",
+  ]));
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Injected second-install failure/i);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Injected first rollback action/i);
+  assert.equal(sha256(fullFilmPath), oldFullFilmHash, "recovery must continue to the second pair");
+
+  const leftovers = transactionFiles(outputDirectory);
+  const backgroundBackup = leftovers.find((name) => name.startsWith("intro-background.backup."));
+  assert.ok(backgroundBackup, "unrecoverable old output backup must be preserved");
+  assert.equal(sha256(path.join(outputDirectory, backgroundBackup)), oldBackgroundHash);
+  assert.equal(leftovers.some((name) => name.startsWith("full-film.backup.")), false);
+  assert.equal(leftovers.some((name) => name.includes(".tmp.")), false);
+});
+
+test("post-commit backup cleanup failure warns without failing the build", async (t) => {
+  const { fixtureRoot, source } = makeFixture(t);
+  const outputDirectory = path.join(fixtureRoot, "assets", "video");
+  mkdirSync(outputDirectory, { recursive: true });
+  const backgroundPath = path.join(outputDirectory, "intro-background.mp4");
+  const fullFilmPath = path.join(outputDirectory, "full-film.mp4");
+  writeFileSync(backgroundPath, "old background for cleanup");
+  writeFileSync(fullFilmPath, "old full film for cleanup");
+  const oldBackgroundHash = sha256(backgroundPath);
+
+  const result = runPowerShell(scriptArgs(fixtureRoot, source, ["-TestFailFirstBackupCleanup"]));
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  assert.match(`${result.stdout}\n${result.stderr}`, /warning.*backup cleanup/i);
+  const [background, fullFilm] = await Promise.all([
+    readVideoMetadata(FFMPEG, backgroundPath),
+    readVideoMetadata(FFMPEG, fullFilmPath),
+  ]);
+  assert.equal(background.video.codec, "h264");
+  assert.ok(fullFilm.durationSeconds > 0);
+
+  const leftovers = transactionFiles(outputDirectory);
+  const backgroundBackup = leftovers.find((name) => name.startsWith("intro-background.backup."));
+  assert.ok(backgroundBackup, "persistently undeletable backup must be preserved");
+  assert.equal(sha256(path.join(outputDirectory, backgroundBackup)), oldBackgroundHash);
+  assert.equal(leftovers.some((name) => name.startsWith("full-film.backup.")), false);
+  assert.equal(leftovers.some((name) => name.includes(".tmp.")), false);
+});
+
+test("rejects a junction in the output path before writing outside the workspace", (t) => {
+  const { fixtureRoot, source } = makeFixture(t);
+  const external = path.join(FIXTURE_PARENT, `${process.pid}-${Date.now()}-junction-target`);
+  const assetsDirectory = path.join(fixtureRoot, "assets");
+  const outputJunction = path.join(assetsDirectory, "video");
+  mkdirSync(external, { recursive: true });
+  mkdirSync(assetsDirectory, { recursive: true });
+  writeFileSync(path.join(external, "marker.txt"), "outside must remain untouched");
+  symlinkSync(external, outputJunction, "junction");
+  t.after(() => removeFixtureTree(external));
+
+  const result = runPowerShell(scriptArgs(fixtureRoot, source));
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /reparse|junction|symbolic/i);
+  assert.equal(readFileSync(path.join(external, "marker.txt"), "utf8"), "outside must remain untouched");
+  assert.deepEqual(readdirSync(external), ["marker.txt"]);
 });
 
 test("rejects output workspaces outside the checked-out project", (t) => {
