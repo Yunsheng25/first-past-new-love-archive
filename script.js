@@ -1,6 +1,11 @@
 import { parseRoute } from './src/router.js';
+import {
+  applyStoredLastFrame,
+  bindFilmCompletion,
+  clearStoredLastFrame,
+} from './src/after-film.js';
 import { bindFilmMedia, bindIntroMedia, focusRenderedView } from './src/media-ui.js';
-import { buildFilmView, buildIntroView, buildPendingView } from './src/views.js';
+import { buildAfterView, buildFilmView, buildIntroView, buildPendingView } from './src/views.js';
 
 const app = document.querySelector('#app');
 let ignoreNextFilmHashChange = false;
@@ -17,9 +22,7 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
 
     const film = app.querySelector('.film-video');
     film.muted = false;
-    film.addEventListener('ended', () => {
-      // The post-film transition is intentionally owned by the next implementation task.
-    });
+    bindFilmCompletion(app);
     bindFilmMedia(app, { playImmediately: playFilm });
     focusRenderedView(app, { preferFilm: playFilm });
     return;
@@ -35,6 +38,14 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
     return;
   }
 
+  if (route.name === 'after') {
+    app.innerHTML = buildAfterView();
+    document.title = '影片已结束｜初恋 · 旧爱 · 新欢';
+    applyStoredLastFrame(app);
+    focusRenderedView(app);
+    return;
+  }
+
   app.innerHTML = buildPendingView(route.name);
   document.title = '内容整理中｜初恋 · 旧爱 · 新欢';
   focusRenderedView(app);
@@ -44,6 +55,7 @@ document.addEventListener('click', (event) => {
   const playLink = event.target.closest('[data-play-film]');
   if (!playLink) return;
 
+  if (playLink.matches('[data-replay-film]')) clearStoredLastFrame();
   event.preventDefault();
   ignoreNextFilmHashChange = window.location.hash !== '#film';
   window.location.hash = '#film';

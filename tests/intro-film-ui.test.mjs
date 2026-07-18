@@ -8,7 +8,6 @@ import {
   buildFilmView,
   buildIntroView,
   buildPendingView,
-  filmEndedDestination,
 } from '../src/views.js';
 
 const projectRoot = new URL('../', import.meta.url);
@@ -25,9 +24,7 @@ test('intro view uses the optimized film as a full-screen silent looping backgro
   assert.doesNotMatch(html, /playbackRate/i);
 });
 
-test('intro view keeps the approved title hierarchy and every navigation item clickable', () => {
-  // Task 5 intentionally keeps these approved top-level text links. They are
-  // navigation, not the two post-film choice cards owned by a later task.
+test('intro view keeps the approved title hierarchy without revealing deep navigation', () => {
   const html = buildIntroView();
 
   assert.match(html, /初恋\s*·\s*旧爱\s*·\s*新欢/);
@@ -38,9 +35,9 @@ test('intro view keeps the approved title hierarchy and every navigation item cl
   assert.match(html, /每一段情感，都是时光里的一次遇见/);
   assert.match(html, /Like the first time, like the reunion, like what comes after\./);
   assert.match(html, /href="#film"[^>]*>\s*观看成片/);
-  assert.match(html, /href="#archive"[^>]*>\s*制作档案/);
-  assert.match(html, /href="#review"[^>]*>\s*复盘手记/);
-  assert.match(html, /href="#about"[^>]*>\s*关于项目/);
+  assert.doesNotMatch(html, /href="#archive"/);
+  assert.doesNotMatch(html, /href="#review"/);
+  assert.doesNotMatch(html, /href="#about"/);
   assert.match(html, /href="#film"[^>]*class="watch-film/);
 });
 
@@ -64,11 +61,6 @@ test('film view plays the full film at normal speed with sound-capable controls'
   assert.match(html, /href="#"[^>]*>[\s\S]*?返回片头<\/a>/);
   assert.doesNotMatch(html, />复盘手记</);
   assert.doesNotMatch(html, />提示词和图片</);
-});
-
-test('film ending stays on the film route for the later after-film task', () => {
-  // Task 6 owns the #after transition and frame persistence. Task 5 must stay put.
-  assert.equal(filmEndedDestination(), null);
 });
 
 test('both videos render visible recovery controls for playback or loading failures', () => {

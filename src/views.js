@@ -1,8 +1,5 @@
 const navItems = [
   ['#film', '观看成片'],
-  ['#archive', '制作档案'],
-  ['#review', '复盘手记'],
-  ['#about', '关于项目'],
 ];
 
 function buildIntroNavigation() {
@@ -78,6 +75,45 @@ export function buildFilmView() {
     </section>`;
 }
 
+export function buildAfterView() {
+  return `
+    <section class="after-view app-view" aria-labelledby="after-title">
+      <div class="after-backdrop" aria-hidden="true"></div>
+      <div class="after-shade" aria-hidden="true"></div>
+
+      <header class="after-header">
+        <a class="wordmark" href="#" aria-label="返回片头">初恋 · 旧爱 · 新欢<i aria-hidden="true"></i></a>
+        <p class="archive-mark">A FILM ARCHIVE · 2026</p>
+      </header>
+
+      <div class="after-content">
+        <p class="after-eyebrow">THE FILM HAS ENDED</p>
+        <h1 id="after-title">影片已结束</h1>
+        <p class="after-prompt">选择继续阅读的方向</p>
+
+        <nav class="after-choices" aria-label="影片结束后的阅读选择">
+          <a class="after-choice" href="#review" data-after-primary>
+            <span class="after-choice-number" aria-hidden="true">01</span>
+            <span class="after-choice-title">复盘手记</span>
+            <span class="after-choice-copy">完整创作经历、判断与方法复盘</span>
+            <span class="after-choice-arrow" aria-hidden="true">→</span>
+          </a>
+          <a class="after-choice" href="#archive" data-after-primary>
+            <span class="after-choice-number" aria-hidden="true">02</span>
+            <span class="after-choice-title">提示词和图片</span>
+            <span class="after-choice-copy">浏览制作过程中的提示词与视觉案例</span>
+            <span class="after-choice-arrow" aria-hidden="true">→</span>
+          </a>
+        </nav>
+
+        <div class="after-actions" aria-label="辅助操作">
+          <a href="#film" data-play-film data-replay-film>重新观看影片</a>
+          <a href="#">返回片头</a>
+        </div>
+      </div>
+    </section>`;
+}
+
 const pendingLabels = {
   'archive-index': '制作档案',
   'review-index': '复盘手记',
@@ -96,5 +132,5 @@ export function buildPendingView(routeName = '') {
 }
 
 export function filmEndedDestination() {
-  return null;
+  return '#after';
 }

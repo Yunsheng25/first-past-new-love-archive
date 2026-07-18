@@ -335,6 +335,12 @@ video:focus-visible {
   height: 100%;
   object-fit: contain;
   background: #000;
+  transition: opacity 950ms ease-in, filter 950ms ease-in;
+}
+
+.film-view.is-ending .film-video {
+  opacity: 0.28;
+  filter: brightness(0.52) saturate(0.72);
 }
 
 .film-back {
@@ -367,6 +373,174 @@ video:focus-visible {
   margin-left: 14px;
   font: 500 9px/1 Georgia, serif;
   letter-spacing: 0.22em;
+}
+
+.after-view {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: #08090a;
+}
+
+.after-backdrop,
+.after-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.after-backdrop {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(74, 59, 48, 0.54), transparent 56%),
+    linear-gradient(135deg, #161412, #070809 67%);
+  background-position: center;
+  background-size: cover;
+  opacity: 0.42;
+  filter: saturate(0.72) contrast(1.06);
+  animation: after-backdrop-reveal 720ms ease-out both;
+}
+
+.after-shade {
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(3, 4, 5, 0.74), rgba(3, 4, 5, 0.22) 34%, rgba(3, 4, 5, 0.76)),
+    radial-gradient(ellipse at center, transparent 20%, rgba(0, 0, 0, 0.62) 100%);
+}
+
+.after-header {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: clamp(64px, 10vh, 96px);
+  padding: 0 clamp(22px, 4vw, 68px);
+  border-bottom: 1px solid rgba(238, 231, 220, 0.12);
+  animation: after-content-reveal 620ms 80ms ease-out both;
+}
+
+.after-content {
+  align-self: center;
+  width: min(1050px, calc(100vw - 48px));
+  margin: 0 auto;
+  text-align: center;
+  animation: after-content-reveal 680ms 120ms ease-out both;
+}
+
+.after-eyebrow {
+  margin: 0 0 16px;
+  color: rgba(238, 231, 220, 0.52);
+  font: 500 10px/1 Georgia, serif;
+  letter-spacing: 0.5em;
+}
+
+.after-content h1 {
+  margin: 0;
+  font-size: clamp(38px, 5vw, 74px);
+  font-weight: 400;
+  letter-spacing: 0.17em;
+}
+
+.after-prompt {
+  margin: 14px 0 clamp(24px, 4vh, 44px);
+  color: var(--soft-ink);
+  font-size: clamp(13px, 1.25vw, 18px);
+  letter-spacing: 0.2em;
+}
+
+.after-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(14px, 2.2vw, 28px);
+  text-align: left;
+}
+
+.after-choice {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  min-height: clamp(150px, 23vh, 220px);
+  padding: clamp(22px, 3vw, 38px);
+  border: 1px solid rgba(238, 231, 220, 0.28);
+  background: rgba(12, 12, 12, 0.42);
+  backdrop-filter: blur(8px);
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.after-choice:hover {
+  transform: translateY(-3px);
+  border-color: rgba(238, 231, 220, 0.62);
+  background: rgba(31, 25, 22, 0.62);
+}
+
+.after-choice-number {
+  grid-column: 1;
+  color: #a33a34;
+  font: 500 10px/1 Georgia, serif;
+  letter-spacing: 0.22em;
+}
+
+.after-choice-title {
+  grid-column: 1 / 3;
+  align-self: end;
+  margin-top: 22px;
+  font-size: clamp(26px, 3vw, 43px);
+  letter-spacing: 0.13em;
+}
+
+.after-choice-copy {
+  grid-column: 1 / 3;
+  align-self: start;
+  margin-top: 12px;
+  color: var(--faint-ink);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+}
+
+.after-choice-arrow {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  align-self: center;
+  color: rgba(238, 231, 220, 0.7);
+  font: 300 clamp(25px, 2.5vw, 38px)/1 Georgia, serif;
+}
+
+.after-actions {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  margin-top: clamp(20px, 3vh, 34px);
+  color: rgba(238, 231, 220, 0.64);
+  font-size: 12px;
+  letter-spacing: 0.13em;
+}
+
+.after-actions a {
+  padding: 8px 2px;
+  border-bottom: 1px solid rgba(238, 231, 220, 0.25);
+}
+
+@keyframes after-backdrop-reveal {
+  from { opacity: 0; }
+  to { opacity: 0.42; }
+}
+
+@keyframes after-content-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .pending-view {
@@ -425,6 +599,35 @@ video:focus-visible {
     display: none;
   }
 
+}
+
+@media (max-width: 760px) {
+  .after-header {
+    min-height: 64px;
+    padding: 0 18px;
+  }
+
+  .after-content {
+    width: min(520px, calc(100vw - 32px));
+    padding-top: 42px;
+  }
+
+  .after-choices {
+    grid-template-columns: 1fr;
+  }
+
+  .after-choice {
+    min-height: 128px;
+    padding: 20px 22px;
+  }
+
+  .after-choice-title {
+    margin-top: 14px;
+  }
+
+  .after-choice-copy {
+    margin-top: 7px;
+  }
 }
 
 @media (max-width: 700px) {
@@ -522,6 +725,91 @@ video:focus-visible {
   }
 }
 
+@media (max-height: 560px) {
+  .after-view {
+    align-items: center;
+  }
+
+  .after-header {
+    min-height: 50px;
+  }
+
+  .after-content {
+    width: min(980px, calc(100vw - 32px));
+    padding-top: 42px;
+  }
+
+  .after-eyebrow,
+  .after-choice-copy {
+    display: none;
+  }
+
+  .after-content h1 {
+    font-size: clamp(27px, 6vh, 40px);
+  }
+
+  .after-prompt {
+    margin: 7px 0 12px;
+  }
+
+  .after-choice {
+    min-height: 88px;
+    padding: 15px 20px;
+  }
+
+  .after-choice-title {
+    margin-top: 9px;
+    font-size: clamp(21px, 5vh, 31px);
+  }
+
+  .after-actions {
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 560px) {
+  .after-header {
+    min-height: 42px;
+  }
+
+  .after-header .wordmark {
+    font-size: 11px;
+  }
+
+  .after-header .archive-mark {
+    font-size: 6px;
+  }
+
+  .after-content {
+    padding-top: 36px;
+  }
+
+  .after-prompt {
+    margin: 3px 0 7px;
+    font-size: 11px;
+  }
+
+  .after-choices {
+    gap: 6px;
+  }
+
+  .after-choice {
+    min-height: 68px;
+    padding: 9px 14px;
+  }
+
+  .after-choice-title {
+    margin-top: 4px;
+    font-size: 18px;
+  }
+
+  .after-actions {
+    gap: 18px;
+    margin-top: 3px;
+    font-size: 10px;
+  }
+}
+
 @media (max-height: 670px) {
   .hero-eyebrow {
     margin-bottom: 22px;
@@ -598,5 +886,15 @@ video:focus-visible {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .film-video {
+    transition: none !important;
+  }
+
+  .after-backdrop,
+  .after-header,
+  .after-content {
+    animation: none !important;
   }
 }
