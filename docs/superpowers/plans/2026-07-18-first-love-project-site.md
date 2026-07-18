@@ -21,7 +21,7 @@ scripts/build-archive-data.mjs     Canvas 转案例 JSON
 scripts/build-site-data.mjs        完整性检查入口
 scripts/optimize-video.ps1         网页视频转码
 data/{review,archive}.json         生成数据
-assets/review-images/              复盘正文图片
+assets/review-media/               复盘正文图片与视频案例
 assets/video/{hero-background,full-film}.mp4
 tests/*.test.mjs
 ```
@@ -96,7 +96,7 @@ Commit: `git commit -am "test: establish route contract"`
 **Files:**
 - Create: `scripts/build-review-data.mjs`
 - Create: `data/review.json`
-- Create: `assets/review-images/`
+- Create: `assets/review-media/`
 - Test: `tests/review-data.test.mjs`
 
 - [ ] **Step 1: 写失败测试**
@@ -121,7 +121,7 @@ const CHAPTERS = [
 ];
 ```
 
-导出 `parseReview(markdown)`、`paginateBlocks(blocks, limit = 900)` 和 `writeReviewData()`。按标题、段落、Obsidian 图片嵌入生成块；只在块边界分页，每页目标 600–1000 字；输出 UTF-8 `data/review.json`。构建时在 `D:/黑曜石` 中解析 51 处正文图片引用，复制到 `assets/review-images/`，JSON 中写入网站相对路径；任一图片缺失时构建失败并列出文件名。
+导出 `parseReview(markdown)`、`paginateBlocks(blocks, limit = 900)` 和 `writeReviewData()`。按标题、段落和 Obsidian 媒体嵌入生成块；只在块边界分页，每页目标 600–1000 字；输出 UTF-8 `data/review.json`。构建时解析 51 处正文案例媒体（25 张图片、26 段视频，49 个不同文件），复制到 `assets/review-media/`。block 顺序必须与原 Markdown 完全一致，媒体与前后段落的相对位置不变，重复 occurrence 不合并或移动；任一媒体缺失时构建失败并列出文件名。
 
 - [ ] **Step 4: 验证编码和页数**
 
@@ -356,7 +356,7 @@ Commit: `git commit -m "feat: add searchable prompt and image archive"`
 
 - [ ] **Step 1: 创建总构建入口**
 
-依次调用 `writeReviewData()` 和 `writeArchiveData()`，然后断言：5 个复盘章节、复盘总页数 20–30、51 处复盘图片全部解析、72 个案例、137 张不同图片、0 张缺失图片。再按图片原始文件名匹配复盘图片块与档案案例，为可匹配的复盘块写入 `caseId`，从而生成双向案例链接；无法匹配的内容保持独立阅读。任一完整性条件不满足时退出码非零。
+依次调用 `writeReviewData()` 和 `writeArchiveData()`，然后断言：5 个复盘章节、复盘总页数 20–30、51 处复盘案例媒体全部解析且顺序未变、72 个案例、137 张不同图片、0 张缺失图片。再按图片原始文件名匹配复盘图片块与档案案例，为可匹配的复盘块写入 `caseId`，从而生成双向案例链接；无法匹配的内容保持独立阅读。任一完整性条件不满足时退出码非零。
 
 - [ ] **Step 2: 完成响应式和减少动画规则**
 
