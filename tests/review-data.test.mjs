@@ -24,7 +24,8 @@ function mediaBlocks(review) {
 }
 
 test("parseReview extracts the five authored chapters, sections, and every media occurrence", () => {
-  const review = parseReview(fs.readFileSync(reviewPath, "utf8"));
+  const markdown = fs.readFileSync(reviewPath, "utf8");
+  const review = parseReview(markdown);
 
   assert.deepEqual(review.chapters.map(({ slug, title }) => [slug, title]), expectedChapters);
   for (const chapter of review.chapters) {
@@ -39,6 +40,12 @@ test("parseReview extracts the five authored chapters, sections, and every media
   assert.equal(new Set(media.map((block) => block.ref)).size, 49);
   assert.ok(media.some((block) => block.ref === "Pasted image 20260619214557.png"));
   assert.ok(media.every((block) => block.src.startsWith("assets/review-media/")));
+  assert.deepEqual(
+    media.map((block) => block.rawRef),
+    [...markdown.matchAll(/!\[\[([^\]]+)\]\]/g)].map((match) => match[1].trim()),
+  );
+  assert.equal(review.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0), 27);
+  assert.ok(review.chapters.flatMap((chapter) => chapter.pages).every((page) => page.at(-1)?.type !== "heading"));
 });
 
 test("parseReview preserves inline media sequence and duplicate occurrences", () => {
@@ -67,6 +74,28 @@ test("paginateBlocks only breaks at block boundaries without losing text", () =>
   );
 });
 
+test("paginateBlocks keeps headings with their first paragraph and text with following media", () => {
+  const blocks = [
+    { type: "heading", text: "小标题", level: 3 },
+    { type: "text", text: "甲".repeat(920) },
+    { type: "text", text: "乙".repeat(700) },
+    { type: "image", ref: "scene.png", src: "assets/review-media/scene.png" },
+    { type: "video", ref: "scene.mp4", src: "assets/review-media/scene.mp4" },
+    { type: "text", text: "丙".repeat(700) },
+  ];
+  const pages = paginateBlocks(blocks, 900);
+
+  assert.deepEqual(pages.flat(), blocks);
+  assert.deepEqual(pages[0].map((block) => block.type), ["heading", "text"]);
+  assert.deepEqual(pages[1].map((block) => block.type), ["text", "image", "video"]);
+  assert.ok(pages.every((page) => page.at(-1)?.type !== "heading"));
+  for (const page of pages.slice(0, -1)) {
+    const textSize = page.filter((block) => block.type === "text" || block.type === "heading")
+      .reduce((sum, block) => sum + block.text.length, 0);
+    assert.ok(textSize >= 600 && textSize <= 1000, `unexpected page text size ${textSize}`);
+  }
+});
+
 test("writeReviewData copies all media and writes readable UTF-8 pages", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-data-"));
   const outputPath = path.join(tempDir, "review.json");
@@ -82,6 +111,7 @@ test("writeReviewData copies all media and writes readable UTF-8 pages", () => {
     assert.equal(media.filter((block) => block.type === "image").length, 25);
     assert.equal(media.filter((block) => block.type === "video").length, 26);
     assert.equal(new Set(media.map((block) => block.ref)).size, 49);
+    assert.equal(fs.readdirSync(mediaOutputDir).length, 49);
     assert.equal(written.chapters.length, 5);
     assert.ok(pageCount >= 20 && pageCount <= 30, `expected 20-30 pages, got ${pageCount}`);
     assert.ok(!fs.readFileSync(outputPath, "utf8").includes("\uFFFD"));
@@ -94,10 +124,13 @@ test("writeReviewData copies all media and writes readable UTF-8 pages", () => {
 
 test("writeReviewData reports every missing media filename", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-missing-"));
-  const fixturePath = path.join(tempDir, "fixture.md");
-  fs.writeFileSync(fixturePath, `## ${originTitle}\n\n![[missing-image.png]]`, "utf8");
+  const markdownDir = path.join(tempDir, "notes");
+  const fixturePath = path.join(markdownDir, "fixture.md");
+  fs.mkdirSync(markdownDir);
+  fs.writeFileSync(fixturePath, `## ${originTitle}\n\n![[missing-image.png]] ![[missing-video.mp4]]`, "utf8");
 
   try {
+    let error;
     assert.throws(
       () => writeReviewData({
         markdownPath: fixturePath,
@@ -105,8 +138,20 @@ test("writeReviewData reports every missing media filename", () => {
         outputPath: path.join(tempDir, "review.json"),
         mediaOutputDir: path.join(tempDir, "review-media"),
       }),
-      /missing-image\.png/,
     );
+    try {
+      writeReviewData({
+        markdownPath: fixturePath,
+        obsidianRoot: tempDir,
+        outputPath: path.join(tempDir, "review.json"),
+        mediaOutputDir: path.join(tempDir, "review-media"),
+      });
+    } catch (caught) {
+      error = caught;
+    }
+    assert.ok(error instanceof Error);
+    assert.match(error.message, /missing-image\.png/);
+    assert.match(error.message, /missing-video\.mp4/);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -114,9 +159,11 @@ test("writeReviewData reports every missing media filename", () => {
 
 test("writeReviewData copies fixture media into the requested media directory", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-copy-"));
-  const fixturePath = path.join(tempDir, "fixture.md");
+  const markdownDir = path.join(tempDir, "notes");
+  const fixturePath = path.join(markdownDir, "fixture.md");
   const sourceDir = path.join(tempDir, "source");
   const mediaOutputDir = path.join(tempDir, "website-media");
+  fs.mkdirSync(markdownDir);
   fs.mkdirSync(sourceDir);
   fs.writeFileSync(path.join(sourceDir, "fixture.png"), "fixture", "utf8");
   fs.writeFileSync(fixturePath, `## ${originTitle}\n\n![[fixture.png]]`, "utf8");
@@ -130,6 +177,130 @@ test("writeReviewData copies fixture media into the requested media directory", 
     });
     const block = mediaBlocks(review)[0];
     assert.ok(fs.existsSync(path.join(mediaOutputDir, path.basename(block.src))));
+    assert.equal(fs.readFileSync(path.join(mediaOutputDir, path.basename(block.src)), "utf8"), "fixture");
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("writeReviewData resolves directory-qualified duplicate basenames and rejects ambiguous bare names", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-ambiguous-"));
+  const markdownDir = path.join(tempDir, "notes");
+  const fixturePath = path.join(markdownDir, "fixture.md");
+  const vaultDir = path.join(tempDir, "vault");
+  const mediaOutputDir = path.join(tempDir, "review-media");
+  fs.mkdirSync(markdownDir);
+  fs.mkdirSync(path.join(vaultDir, "a"), { recursive: true });
+  fs.mkdirSync(path.join(vaultDir, "b"), { recursive: true });
+  fs.writeFileSync(path.join(vaultDir, "a", "same.png"), "A", "utf8");
+  fs.writeFileSync(path.join(vaultDir, "b", "same.png"), "B", "utf8");
+
+  try {
+    fs.writeFileSync(fixturePath, `## ${originTitle}\n\n![[a/same.png]] ![[b/same.png]]`, "utf8");
+    const qualified = writeReviewData({
+      markdownPath: fixturePath,
+      obsidianRoot: vaultDir,
+      outputPath: path.join(tempDir, "review.json"),
+      mediaOutputDir,
+    });
+    const copiedContents = mediaBlocks(qualified)
+      .map((block) => fs.readFileSync(path.join(mediaOutputDir, path.basename(block.src)), "utf8"));
+    assert.deepEqual(copiedContents, ["A", "B"]);
+
+    fs.writeFileSync(fixturePath, `## ${originTitle}\n\n![[same.png]]`, "utf8");
+    let error;
+    try {
+      writeReviewData({
+        markdownPath: fixturePath,
+        obsidianRoot: vaultDir,
+        outputPath: path.join(tempDir, "review.json"),
+        mediaOutputDir,
+      });
+    } catch (caught) {
+      error = caught;
+    }
+    assert.ok(error instanceof Error);
+    assert.match(error.message, /Ambiguous review media: same\.png/);
+    assert.match(error.message, /a[\\/]same\.png/);
+    assert.match(error.message, /b[\\/]same\.png/);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("writeReviewData rejects unsafe media output paths", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-unsafe-"));
+  const sourceDir = path.join(tempDir, "source");
+  const fixturePath = path.join(sourceDir, "fixture.md");
+  fs.mkdirSync(sourceDir);
+  fs.writeFileSync(fixturePath, `## ${originTitle}\n\n![[missing.png]]`, "utf8");
+
+  try {
+    for (const mediaOutputDir of [path.parse(tempDir).root, tempDir, sourceDir, path.dirname(sourceDir)]) {
+      assert.throws(() => writeReviewData({
+        workspace: tempDir,
+        markdownPath: fixturePath,
+        obsidianRoot: tempDir,
+        outputPath: path.join(tempDir, "review.json"),
+        mediaOutputDir,
+      }), /Unsafe media output directory/);
+    }
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("writeReviewData keeps existing output intact when copying fails", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-atomic-"));
+  const sourceDir = path.join(tempDir, "source");
+  const fixturePath = path.join(sourceDir, "fixture.md");
+  const outputPath = path.join(tempDir, "review.json");
+  const mediaOutputDir = path.join(tempDir, "review-media");
+  fs.mkdirSync(sourceDir);
+  fs.mkdirSync(mediaOutputDir);
+  fs.writeFileSync(path.join(sourceDir, "a.png"), "A", "utf8");
+  fs.writeFileSync(path.join(sourceDir, "b.png"), "B", "utf8");
+  fs.writeFileSync(path.join(mediaOutputDir, "previous.txt"), "previous media", "utf8");
+  fs.writeFileSync(outputPath, '{"previous":true}', "utf8");
+  fs.writeFileSync(fixturePath, `## ${originTitle}\n\n![[a.png]] ![[b.png]]`, "utf8");
+  let attempts = 0;
+
+  try {
+    assert.throws(() => writeReviewData({
+      markdownPath: fixturePath,
+      obsidianRoot: sourceDir,
+      outputPath,
+      mediaOutputDir,
+      copyFile(source, target) {
+        attempts += 1;
+        if (attempts === 2) throw new Error("copy exploded");
+        fs.copyFileSync(source, target);
+      },
+    }), /copy exploded/);
+    assert.equal(fs.readFileSync(path.join(mediaOutputDir, "previous.txt"), "utf8"), "previous media");
+    assert.equal(fs.readFileSync(outputPath, "utf8"), '{"previous":true}');
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("writeReviewData accepts an injected clock for reproducible metadata", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-clock-"));
+  const markdownDir = path.join(tempDir, "notes");
+  const fixturePath = path.join(markdownDir, "fixture.md");
+  const outputPath = path.join(tempDir, "review.json");
+  fs.mkdirSync(markdownDir);
+  fs.writeFileSync(fixturePath, `## ${originTitle}\n\n文字`, "utf8");
+
+  try {
+    writeReviewData({
+      markdownPath: fixturePath,
+      obsidianRoot: tempDir,
+      outputPath,
+      mediaOutputDir: path.join(tempDir, "review-media"),
+      clock: () => new Date("2026-07-18T00:00:00.000Z"),
+    });
+    assert.equal(JSON.parse(fs.readFileSync(outputPath, "utf8")).generatedAt, "2026-07-18T00:00:00.000Z");
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -137,9 +308,11 @@ test("writeReviewData copies fixture media into the requested media directory", 
 
 test("writeReviewData reports indexing and copy stages", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-progress-"));
-  const fixturePath = path.join(tempDir, "fixture.md");
+  const markdownDir = path.join(tempDir, "notes");
+  const fixturePath = path.join(markdownDir, "fixture.md");
   const sourceDir = path.join(tempDir, "source");
   const stages = [];
+  fs.mkdirSync(markdownDir);
   fs.mkdirSync(sourceDir);
   fs.writeFileSync(path.join(sourceDir, "fixture.png"), "fixture", "utf8");
   fs.writeFileSync(fixturePath, `## ${originTitle}\n\n![[fixture.png]]`, "utf8");

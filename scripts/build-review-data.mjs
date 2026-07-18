@@ -59,21 +59,65 @@ function blockSize(block) {
 
 export function paginateBlocks(blocks, limit = 900) {
   if (!Array.isArray(blocks) || blocks.length === 0) return [];
+  const units = semanticUnits(blocks);
   const pages = [];
   let page = [];
   let pageSize = 0;
-  for (const block of blocks) {
-    const size = blockSize(block);
+  for (const unit of units) {
+    const size = unitSize(unit);
     if (page.length > 0 && pageSize + size > limit) {
       pages.push(page);
       page = [];
       pageSize = 0;
     }
-    page.push(block);
+    page.push(unit);
     pageSize += size;
   }
   if (page.length > 0) pages.push(page);
-  return pages;
+  rebalancePages(pages, Math.max(limit, 1000));
+  return pages.map((unitsOnPage) => unitsOnPage.flat());
+}
+
+function semanticUnits(blocks) {
+  const units = [];
+  let index = 0;
+  const isMedia = (block) => ["image", "video", "media"].includes(block.type);
+  const appendMedia = (unit) => {
+    while (index < blocks.length && isMedia(blocks[index])) unit.push(blocks[index++]);
+  };
+
+  while (index < blocks.length) {
+    const block = blocks[index++];
+    const unit = [block];
+    if (block.type === "heading" && index < blocks.length && blocks[index].type !== "heading") {
+      unit.push(blocks[index++]);
+      if (unit.at(-1).type === "text") appendMedia(unit);
+    } else if (block.type === "text") {
+      appendMedia(unit);
+    } else if (isMedia(block)) {
+      appendMedia(unit);
+    }
+    units.push(unit);
+  }
+  return units;
+}
+
+function unitSize(unit) {
+  return unit.reduce((sum, block) => sum + blockSize(block), 0);
+}
+
+function rebalancePages(pages, maximumTextSize) {
+  const minimumTextSize = 600;
+  for (let index = 0; index < pages.length - 1; index += 1) {
+    let pageSize = pages[index].reduce((sum, unit) => sum + unitSize(unit), 0);
+    while (pageSize < minimumTextSize && pages[index + 1].length > 0) {
+      const nextUnit = pages[index + 1][0];
+      const nextSize = unitSize(nextUnit);
+      if (pageSize + nextSize > maximumTextSize) break;
+      pages[index].push(pages[index + 1].shift());
+      pageSize += nextSize;
+    }
+  }
 }
 
 function assignMediaSources(chapters) {
@@ -138,20 +182,126 @@ export function parseReview(markdown) {
   return { chapters };
 }
 
-function walkMedia(root, wantedNames, found = new Map()) {
+function normalizeObsidianRef(ref) {
+  return String(ref).replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/\/+/g, "/").toLowerCase();
+}
+
+function refBasename(ref) {
+  return path.posix.basename(normalizeObsidianRef(ref));
+}
+
+function walkMedia(root, wantedRelativePaths, wantedBasenames, found = {
+  byRelativePath: new Map(),
+  byBasename: new Map(),
+}, vaultRoot = root) {
   let entries;
   try {
     entries = fs.readdirSync(root, { withFileTypes: true });
   } catch {
     return found;
   }
+  entries.sort((left, right) => left.name.localeCompare(right.name));
   for (const entry of entries) {
-    if (found.size === wantedNames.size) break;
     const fullPath = path.join(root, entry.name);
-    if (entry.isDirectory()) walkMedia(fullPath, wantedNames, found);
-    else if (wantedNames.has(entry.name.toLowerCase()) && !found.has(entry.name.toLowerCase())) found.set(entry.name.toLowerCase(), fullPath);
+    if (entry.isDirectory()) {
+      walkMedia(fullPath, wantedRelativePaths, wantedBasenames, found, vaultRoot);
+      continue;
+    }
+    const relativePath = normalizeObsidianRef(path.relative(vaultRoot, fullPath));
+    const basename = refBasename(relativePath);
+    if (wantedRelativePaths.has(relativePath)) found.byRelativePath.set(relativePath, fullPath);
+    if (wantedBasenames.has(basename)) {
+      const candidates = found.byBasename.get(basename) || [];
+      candidates.push({ fullPath, relativePath });
+      found.byBasename.set(basename, candidates);
+    }
   }
   return found;
+}
+
+function resolveMediaSources(uniqueRefs, found) {
+  const sources = new Map();
+  const missing = [];
+  const ambiguous = [];
+  for (const ref of uniqueRefs) {
+    const normalized = normalizeObsidianRef(ref);
+    if (normalized.includes("/")) {
+      const source = found.byRelativePath.get(normalized);
+      if (source) sources.set(ref, source);
+      else missing.push(ref);
+      continue;
+    }
+    const candidates = found.byBasename.get(refBasename(ref)) || [];
+    if (candidates.length === 1) sources.set(ref, candidates[0].fullPath);
+    else if (candidates.length === 0) missing.push(ref);
+    else ambiguous.push(`${ref}: ${candidates.map((candidate) => candidate.relativePath).join(", ")}`);
+  }
+  if (missing.length > 0 || ambiguous.length > 0) {
+    const issues = [];
+    if (missing.length > 0) issues.push(`Missing review media: ${missing.join(", ")}`);
+    if (ambiguous.length > 0) issues.push(`Ambiguous review media: ${ambiguous.join("; ")}`);
+    throw new Error(issues.join(" | "));
+  }
+  return sources;
+}
+
+function isSameOrDescendant(candidate, ancestor) {
+  const normalizedCandidate = path.resolve(candidate).toLowerCase();
+  const normalizedAncestor = path.resolve(ancestor).toLowerCase();
+  return normalizedCandidate === normalizedAncestor || normalizedCandidate.startsWith(`${normalizedAncestor}${path.sep}`);
+}
+
+function validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath) {
+  const resolvedMediaDir = path.resolve(mediaOutputDir);
+  const root = path.parse(resolvedMediaDir).root;
+  const markdownDirectory = path.dirname(path.resolve(markdownPath));
+  if (
+    resolvedMediaDir.toLowerCase() === root.toLowerCase()
+    || resolvedMediaDir.toLowerCase() === path.resolve(workspace).toLowerCase()
+    || isSameOrDescendant(resolvedMediaDir, markdownDirectory)
+    || isSameOrDescendant(markdownDirectory, resolvedMediaDir)
+  ) {
+    throw new Error(`Unsafe media output directory: ${resolvedMediaDir}`);
+  }
+}
+
+function temporarySibling(targetPath, label) {
+  const directory = path.dirname(targetPath);
+  const base = path.basename(targetPath);
+  return path.join(directory, `.${base}.${label}-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+}
+
+function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath }) {
+  const mediaBackup = temporarySibling(mediaOutputDir, "backup");
+  const outputBackup = temporarySibling(outputPath, "backup");
+  let mediaBackedUp = false;
+  let mediaPromoted = false;
+  let outputBackedUp = false;
+  let outputPromoted = false;
+
+  try {
+    if (fs.existsSync(mediaOutputDir)) {
+      fs.renameSync(mediaOutputDir, mediaBackup);
+      mediaBackedUp = true;
+    }
+    fs.renameSync(temporaryMediaDir, mediaOutputDir);
+    mediaPromoted = true;
+    if (fs.existsSync(outputPath)) {
+      fs.renameSync(outputPath, outputBackup);
+      outputBackedUp = true;
+    }
+    fs.renameSync(temporaryOutputPath, outputPath);
+    outputPromoted = true;
+  } catch (error) {
+    if (outputPromoted) fs.rmSync(outputPath, { force: true });
+    if (outputBackedUp) fs.renameSync(outputBackup, outputPath);
+    if (mediaPromoted) fs.rmSync(mediaOutputDir, { recursive: true, force: true });
+    if (mediaBackedUp) fs.renameSync(mediaBackup, mediaOutputDir);
+    throw error;
+  }
+
+  if (mediaBackedUp) fs.rmSync(mediaBackup, { recursive: true, force: true });
+  if (outputBackedUp) fs.rmSync(outputBackup, { force: true });
 }
 
 function reviewMedia(review) {
@@ -165,31 +315,45 @@ export function writeReviewData(options = {}) {
   const outputPath = options.outputPath || path.join(workspace, "data", "review.json");
   const mediaOutputDir = options.mediaOutputDir || path.join(workspace, "assets", "review-media");
   const onProgress = typeof options.onProgress === "function" ? options.onProgress : () => {};
+  const copyFile = options.copyFile || fs.copyFileSync;
+  const clock = options.clock || (() => new Date());
+  validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath);
   const review = parseReview(fs.readFileSync(markdownPath, "utf8"));
   const media = reviewMedia(review);
   const uniqueRefs = [...new Set(media.map((block) => block.ref))];
-  const wantedNames = new Set(uniqueRefs.map((ref) => path.win32.basename(ref).toLowerCase()));
+  const wantedRelativePaths = new Set(uniqueRefs.map(normalizeObsidianRef).filter((ref) => ref.includes("/")));
+  const wantedNames = new Set(uniqueRefs.map(refBasename));
   onProgress("parsed", { chapters: review.chapters.length, mediaEmbeds: media.length });
   onProgress("indexing-media", { wantedAssets: wantedNames.size, obsidianRoot });
-  const found = walkMedia(obsidianRoot, wantedNames);
-  const missing = uniqueRefs.filter((ref) => !found.has(path.win32.basename(ref).toLowerCase()));
-  if (missing.length > 0) throw new Error(`Missing review media: ${missing.join(", ")}`);
+  const found = walkMedia(obsidianRoot, wantedRelativePaths, wantedNames);
+  const sources = resolveMediaSources(uniqueRefs, found);
 
   onProgress("copying-media", { uniqueAssets: uniqueRefs.length, mediaOutputDir });
-  fs.rmSync(mediaOutputDir, { recursive: true, force: true });
-  fs.mkdirSync(mediaOutputDir, { recursive: true });
-  const copied = new Set();
-  for (const block of media) {
-    if (copied.has(block.ref)) continue;
-    fs.copyFileSync(found.get(path.win32.basename(block.ref).toLowerCase()), path.join(mediaOutputDir, path.basename(block.src)));
-    copied.add(block.ref);
-  }
+  const temporaryMediaDir = temporarySibling(mediaOutputDir, "tmp");
+  const temporaryOutputPath = temporarySibling(outputPath, "tmp");
+  try {
+    fs.mkdirSync(temporaryMediaDir, { recursive: true });
+    const copied = new Set();
+    for (const block of media) {
+      if (copied.has(block.ref)) continue;
+      copyFile(sources.get(block.ref), path.join(temporaryMediaDir, path.basename(block.src)));
+      copied.add(block.ref);
+    }
+    if (copied.size !== uniqueRefs.length || fs.readdirSync(temporaryMediaDir).length !== uniqueRefs.length) {
+      throw new Error(`Copied review media count mismatch: expected ${uniqueRefs.length}, got ${copied.size}`);
+    }
 
-  const payload = { generatedAt: new Date().toISOString(), chapters: review.chapters };
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, JSON.stringify(payload, null, 2), "utf8");
-  onProgress("written", { outputPath });
-  return payload;
+    const payload = { generatedAt: clock().toISOString(), chapters: review.chapters };
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(temporaryOutputPath, JSON.stringify(payload, null, 2), "utf8");
+    replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath });
+    onProgress("written", { outputPath });
+    return payload;
+  } catch (error) {
+    fs.rmSync(temporaryMediaDir, { recursive: true, force: true });
+    fs.rmSync(temporaryOutputPath, { force: true });
+    throw error;
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
