@@ -32,6 +32,9 @@ function fakeVideo() {
     addEventListener(type, listener, options) {
       this.listeners.set(type, { listener, options });
     },
+    removeEventListener(type, listener) {
+      if (this.listeners.get(type)?.listener === listener) this.listeners.delete(type);
+    },
     dispatch(type) { this.listeners.get(type)?.listener({ type }); },
   };
 }
@@ -155,6 +158,53 @@ test('leaving the film cancels its pending transition and stale callbacks cannot
   secondVideo.dispatch('ended');
   secondScheduled[0]();
   assert.deepEqual(destinations, []);
+});
+
+test('cleanup before ended removes the listener and prevents all completion side effects', () => {
+  const video = fakeVideo();
+  const sideEffects = {
+    canvas: 0,
+    storageReads: 0,
+    storageWrites: 0,
+    storageRemovals: 0,
+    schedules: 0,
+    navigations: 0,
+  };
+  const storage = {
+    getItem() { sideEffects.storageReads += 1; return null; },
+    setItem() { sideEffects.storageWrites += 1; },
+    removeItem() { sideEffects.storageRemovals += 1; },
+  };
+
+  const cleanup = bindFilmCompletion(
+    { querySelector: () => video },
+    {
+      storage,
+      documentRef: {
+        createElement() {
+          sideEffects.canvas += 1;
+          return null;
+        },
+      },
+      navigate: () => { sideEffects.navigations += 1; },
+      matchMedia: () => ({ matches: false }),
+      schedule: () => { sideEffects.schedules += 1; },
+    },
+  );
+
+  cleanup();
+  cleanup();
+  video.dispatch('ended');
+
+  assert.equal(video.listeners.has('ended'), false);
+  assert.deepEqual(sideEffects, {
+    canvas: 0,
+    storageReads: 0,
+    storageWrites: 0,
+    storageRemovals: 0,
+    schedules: 0,
+    navigations: 0,
+  });
 });
 
 test('frame capture failure never blocks the ended navigation', () => {

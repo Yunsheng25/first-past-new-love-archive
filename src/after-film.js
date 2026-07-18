@@ -94,8 +94,8 @@ export function bindFilmCompletion(
     navigate(filmEndedDestination());
   };
 
-  video.addEventListener('ended', () => {
-    if (completed) return;
+  const handleEnded = () => {
+    if (!active || completed) return;
     completed = true;
     captureFilmFrame(video, { documentRef, storage });
 
@@ -126,11 +126,17 @@ export function bindFilmCompletion(
     } catch {
       finish();
     }
-  }, { once: true });
+  };
+  video.addEventListener('ended', handleEnded, { once: true });
 
   return () => {
     if (!active) return;
     active = false;
+    try {
+      video.removeEventListener('ended', handleEnded);
+    } catch {
+      // The active guard still suppresses a queued event in limited media shims.
+    }
     if (timerId !== null && timerId !== undefined) {
       try {
         cancelSchedule(timerId);
