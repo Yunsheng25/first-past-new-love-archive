@@ -25,13 +25,13 @@ export function parseRoute(hash = window.location.hash) {
 
   if (segments.length === 3 && segments[0] === 'review') {
     const category = decodeSegment(segments[1]);
-    if (category === null) return introRoute();
+    if (category === null || category === '') return introRoute();
     return { name: 'review-page', chapter: category, page: pageNumber(segments[2]) };
   }
 
   if (segments.length === 2 && segments[0] === 'archive') {
     const id = decodeSegment(segments[1]);
-    if (id === null) return introRoute();
+    if (id === null || id === '') return introRoute();
     return { name: 'archive-detail', id };
   }
 
@@ -47,11 +47,13 @@ export function routeHref(name, params = {}) {
     case 'review-index':
       return '#review';
     case 'review-page':
-      return `#review/${encodeURIComponent(params.chapter ?? '')}/${pageNumber(params.page)}`;
+      if (params.chapter == null || params.chapter === '') return '';
+      return `#review/${encodeURIComponent(params.chapter)}/${pageNumber(params.page)}`;
     case 'archive-index':
       return '#archive';
     case 'archive-detail':
-      return `#archive/${encodeURIComponent(params.id ?? '')}`;
+      if (params.id == null || params.id === '') return '';
+      return `#archive/${encodeURIComponent(params.id)}`;
     case 'intro':
     default:
       return '';
