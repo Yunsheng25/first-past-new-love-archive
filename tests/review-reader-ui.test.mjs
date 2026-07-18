@@ -7,6 +7,7 @@ import {
   bindReviewInteractions,
   buildReviewIndex,
   buildReviewPage,
+  createFocusTrap,
   estimateReadingMinutes,
   mountReviewRoute,
   normalizeReviewTarget,
@@ -185,6 +186,7 @@ test('page targets and reader chrome show overall and within-chapter page positi
   const html = buildReviewPage(reviewData, productionMiddle);
   assert.match(html, /全篇\s*13\s*\/\s*27/);
   assert.match(html, /本章\s*7\s*\/\s*13/);
+  assert.match(html, /class="review-chapter-drawer"[^>]*role="dialog"[^>]*aria-modal="true"[^>]*hidden/);
 });
 
 test('inline markdown escapes HTML before applying the supported subset', () => {
@@ -337,6 +339,61 @@ test('mobile chapter drawer traps an intentional focus cycle and cleanup never r
   assert.equal(toggle.focusCount, 1, 'route cleanup must not return focus into stale markup');
 });
 
+test('reusable focus trap cycles drawer links in both Tab directions and restores its trigger', () => {
+  const documentRef = { activeElement: null };
+  const focusable = (name) => ({
+    name,
+    focusCount: 0,
+    focus() { this.focusCount += 1; documentRef.activeElement = this; },
+    getAttribute() { return null; },
+  });
+  const trigger = focusable('trigger');
+  const close = focusable('close');
+  const chapterLinks = Array.from({ length: 5 }, (_, index) => focusable(`chapter-${index + 1}`));
+  const all = [close, ...chapterLinks];
+  const drawer = { querySelectorAll() { return all; } };
+  const trap = createFocusTrap(drawer, { documentRef });
+
+  trap.activate({ returnFocus: trigger, initialFocus: close });
+  assert.equal(documentRef.activeElement, close);
+
+  documentRef.activeElement = chapterLinks[4];
+  let prevented = 0;
+  assert.equal(trap.handleKeydown({ key: 'Tab', shiftKey: false, preventDefault() { prevented += 1; } }), true);
+  assert.equal(documentRef.activeElement, close);
+
+  documentRef.activeElement = close;
+  assert.equal(trap.handleKeydown({ key: 'Tab', shiftKey: true, preventDefault() { prevented += 1; } }), true);
+  assert.equal(documentRef.activeElement, chapterLinks[4]);
+  assert.equal(prevented, 2);
+
+  trap.deactivate();
+  assert.equal(documentRef.activeElement, trigger);
+});
+
+test('focus trap keeps Tab and Shift+Tab on the only lightbox close control', () => {
+  const documentRef = { activeElement: null };
+  const trigger = { focusCount: 0, focus() { this.focusCount += 1; documentRef.activeElement = this; } };
+  const close = {
+    focusCount: 0,
+    focus() { this.focusCount += 1; documentRef.activeElement = this; },
+    getAttribute() { return null; },
+  };
+  const trap = createFocusTrap({ querySelectorAll: () => [close] }, { documentRef });
+  trap.activate({ returnFocus: trigger, initialFocus: close });
+
+  for (const shiftKey of [false, true]) {
+    let prevented = false;
+    documentRef.activeElement = close;
+    trap.handleKeydown({ key: 'Tab', shiftKey, preventDefault() { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.equal(documentRef.activeElement, close);
+  }
+
+  trap.deactivate({ restoreFocus: false });
+  assert.equal(trigger.focusCount, 0);
+});
+
 test('reader CSS keeps one route page inside a 100dvh shell with an internal scroll region', async () => {
   const css = await readFile(new URL('style.css', projectRoot), 'utf8');
 
@@ -347,6 +404,10 @@ test('reader CSS keeps one route page inside a 100dvh shell with an internal scr
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /\.review-return-after[\s\S]*position:\s*(?:fixed|sticky)/);
   assert.match(css, /\.review-index-placeholder/);
+  assert.match(css, /\.review-index-main[\s\S]*overflow-y:\s*auto[\s\S]*overscroll-behavior:\s*contain/);
+  assert.match(css, /\.review-index-list[\s\S]*min-height:\s*0[\s\S]*max-height:/);
+  assert.match(css, /\.review-chapter-drawer[\s\S]*min-height:\s*0[\s\S]*overflow-y:\s*auto[\s\S]*overscroll-behavior:\s*contain/);
+  assert.match(css, /@media\s*\(max-height:\s*650px\)[\s\S]*\.review-index-list/);
 });
 
 test('script routes both review destinations through cancellable review mounting', async () => {

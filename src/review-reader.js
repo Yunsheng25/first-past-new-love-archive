@@ -242,7 +242,7 @@ export function buildReviewPage(data, target) {
           </nav>
         </main>
       </div>
-      <aside id="review-chapter-drawer" class="review-chapter-drawer" data-review-drawer aria-label="移动端复盘章节" aria-hidden="true" hidden>
+      <aside id="review-chapter-drawer" class="review-chapter-drawer" data-review-drawer role="dialog" aria-modal="true" aria-label="移动端复盘章节" aria-hidden="true" hidden>
         <div class="review-chapter-drawer-title"><span>章节目录</span><button type="button" data-close-review-drawer aria-label="关闭章节目录">×</button></div>
         <nav>${chapterDirectory(data, chapter.slug)}</nav>
       </aside>
@@ -282,6 +282,61 @@ function navigateTo(windowRef, href) {
   if (href) windowRef.location.hash = href.replace(/^#/, '');
 }
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
+export function createFocusTrap(container, { documentRef = document } = {}) {
+  let active = false;
+  let returnFocus = null;
+
+  const focusableElements = () => [...(container?.querySelectorAll?.(FOCUSABLE_SELECTOR) ?? [])]
+    .filter((element) => !element.hidden && element.getAttribute?.('aria-hidden') !== 'true');
+
+  return {
+    activate({ initialFocus = null, returnFocus: nextReturnFocus = null } = {}) {
+      active = true;
+      returnFocus = nextReturnFocus ?? documentRef.activeElement ?? null;
+      const target = initialFocus ?? focusableElements()[0];
+      target?.focus?.({ preventScroll: true });
+    },
+    deactivate({ restoreFocus = true } = {}) {
+      if (!active) return;
+      active = false;
+      const target = returnFocus;
+      returnFocus = null;
+      if (restoreFocus) target?.focus?.({ preventScroll: true });
+    },
+    handleKeydown(event) {
+      if (!active || event.key !== 'Tab') return false;
+      const elements = focusableElements();
+      if (elements.length === 0) {
+        event.preventDefault?.();
+        return true;
+      }
+
+      const first = elements[0];
+      const last = elements.at(-1);
+      const currentIndex = elements.indexOf(documentRef.activeElement);
+      if (elements.length === 1
+        || (event.shiftKey && (documentRef.activeElement === first || currentIndex < 0))
+        || (!event.shiftKey && (documentRef.activeElement === last || currentIndex < 0))) {
+        event.preventDefault?.();
+        (event.shiftKey ? last : first).focus?.({ preventScroll: true });
+      }
+      return true;
+    },
+    isActive() {
+      return active;
+    },
+  };
+}
+
 export function bindReviewInteractions(root, {
   documentRef = document,
   windowRef = window,
@@ -293,6 +348,8 @@ export function bindReviewInteractions(root, {
   const lightboxClose = lightbox?.querySelector?.('[data-close-lightbox]');
   let lightboxTrigger = null;
   let active = true;
+  const drawerTrap = createFocusTrap(drawer, { documentRef });
+  const lightboxTrap = createFocusTrap(lightbox, { documentRef });
 
   const setDrawer = (open, { moveFocus = false, restoreFocus = false } = {}) => {
     if (!drawer || !drawerToggle) return;
@@ -303,17 +360,17 @@ export function bindReviewInteractions(root, {
     if (open && moveFocus) {
       const firstTarget = drawer.querySelector('[data-close-review-drawer]')
         ?? drawer.querySelector('.review-chapter-link');
-      firstTarget?.focus?.({ preventScroll: true });
-    } else if (!open && restoreFocus && active) {
-      drawerToggle.focus?.({ preventScroll: true });
+      drawerTrap.activate({ initialFocus: firstTarget, returnFocus: drawerToggle });
+    } else if (!open) {
+      drawerTrap.deactivate({ restoreFocus: restoreFocus && active });
     }
   };
 
-  const closeLightbox = () => {
+  const closeLightbox = ({ restoreFocus = true } = {}) => {
     if (!lightbox || lightbox.hidden) return;
     lightbox.hidden = true;
     lightboxImage?.removeAttribute?.('src');
-    lightboxTrigger?.focus?.({ preventScroll: true });
+    lightboxTrap.deactivate({ restoreFocus: restoreFocus && active });
     lightboxTrigger = null;
   };
 
@@ -337,13 +394,14 @@ export function bindReviewInteractions(root, {
       lightboxImage.src = imageTrigger.getAttribute('data-lightbox-src');
       lightboxImage.alt = imageTrigger.getAttribute('data-lightbox-alt') || '';
       lightbox.hidden = false;
-      lightboxClose?.focus?.({ preventScroll: true });
+      lightboxTrap.activate({ initialFocus: lightboxClose, returnFocus: imageTrigger });
       return;
     }
     if (closest('[data-close-lightbox]') || (event.target === lightbox)) closeLightbox();
   };
 
   const onKeydown = (event) => {
+    if (lightboxTrap.handleKeydown(event) || drawerTrap.handleKeydown(event)) return;
     if (event.key === 'Escape') {
       if (lightbox && !lightbox.hidden) {
         event.preventDefault?.();
@@ -369,6 +427,7 @@ export function bindReviewInteractions(root, {
     active = false;
     root.removeEventListener?.('click', onClick);
     documentRef.removeEventListener?.('keydown', onKeydown);
+    lightboxTrap.deactivate({ restoreFocus: false });
     setDrawer(false);
     root.querySelectorAll?.('.review-media-video').forEach((video) => video.pause());
   };
