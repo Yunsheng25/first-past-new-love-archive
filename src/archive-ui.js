@@ -240,8 +240,23 @@ export async function copyArchivePrompt(prompt, {
     // Permission denial falls through to the synchronous accessibility fallback.
   }
   let textarea;
+  let originalActive = null;
+  let originalSelection = null;
+  const originalRanges = [];
   try {
     if (typeof documentRef?.createElement !== 'function' || typeof documentRef?.execCommand !== 'function') return false;
+    try { originalActive = documentRef.activeElement ?? null; } catch { originalActive = null; }
+    try {
+      originalSelection = documentRef.getSelection?.() ?? null;
+      const rangeCount = Number(originalSelection?.rangeCount) || 0;
+      for (let index = 0; index < rangeCount; index += 1) {
+        const range = originalSelection.getRangeAt(index);
+        originalRanges.push(typeof range?.cloneRange === 'function' ? range.cloneRange() : range);
+      }
+    } catch {
+      originalSelection = null;
+      originalRanges.length = 0;
+    }
     textarea = documentRef.createElement('textarea');
     textarea.value = String(prompt);
     textarea.setAttribute?.('readonly', '');
@@ -252,7 +267,16 @@ export async function copyArchivePrompt(prompt, {
   } catch {
     return false;
   } finally {
-    textarea?.remove?.();
+    try { textarea?.remove?.(); } catch { /* A detached fallback is already harmless. */ }
+    if (originalSelection) {
+      try { originalSelection.removeAllRanges?.(); } catch { /* Selection access can be blocked. */ }
+      for (const range of originalRanges) {
+        try { originalSelection.addRange?.(range); } catch { /* Restore as many original ranges as possible. */ }
+      }
+    }
+    if (originalActive && originalActive.isConnected !== false) {
+      try { originalActive.focus?.({ preventScroll: true }); } catch { /* Focus restoration is best effort. */ }
+    }
   }
 }
 
@@ -407,17 +431,30 @@ export function bindArchiveDetailInteractions(root, {
 }
 
 export function bindArchiveIndexInteractions(root, data, state, render) {
-  const onInput = (event) => {
-    if (!event.target?.matches?.('[data-archive-query]')) return;
-    const selectionStart = event.target.selectionStart;
-    const selectionEnd = event.target.selectionEnd;
-    state.query = event.target.value;
+  let composing = false;
+  const applyQuery = (input) => {
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
+    state.query = input.value;
     render();
     const replacement = root.querySelector?.('[data-archive-query]');
     replacement?.focus?.({ preventScroll: true });
     if (Number.isInteger(selectionStart) && Number.isInteger(selectionEnd)) {
       replacement?.setSelectionRange?.(selectionStart, selectionEnd);
     }
+  };
+  const onInput = (event) => {
+    if (!event.target?.matches?.('[data-archive-query]') || composing || event.isComposing) return;
+    applyQuery(event.target);
+  };
+  const onCompositionStart = (event) => {
+    if (!event.target?.matches?.('[data-archive-query]')) return;
+    composing = true;
+  };
+  const onCompositionEnd = (event) => {
+    if (!event.target?.matches?.('[data-archive-query]')) return;
+    composing = false;
+    applyQuery(event.target);
   };
   const onChange = (event) => {
     const type = event.target?.getAttribute?.('data-archive-type-filter');
@@ -443,10 +480,14 @@ export function bindArchiveIndexInteractions(root, data, state, render) {
     render();
   };
   root.addEventListener?.('input', onInput);
+  root.addEventListener?.('compositionstart', onCompositionStart);
+  root.addEventListener?.('compositionend', onCompositionEnd);
   root.addEventListener?.('change', onChange);
   root.addEventListener?.('click', onClick);
   return () => {
     root.removeEventListener?.('input', onInput);
+    root.removeEventListener?.('compositionstart', onCompositionStart);
+    root.removeEventListener?.('compositionend', onCompositionEnd);
     root.removeEventListener?.('change', onChange);
     root.removeEventListener?.('click', onClick);
   };

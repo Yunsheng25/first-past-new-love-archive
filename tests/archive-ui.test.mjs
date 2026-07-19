@@ -135,6 +135,49 @@ test('typing a search term restores focus and caret after the filtered index rer
   assert.deepEqual(replacement.range, [2, 2]);
 });
 
+test('IME composition defers filtering until compositionend and applies the final Chinese query once', () => {
+  const listeners = new Map();
+  let renderCount = 0;
+  const replacement = { focused: false, focus() { this.focused = true; }, setSelectionRange(start, end) { this.range = [start, end]; } };
+  const root = {
+    addEventListener(type, handler) { listeners.set(type, handler); },
+    removeEventListener(type, handler) {
+      if (listeners.get(type) === handler) listeners.delete(type);
+    },
+    querySelector(selector) { return selector === '[data-archive-query]' ? replacement : null; },
+  };
+  const state = { query: '', types: [], stages: [] };
+  const cleanup = bindArchiveIndexInteractions(root, archive, state, () => { renderCount += 1; });
+  const input = {
+    value: '老', selectionStart: 1, selectionEnd: 1,
+    matches(selector) { return selector === '[data-archive-query]'; },
+  };
+  listeners.get('compositionstart')({ target: input });
+  listeners.get('input')({ target: input, isComposing: true });
+  input.value = '老人';
+  input.selectionStart = 2;
+  input.selectionEnd = 2;
+  listeners.get('input')({ target: input, isComposing: true });
+  listeners.get('input')({ target: input, isComposing: false });
+  assert.equal(renderCount, 0);
+  assert.equal(state.query, '');
+
+  listeners.get('compositionend')({ target: input });
+  assert.equal(renderCount, 1);
+  assert.equal(state.query, '老人');
+  assert.equal(replacement.focused, true);
+  assert.deepEqual(replacement.range, [2, 2]);
+  assert.deepEqual(
+    filterArchiveCases(archive.cases, state).map((item) => item.id),
+    archive.cases.filter((item) => [item.title, item.prompt, ...item.tags].join(' ').includes('老人')).map((item) => item.id),
+  );
+
+  cleanup();
+  assert.equal(listeners.has('compositionstart'), false);
+  assert.equal(listeners.has('compositionend'), false);
+  assert.equal(listeners.has('input'), false);
+});
+
 test('index renders ordered lazy cards, controls, fixed returns and clean empty state', () => {
   const html = buildArchiveIndex(archive, { query: '', types: [], stages: [] }, 'case-21');
   const ids = [...html.matchAll(/data-archive-card="(case-\d{2})"/g)].map((match) => match[1]);
@@ -263,6 +306,44 @@ test('copy uses Clipboard API, then textarea fallback, and reports final failure
   assert.equal(textarea.value, 'fallback prompt');
   assert.equal(textarea.selectCalled, true);
   assert.equal(await copyArchivePrompt('failure', { navigatorRef: {}, documentRef: {} }), false);
+});
+
+test('successful textarea copy fallback restores the original selection, focus, and removes its textarea', async () => {
+  const originalActive = {
+    isConnected: true,
+    focused: false,
+    focus() { this.focused = true; },
+  };
+  const originals = [
+    { name: 'one', cloneRange() { return { name: 'one-clone' }; } },
+    { name: 'two', cloneRange() { return { name: 'two-clone' }; } },
+  ];
+  const restored = [];
+  const selection = {
+    rangeCount: originals.length,
+    getRangeAt(index) { return originals[index]; },
+    removeAllRanges() { restored.length = 0; },
+    addRange(range) { restored.push(range); },
+  };
+  const textarea = {
+    style: {}, removed: false, selected: false,
+    setAttribute() {},
+    select() { this.selected = true; },
+    remove() { this.removed = true; },
+  };
+  const documentRef = {
+    activeElement: originalActive,
+    getSelection: () => selection,
+    body: { append(node) { assert.equal(node, textarea); } },
+    createElement: (tag) => { assert.equal(tag, 'textarea'); return textarea; },
+    execCommand: (command) => { assert.equal(command, 'copy'); return true; },
+  };
+  const result = await copyArchivePrompt('fallback prompt', { navigatorRef: {}, documentRef });
+  assert.equal(result, true);
+  assert.equal(textarea.selected, true);
+  assert.equal(textarea.removed, true);
+  assert.deepEqual(restored, [{ name: 'one-clone' }, { name: 'two-clone' }]);
+  assert.equal(originalActive.focused, true);
 });
 
 test('final copy failure selects the visible clean prompt and announces manual copy accessibly', async () => {
