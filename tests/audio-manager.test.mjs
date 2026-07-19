@@ -40,6 +40,20 @@ function immediateFade(audio) {
   return async (_player, target) => { audio.volume = target; };
 }
 
+function createDeferredFade(audio) {
+  const pending = [];
+  const fade = (_player, target) => new Promise((resolve) => {
+    pending.push({
+      target,
+      resolve() {
+        audio.volume = target;
+        resolve();
+      },
+    });
+  });
+  return { fade, pending };
+}
+
 test('原创钢琴 BGM 是可循环的本地 PCM WAV', async () => {
   const wav = await readFile(new URL('../assets/audio/memory-piano.wav', import.meta.url));
   assert.equal(wav.subarray(0, 4).toString('ascii'), 'RIFF');
@@ -230,4 +244,47 @@ test('destroy during a fade settles the pending call without stale side effects'
 
   assert.equal(audio.pauseCalls, 1);
   assert.equal(audio.playCalls, 1);
+});
+
+test('leaving film supersedes a stale fade and restores BGM volume while already playing', async () => {
+  const audio = createFakeAudio();
+  const { fade, pending } = createDeferredFade(audio);
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade });
+
+  const start = manager.startFromGesture();
+  await Promise.resolve();
+  pending.shift().resolve();
+  await start;
+  const entering = manager.enterFilm();
+  const leaving = manager.leaveFilm();
+  const staleFilmFade = pending.shift();
+  const latestFade = pending.shift();
+  staleFilmFade.resolve();
+  latestFade.resolve();
+  await Promise.all([entering, leaving]);
+
+  assert.equal(audio.paused, false);
+  assert.equal(audio.volume, BGM_VOLUME);
+});
+
+test('re-enabling BGM supersedes a stale disable fade', async () => {
+  const audio = createFakeAudio();
+  const { fade, pending } = createDeferredFade(audio);
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade });
+
+  const start = manager.startFromGesture();
+  await Promise.resolve();
+  pending.shift().resolve();
+  await start;
+  const disabling = manager.toggle();
+  const enabling = manager.toggle();
+  const staleDisableFade = pending.shift();
+  const latestFade = pending.shift();
+  latestFade.resolve();
+  staleDisableFade.resolve();
+  await Promise.all([disabling, enabling]);
+
+  assert.deepEqual(manager.state(), { enabled: true, gestureReceived: true, filmActive: false, unavailable: false, playing: true });
+  assert.equal(audio.volume, BGM_VOLUME);
+  assert.equal(audio.pauseCalls, 0);
 });
