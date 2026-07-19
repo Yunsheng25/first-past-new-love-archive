@@ -2265,7 +2265,7 @@ button.archive-filter-chip {
   .archive-header { min-height: 60px; padding: 0 17px; }
   .archive-header > span { display: none; }
   .archive-detail-header { grid-template-columns: 1fr auto; }
-  .archive-index-main { grid-template-columns: 1fr; overflow-y: auto; }
+  .archive-index-main { display: block; overflow-y: auto; }
   .archive-index-sidebar { overflow: visible; padding: 25px 19px 22px; border-right: 0; border-bottom: 1px solid rgba(238, 231, 220, 0.1); }
   .archive-index-sidebar h1 { margin: 11px 0 12px; font-size: clamp(41px, 14vw, 62px); }
   .archive-results { min-height: 60dvh; padding: 0 14px 64px; }
