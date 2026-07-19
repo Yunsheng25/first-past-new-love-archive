@@ -53,10 +53,12 @@ test('intro does not reveal either post-film choice before the film', () => {
 
 test('film view plays the full film at normal speed with sound-capable controls', () => {
   const html = buildFilmView();
+  const filmVideo = html.match(/<video\b[\s\S]*?<\/video>/)?.[0] ?? '';
 
-  assert.match(html, /src="assets\/video\/full-film\.mp4"/);
-  assert.match(html, /controls/);
-  assert.match(html, /playsinline/);
+  assert.match(filmVideo, /src="assets\/video\/full-film\.mp4"/);
+  assert.match(filmVideo, /controls/);
+  assert.match(filmVideo, /controlsList="nofullscreen"/);
+  assert.match(filmVideo, /playsinline/);
   assert.doesNotMatch(html, /\bmuted\b/);
   assert.doesNotMatch(html, /\bloop\b/);
   assert.doesNotMatch(html, /autoplay/);
@@ -240,12 +242,14 @@ test('global BGM control persists outside routes and is wired to route audio sta
 
 test('film exit stays visible above video and recovery layers with a mobile-safe touch target', async () => {
   const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  const exitBlock = css.match(/\.film-exit\s*{([^}]*)}/)?.[1] ?? '';
 
-  assert.match(css, /\.film-exit\s*{[\s\S]*position:\s*(?:fixed|absolute)/);
-  assert.match(css, /\.film-exit\s*{[\s\S]*inset-(?:inline-end|right):\s*max\(/);
-  assert.match(css, /\.film-exit\s*{[\s\S]*inset-(?:block-start|top):\s*max\(/);
-  assert.match(css, /\.film-exit\s*{[\s\S]*min-(?:width|height):\s*44px/);
-  assert.match(css, /\.film-exit\s*{[\s\S]*z-index:\s*[7-9]|\.film-exit\s*{[\s\S]*z-index:\s*[1-9]\d/);
+  assert.match(exitBlock, /position:\s*(?:fixed|absolute)/);
+  assert.match(exitBlock, /inset-(?:inline-end|right):\s*max\(/);
+  assert.match(exitBlock, /inset-(?:block-start|top):\s*max\(/);
+  assert.match(exitBlock, /min-(?:width|height):\s*44px/);
+  assert.match(exitBlock, /z-index:\s*(?:[7-9]|[1-9]\d)/);
+  assert.match(css, /\.film-video::\-webkit-media-controls-fullscreen-button\s*{\s*display:\s*none/);
   assert.match(css, /@media\s*\(max-width:\s*760px\)[\s\S]*\.film-exit/);
 });
 

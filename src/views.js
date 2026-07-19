@@ -63,6 +63,7 @@ export function buildFilmView() {
         class="film-video"
         src="assets/video/full-film.mp4"
         controls
+        controlsList="nofullscreen"
         playsinline
         preload="metadata"
       ></video>

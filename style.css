@@ -338,6 +338,10 @@ video:focus-visible {
   transition: opacity 950ms ease-in, filter 950ms ease-in;
 }
 
+.film-video::-webkit-media-controls-fullscreen-button {
+  display: none;
+}
+
 .film-view.is-ending .film-video {
   opacity: 0.28;
   filter: brightness(0.52) saturate(0.72);

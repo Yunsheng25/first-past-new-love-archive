@@ -173,6 +173,7 @@ export function bindFilmExit(
       navigate('#after');
     } catch {
       // A navigation failure should not surface as an uncaught input-event error.
+      exited = false;
     }
   };
   const handleClick = (event) => {

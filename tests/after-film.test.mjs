@@ -145,6 +145,31 @@ test('a pause failure does not prevent film exit navigation', () => {
   assert.deepEqual(harness.destinations, ['#after']);
 });
 
+test('a failed film exit navigation releases the lock for a later successful retry', () => {
+  const harness = createFilmExitHarness();
+  let attempts = 0;
+  bindFilmExit(harness.root, {
+    documentRef: harness.documentRef,
+    navigate(destination) {
+      attempts += 1;
+      if (attempts === 1) throw new Error('navigation unavailable');
+      harness.destinations.push(destination);
+    },
+  });
+  let clickPrevented = false;
+  let escapePrevented = false;
+
+  assert.doesNotThrow(() => harness.exit.dispatch('click', { preventDefault() { clickPrevented = true; } }));
+  harness.documentRef.dispatch('keydown', { key: 'Escape', preventDefault() { escapePrevented = true; } });
+  harness.exit.dispatch('click', { preventDefault() { throw new Error('successful exit must stay idempotent'); } });
+
+  assert.equal(clickPrevented, true);
+  assert.equal(escapePrevented, true);
+  assert.equal(attempts, 2);
+  assert.equal(harness.video.pauseCalls, 2);
+  assert.deepEqual(harness.destinations, ['#after']);
+});
+
 test('after view has exactly two equal primary choices with the required destinations', () => {
   const html = buildAfterView();
   const primaryChoices = [...html.matchAll(/<a\b[^>]*data-after-primary[^>]*>/g)];
