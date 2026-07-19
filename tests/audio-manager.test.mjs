@@ -1,6 +1,44 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import {
+  BGM_PREFERENCE_KEY,
+  BGM_VOLUME,
+  createAudioManager,
+  createVolumeFade,
+} from '../src/audio-manager.js';
+
+function createFakeAudio({ playResult = Promise.resolve() } = {}) {
+  return {
+    volume: 1,
+    loop: false,
+    paused: true,
+    playCalls: 0,
+    pauseCalls: 0,
+    play() {
+      this.playCalls += 1;
+      this.paused = false;
+      return playResult;
+    },
+    pause() {
+      this.pauseCalls += 1;
+      this.paused = true;
+    },
+  };
+}
+
+function createFakeStorage(initial = {}) {
+  const values = new Map(Object.entries(initial));
+  return {
+    getItem(key) { return values.get(key) ?? null; },
+    setItem(key, value) { values.set(key, value); },
+    value(key) { return values.get(key); },
+  };
+}
+
+function immediateFade(audio) {
+  return async (_player, target) => { audio.volume = target; };
+}
 
 test('原创钢琴 BGM 是可循环的本地 PCM WAV', async () => {
   const wav = await readFile(new URL('../assets/audio/memory-piano.wav', import.meta.url));
@@ -17,4 +55,84 @@ test('原创钢琴 BGM 是可循环的本地 PCM WAV', async () => {
   assert.equal(channels, 2);
   assert.equal(bits, 16);
   assert.ok(duration >= 31.9 && duration <= 32.1);
+});
+
+test('starts from a gesture, enters film mode, and leaves it', async () => {
+  const audio = createFakeAudio();
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  assert.equal(audio.playCalls, 0);
+  assert.deepEqual(manager.state(), { enabled: true, gestureReceived: false, filmActive: false, unavailable: false, playing: false });
+
+  assert.equal(await manager.startFromGesture(), true);
+  assert.equal(audio.playCalls, 1);
+  assert.equal(audio.loop, true);
+  assert.equal(audio.volume, BGM_VOLUME);
+
+  await manager.enterFilm();
+  assert.equal(audio.volume, 0);
+  assert.equal(audio.pauseCalls, 1);
+  assert.equal(manager.state().filmActive, true);
+
+  assert.equal(await manager.leaveFilm(), true);
+  assert.equal(audio.playCalls, 2);
+  assert.equal(manager.state().filmActive, false);
+});
+
+test('toggle persists preference and disabled stored preference does not resume', async () => {
+  const audio = createFakeAudio();
+  const storage = createFakeStorage();
+  const manager = createAudioManager({ audio, storage, fade: immediateFade(audio) });
+
+  await manager.startFromGesture();
+  assert.equal(await manager.toggle(), false);
+  assert.equal(storage.value(BGM_PREFERENCE_KEY), 'false');
+  assert.equal(audio.pauseCalls, 1);
+  assert.equal(await manager.toggle(), true);
+  assert.equal(storage.value(BGM_PREFERENCE_KEY), 'true');
+  assert.equal(audio.playCalls, 2);
+
+  const disabledAudio = createFakeAudio();
+  const disabled = createAudioManager({
+    audio: disabledAudio,
+    storage: createFakeStorage({ [BGM_PREFERENCE_KEY]: 'false' }),
+    fade: immediateFade(disabledAudio),
+  });
+  await disabled.startFromGesture();
+  assert.equal(await disabled.leaveFilm(), false);
+  assert.equal(disabled.state().enabled, false);
+});
+
+test('marks playback as unavailable when play is rejected', async () => {
+  const audio = createFakeAudio({ playResult: Promise.reject(new Error('blocked')) });
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  assert.equal(await manager.startFromGesture(), false);
+  assert.equal(manager.state().unavailable, true);
+  assert.equal(audio.pauseCalls, 1);
+});
+
+test('volume fade interpolates to its target and settles immediately for zero duration', async () => {
+  const audio = { volume: 0 };
+  const fade = createVolumeFade();
+
+  await fade(audio, 0.7, 0);
+  assert.equal(audio.volume, 0.7);
+
+  const completion = fade(audio, 0.2, 40);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.ok(audio.volume < 0.7 && audio.volume > 0.2);
+  await completion;
+  assert.equal(audio.volume, 0.2);
+});
+
+test('destroy pauses and prevents future playback', async () => {
+  const audio = createFakeAudio();
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  await manager.startFromGesture();
+  manager.destroy();
+  assert.equal(audio.pauseCalls, 1);
+  assert.equal(await manager.leaveFilm(), false);
+  assert.equal(audio.playCalls, 1);
 });
