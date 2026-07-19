@@ -445,7 +445,7 @@ function loadingView() {
   return `<section class="review-status-view app-view" data-review-loading><p>REVIEW NOTES</p><h1>正在打开复盘手记</h1><span>请稍候……</span></section>`;
 }
 
-let reviewDataCache = new Map();
+let reviewDataCache = new WeakMap();
 
 function availableFetch(fetchImpl) {
   return typeof fetchImpl === 'function' ? fetchImpl : null;
@@ -457,7 +457,7 @@ export function peekReviewData(fetchImpl = globalThis.fetch) {
 }
 
 export function resetReviewDataCache() {
-  reviewDataCache = new Map();
+  reviewDataCache = new WeakMap();
 }
 
 export function loadReviewData(fetchImpl = globalThis.fetch, { force = false } = {}) {
@@ -535,28 +535,32 @@ export function mountReviewRoute(app, route, {
     app.focus?.({ preventScroll: true });
   };
 
+  const renderError = () => {
+    app.innerHTML = errorView();
+    retryButton = app.querySelector?.('[data-retry-review]');
+    retryHandler = () => load({ force: true });
+    retryButton?.addEventListener?.('click', retryHandler);
+    app.focus?.({ preventScroll: true });
+  };
+
   const load = async ({ force = false } = {}) => {
     const version = ++loadVersion;
     interactionCleanup();
     clearRetry();
-    const cached = !force && peekReviewData(fetchImpl);
-    if (cached) {
-      if (active && version === loadVersion) renderData(cached);
-      return;
-    }
-    app.innerHTML = loadingView();
 
     try {
+      const cached = !force && peekReviewData(fetchImpl);
+      if (cached) {
+        if (active && version === loadVersion) renderData(cached);
+        return;
+      }
+      app.innerHTML = loadingView();
       const data = await loadReviewData(fetchImpl, { force });
       if (!active || version !== loadVersion) return;
       renderData(data);
     } catch (error) {
-      if (!active || version !== loadVersion || error?.name === 'AbortError') return;
-      app.innerHTML = errorView();
-      retryButton = app.querySelector?.('[data-retry-review]');
-      retryHandler = () => load({ force: true });
-      retryButton?.addEventListener?.('click', retryHandler);
-      app.focus?.({ preventScroll: true });
+      if (!active || version !== loadVersion) return;
+      renderError();
     }
   };
 

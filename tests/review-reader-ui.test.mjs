@@ -78,7 +78,10 @@ test('review data cache isolates fetch implementations and retries failures', as
   const secondData = { chapters: ['second'] };
   let firstCalls = 0;
   let failureCalls = 0;
-  const firstFetch = async () => ({ ok: true, json: async () => firstData });
+  const firstFetch = async () => {
+    firstCalls += 1;
+    return { ok: true, json: async () => firstData };
+  };
   const secondFetch = async () => ({ ok: true, json: async () => secondData });
   const failingThenWorkingFetch = async () => {
     failureCalls += 1;
@@ -94,7 +97,7 @@ test('review data cache isolates fetch implementations and retries failures', as
   assert.equal(peekReviewData(failingThenWorkingFetch), null);
   await loadReviewData(failingThenWorkingFetch);
   assert.equal(failureCalls, 2);
-  assert.equal(firstCalls, 0);
+  assert.equal(firstCalls, 1);
 });
 
 test('forced and reset cache requests ignore late older completions', async () => {
@@ -171,6 +174,75 @@ test('mount cold load shows loading and retry forces a fresh request', async () 
   assert.match(app.innerHTML, /data-review-error/);
   retryButton.handler();
   assert.match(app.innerHTML, /data-review-loading/);
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls, 2);
+  assert.match(app.innerHTML, /review-index-view/);
+});
+
+test('an active AbortError renders retry UI and a stale AbortError after cleanup is inert', async () => {
+  resetReviewDataCache();
+  let calls = 0;
+  const retryButton = { addEventListener(type, handler) { this.handler = handler; }, removeEventListener() {} };
+  const app = {
+    innerHTML: '', querySelector(selector) { return selector === '[data-retry-review]' ? retryButton : null; },
+    querySelectorAll() { return []; }, addEventListener() {}, removeEventListener() {}, focus() {},
+  };
+  const fetchImpl = async () => {
+    calls += 1;
+    if (calls === 1) throw Object.assign(new Error('aborted'), { name: 'AbortError' });
+    return { ok: true, json: async () => reviewData };
+  };
+  mountReviewRoute(app, { name: 'review-index' }, {
+    fetchImpl, storage: fakeStorage(),
+    documentRef: { addEventListener() {}, removeEventListener() {} }, windowRef: { location: {} },
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.match(app.innerHTML, /data-review-error/);
+  retryButton.handler();
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls, 2);
+  assert.match(app.innerHTML, /review-index-view/);
+
+  resetReviewDataCache();
+  const request = deferred();
+  const staleApp = { innerHTML: '', querySelector() { return null; }, querySelectorAll() { return []; }, addEventListener() {}, removeEventListener() {}, focus() {} };
+  const cleanup = mountReviewRoute(staleApp, { name: 'review-index' }, {
+    fetchImpl: () => request.promise, storage: fakeStorage(),
+    documentRef: { addEventListener() {}, removeEventListener() {} }, windowRef: { location: {} },
+  });
+  cleanup();
+  staleApp.innerHTML = '<p>current route</p>';
+  request.reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(staleApp.innerHTML, '<p>current route</p>');
+});
+
+test('a malformed cached payload renders retry UI and a forced retry recovers', async () => {
+  resetReviewDataCache();
+  let calls = 0;
+  let cached = true;
+  const routeFetch = async () => {
+    calls += 1;
+    return { ok: true, json: async () => (cached ? {} : reviewData) };
+  };
+  await loadReviewData(routeFetch);
+  cached = false;
+  const retryButton = { addEventListener(type, handler) { this.handler = handler; }, removeEventListener() {} };
+  const app = {
+    innerHTML: '', querySelector(selector) { return selector === '[data-retry-review]' ? retryButton : null; },
+    querySelectorAll() { return []; }, addEventListener() {}, removeEventListener() {}, focus() {},
+  };
+  mountReviewRoute(app, { name: 'review-index' }, {
+    fetchImpl: routeFetch, storage: fakeStorage(),
+    documentRef: { addEventListener() {}, removeEventListener() {} }, windowRef: { location: {} },
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.match(app.innerHTML, /data-review-error/);
+  retryButton.handler();
   await new Promise((resolve) => setImmediate(resolve));
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(calls, 2);
