@@ -115,6 +115,30 @@ test('film fullscreen button requests fullscreen for the stage and exits on its 
   assert.equal(harness.documentRef.exitCalls, 1);
 });
 
+test('film fullscreen is announced as unavailable when the stage has no fullscreen API', () => {
+  const harness = createFilmFullscreenHarness();
+  delete harness.stage.requestFullscreen;
+  bindFilmFullscreen(harness.root, { documentRef: harness.documentRef });
+
+  assert.equal(harness.button.disabled, true);
+  assert.equal(harness.button.getAttribute('aria-disabled'), 'true');
+  assert.equal(harness.button.getAttribute('aria-pressed'), 'false');
+  assert.match(harness.button.getAttribute('aria-label'), /不可用/);
+});
+
+test('a rejected fullscreen request disables the unavailable control without an unhandled rejection', async () => {
+  const harness = createFilmFullscreenHarness();
+  harness.stage.requestFullscreen = () => Promise.reject(new Error('permission denied'));
+  bindFilmFullscreen(harness.root, { documentRef: harness.documentRef });
+
+  harness.button.dispatch('click');
+  await Promise.resolve();
+
+  assert.equal(harness.button.disabled, true);
+  assert.equal(harness.button.getAttribute('aria-disabled'), 'true');
+  assert.match(harness.button.getAttribute('aria-label'), /不可用/);
+});
+
 test('film fullscreen immediately escapes video-only and WebKit fullscreen fallbacks', () => {
   const harness = createFilmFullscreenHarness();
   bindFilmFullscreen(harness.root, { documentRef: harness.documentRef });

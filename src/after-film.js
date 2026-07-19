@@ -216,6 +216,14 @@ export function bindFilmFullscreen(
   if (!stage || !video || !button) return () => {};
 
   let active = true;
+  let unavailable = typeof stage.requestFullscreen !== 'function';
+  const markUnavailable = () => {
+    unavailable = true;
+    button.disabled = true;
+    button.setAttribute?.('aria-disabled', 'true');
+    button.setAttribute?.('aria-pressed', 'false');
+    button.setAttribute?.('aria-label', '全屏观看不可用');
+  };
   const safely = (callback) => {
     try {
       const result = callback();
@@ -226,6 +234,12 @@ export function bindFilmFullscreen(
   };
   const sync = () => {
     if (!active) return;
+    if (unavailable) {
+      markUnavailable();
+      return;
+    }
+    button.disabled = false;
+    button.setAttribute?.('aria-disabled', 'false');
     const stageIsFullscreen = documentRef?.fullscreenElement === stage;
     button.setAttribute?.('aria-pressed', String(stageIsFullscreen));
     button.setAttribute?.('aria-label', stageIsFullscreen ? '退出全屏观看' : '全屏观看');
@@ -236,7 +250,12 @@ export function bindFilmFullscreen(
       safely(() => documentRef?.exitFullscreen?.());
       return;
     }
-    safely(() => stage.requestFullscreen?.());
+    try {
+      const result = stage.requestFullscreen();
+      result?.catch?.(() => markUnavailable());
+    } catch {
+      markUnavailable();
+    }
   };
   const handleFullscreenChange = () => {
     if (!active) return;
