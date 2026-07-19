@@ -207,7 +207,7 @@ export function buildReviewPage(data, target) {
   const blocks = chapter.pages[pageIndex];
   const section = blocks.find((block) => block.section)?.section || chapter.title;
   const isChapterOpener = pageIndex === 0;
-  const firstHeadingIndex = isChapterOpener ? -1 : blocks.findIndex((block) => block.type === 'heading');
+  const firstHeadingIndex = !isChapterOpener && blocks[0]?.type === 'heading' ? 0 : -1;
   const hasSectionTitle = firstHeadingIndex >= 0;
   const readerLabel = `复盘阅读：${chapter.title} · ${section}`;
   const articleLabel = hasSectionTitle ? 'aria-labelledby="review-section-title"' : `aria-label="${escapeHtml(readerLabel)}"`;

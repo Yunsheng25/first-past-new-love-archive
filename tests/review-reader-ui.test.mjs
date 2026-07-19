@@ -148,20 +148,32 @@ test('all 51 media occurrences render in place and both duplicate occurrences re
   assert.deepEqual(renderedMedia, expectedMedia);
 });
 
-test('chapter title is an opener-only heading and continuation pages use their section heading', () => {
+test('chapter title is an opener-only heading and a heading-led continuation uses its section heading', () => {
   const chapter = reviewData.chapters.find((item) => item.slug === 'production');
   const opener = buildReviewPage(reviewData, normalizeReviewTarget(reviewData, chapter.slug, 1));
-  const continuation = buildReviewPage(reviewData, normalizeReviewTarget(reviewData, chapter.slug, 2));
-  const firstHeadingIndex = chapter.pages[1].findIndex((block) => block.type === 'heading');
+  const continuation = buildReviewPage(reviewData, normalizeReviewTarget(reviewData, chapter.slug, 4));
 
   assert.match(opener, /<article class="review-paper-content review-chapter-opener"[^>]*data-review-page="opener"/);
   assert.match(opener, /<h1 id="review-reader-title">/);
   assert.match(continuation, /<article class="review-paper-content"[^>]*data-review-page="continuation"[^>]*aria-labelledby="review-section-title"/);
   assert.doesNotMatch(continuation, /review-chapter-opener/);
   assert.doesNotMatch(continuation, /<h1 id="review-reader-title">/);
-  assert.match(continuation, new RegExp(`<h[3-5] class="review-block review-heading" data-block-type="heading" data-block-index="${firstHeadingIndex}" id="review-section-title">`));
+  assert.match(continuation, /<h[3-5] class="review-block review-heading" data-block-type="heading" data-block-index="0" id="review-section-title">/);
   assert.match(continuation, /<div class="review-blocks" aria-labelledby="review-section-title">/);
-  assert.deepEqual(renderedSignature(continuation), expectedSignature(chapter, 1));
+  assert.deepEqual(renderedSignature(continuation), expectedSignature(chapter, 3));
+});
+
+test('split continuation uses a page label instead of a later heading', () => {
+  const chapter = reviewData.chapters.find((item) => item.slug === 'production');
+  const html = buildReviewPage(reviewData, normalizeReviewTarget(reviewData, chapter.slug, 2));
+  const laterHeadingIndex = chapter.pages[1].findIndex((block) => block.type === 'heading');
+
+  assert.ok(laterHeadingIndex > 0);
+  assert.match(html, /<article class="review-paper-content"[^>]*data-review-page="continuation"[^>]*aria-label="[^"]+"/);
+  assert.doesNotMatch(html, /review-section-title/);
+  assert.doesNotMatch(html, /<div class="review-blocks"[^>]*aria-labelledby/);
+  assert.match(html, new RegExp(`data-block-index="${laterHeadingIndex}"(?![^>]*review-section-title)`));
+  assert.deepEqual(renderedSignature(html), expectedSignature(chapter, 1));
 });
 
 test('headingless continuation has an article label without a dangling section reference', () => {
