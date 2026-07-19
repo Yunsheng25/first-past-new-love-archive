@@ -136,3 +136,98 @@ test('destroy pauses and prevents future playback', async () => {
   assert.equal(await manager.leaveFilm(), false);
   assert.equal(audio.playCalls, 1);
 });
+
+test('startFromGesture is idempotent for sequential and concurrent gestures', async () => {
+  let resolvePlay;
+  const audio = createFakeAudio({
+    playResult: new Promise((resolve) => { resolvePlay = resolve; }),
+  });
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  const first = manager.startFromGesture();
+  const second = manager.startFromGesture();
+  assert.equal(audio.playCalls, 1);
+  resolvePlay();
+  assert.deepEqual(await Promise.all([first, second]), [true, true]);
+
+  assert.equal(await manager.startFromGesture(), true);
+  assert.equal(audio.playCalls, 1);
+});
+
+test('a stale enter-film fade cannot pause BGM after leaving film mode', async () => {
+  let resolveFilmFade;
+  const audio = createFakeAudio();
+  const fade = async (_player, target) => {
+    if (target === 0) await new Promise((resolve) => { resolveFilmFade = resolve; });
+    audio.volume = target;
+  };
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade });
+
+  await manager.startFromGesture();
+  const entering = manager.enterFilm();
+  await manager.leaveFilm();
+  resolveFilmFade();
+  await entering;
+
+  assert.equal(audio.paused, false);
+  assert.equal(audio.pauseCalls, 0);
+});
+
+test('no available Audio safely enters film mode and disables BGM', async () => {
+  const originalAudio = globalThis.Audio;
+  try {
+    delete globalThis.Audio;
+    const storage = createFakeStorage();
+    const fade = () => { throw new Error('fade must not receive a missing player'); };
+    const manager = createAudioManager({ storage, fade });
+
+    await assert.doesNotReject(manager.enterFilm());
+    assert.equal(await manager.toggle(), false);
+    assert.equal(storage.value(BGM_PREFERENCE_KEY), 'false');
+    assert.deepEqual(manager.state(), { enabled: false, gestureReceived: false, filmActive: true, unavailable: true, playing: false });
+  } finally {
+    if (originalAudio === undefined) delete globalThis.Audio;
+    else globalThis.Audio = originalAudio;
+  }
+});
+
+test('volume fade honors injected scheduler cancellation and settles superseded work', async () => {
+  const scheduled = [];
+  const cancelled = [];
+  const fade = createVolumeFade({
+    schedule(callback) { scheduled.push(callback); return callback; },
+    cancel(handle) { cancelled.push(handle); },
+  });
+  const audio = { volume: 1 };
+
+  const first = fade(audio, 0, 100);
+  assert.equal(scheduled.length, 1);
+  const second = fade(audio, 0.5, 100);
+  await first;
+  assert.equal(cancelled.length, 1);
+  fade.cancel();
+  await second;
+  assert.equal(cancelled.length, 2);
+
+  await fade(audio, 0.4, -1);
+  assert.equal(audio.volume, 0.4);
+});
+
+test('destroy during a fade settles the pending call without stale side effects', async () => {
+  const audio = createFakeAudio();
+  const pending = [];
+  const fade = (_player, target) => new Promise((resolve) => { pending.push({ resolve, target }); });
+  fade.cancel = () => pending.splice(0).forEach(({ resolve }) => resolve());
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade });
+
+  const start = manager.startFromGesture();
+  await Promise.resolve();
+  pending.shift().resolve();
+  await start;
+  const disabling = manager.toggle();
+  manager.destroy();
+  await disabling;
+
+  assert.equal(audio.pauseCalls, 1);
+  assert.equal(audio.playCalls, 1);
+});

@@ -63,6 +63,7 @@ export function createAudioManager({ audio, storage, fade } = {}) {
   let unavailable = !player;
   let destroyed = false;
   let transition = 0;
+  let resumePromise = null;
 
   if (player) {
     player.loop = true;
@@ -73,26 +74,37 @@ export function createAudioManager({ audio, storage, fade } = {}) {
   const pause = () => { player?.pause(); };
 
   const fadeTo = async (target, duration) => {
+    if (!player) return false;
     const currentTransition = ++transition;
     await volumeFade(player, target, duration);
     return !destroyed && currentTransition === transition;
   };
 
-  const resume = async () => {
+  const resume = () => {
     if (destroyed || !enabled || !gestureReceived || filmActive || unavailable || !player) return false;
-    try {
-      await player.play();
-    } catch {
-      unavailable = true;
-      pause();
-      return false;
-    }
-    if (destroyed || filmActive || !enabled) {
-      pause();
-      return false;
-    }
-    await fadeTo(BGM_VOLUME, 280);
-    return !destroyed && !filmActive && enabled && !unavailable;
+    if (resumePromise) return resumePromise;
+    if (isPlaying()) return true;
+
+    const operation = (async () => {
+      try {
+        await player.play();
+      } catch {
+        unavailable = true;
+        pause();
+        return false;
+      }
+      if (destroyed || filmActive || !enabled) {
+        pause();
+        return false;
+      }
+      const completed = await fadeTo(BGM_VOLUME, 280);
+      return completed && !destroyed && !filmActive && enabled && !unavailable;
+    })();
+    resumePromise = operation;
+    operation.finally(() => {
+      if (resumePromise === operation) resumePromise = null;
+    });
+    return operation;
   };
 
   return {
@@ -104,13 +116,14 @@ export function createAudioManager({ audio, storage, fade } = {}) {
     async enterFilm() {
       if (destroyed) return false;
       filmActive = true;
-      await fadeTo(0, 360);
-      pause();
-      return true;
+      const completed = await fadeTo(0, 360);
+      if (completed) pause();
+      return completed;
     },
     async leaveFilm() {
       if (destroyed) return false;
       filmActive = false;
+      transition += 1;
       return resume();
     },
     async toggle() {
@@ -118,8 +131,8 @@ export function createAudioManager({ audio, storage, fade } = {}) {
       enabled = !enabled;
       preferenceStore?.setItem(BGM_PREFERENCE_KEY, String(enabled));
       if (!enabled) {
-        await fadeTo(0, 280);
-        pause();
+        const completed = await fadeTo(0, 280);
+        if (completed) pause();
         return false;
       }
       return resume();
