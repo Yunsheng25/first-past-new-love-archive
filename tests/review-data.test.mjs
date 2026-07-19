@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { paginateBlocks, parseReview, writeReviewData } from "../scripts/build-review-data.mjs";
+import { paginateBlocks, parseReview, replaceOutputs, writeReviewData } from "../scripts/build-review-data.mjs";
 
 const reviewPath = "D:/\u9ed1\u66dc\u77f3/\u4ea7\u54c1\u8d44\u6599/\u300a\u521d\u604b\u65e7\u7231\u65b0\u6b22\u300b\u89c6\u9891\u590d\u76d8/\u300a\u521d\u604b\u65e7\u7231\u65b0\u6b22\u300b\u590d\u76d8\u624b\u8bb0.md";
 const obsidianRoot = "D:/\u9ed1\u66dc\u77f3";
@@ -21,6 +21,30 @@ const expectedChapters = [
 ];
 
 const chapterByTitle = new Map(expectedChapters.map(([slug, title]) => [title, slug]));
+
+test("review promotion continues after persistent cleanup failures and attempts both exact backups", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-promotion-cleanup-"));
+  const mediaOutputDir = path.join(tempDir, "media");
+  const temporaryMediaDir = path.join(tempDir, "media-next");
+  const outputPath = path.join(tempDir, "review.json");
+  const temporaryOutputPath = path.join(tempDir, "review-next.json");
+  fs.mkdirSync(mediaOutputDir); fs.mkdirSync(temporaryMediaDir);
+  fs.writeFileSync(path.join(mediaOutputDir, "old"), "old"); fs.writeFileSync(path.join(temporaryMediaDir, "new"), "new");
+  fs.writeFileSync(outputPath, "old"); fs.writeFileSync(temporaryOutputPath, "new");
+  const attempted = []; const warnings = [];
+  try {
+    replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath }, {
+      remove(target) { attempted.push(target); throw new Error("locked"); },
+      onCleanupWarning: (warning) => warnings.push(warning),
+      sleep() {},
+    });
+    assert.equal(fs.readFileSync(path.join(mediaOutputDir, "new"), "utf8"), "new");
+    assert.equal(fs.readFileSync(outputPath, "utf8"), "new");
+    assert.ok(attempted.some((target) => target.includes(".media.backup-")));
+    assert.ok(attempted.some((target) => target.includes(".review.json.backup-")));
+    assert.ok(warnings.length >= 2);
+  } finally { fs.rmSync(tempDir, { recursive: true, force: true }); }
+});
 
 function independentMediaDetails(rawRef) {
   const ref = rawRef.split("|")[0].trim();

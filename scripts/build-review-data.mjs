@@ -329,7 +329,24 @@ function reviewOutputIsCurrent(outputPath, payload, mediaOutputDir, media, sourc
   }
 }
 
-function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath }) {
+function cleanupAfterPromotion(targetPath, options, operations, warnings) {
+  const remove = operations.remove || fs.rmSync;
+  const onCleanupWarning = operations.onCleanupWarning || (() => {});
+  const sleep = operations.sleep || (() => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25));
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      remove(targetPath, { ...options, maxRetries: 6, retryDelay: 50 });
+      return true;
+    } catch (error) {
+      const warning = new Error(`Review backup cleanup attempt ${attempt} failed for ${targetPath}: ${error.message}`);
+      warnings.push(warning); onCleanupWarning(warning);
+      if (attempt < 3) sleep();
+    }
+  }
+  return false;
+}
+
+export function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath }, operations = {}) {
   const mediaBackup = temporarySibling(mediaOutputDir, "backup");
   const outputBackup = temporarySibling(outputPath, "backup");
   let mediaBackedUp = false;
@@ -358,8 +375,10 @@ function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, tempora
     throw error;
   }
 
-  if (mediaBackedUp) fs.rmSync(mediaBackup, { recursive: true, force: true, maxRetries: 6, retryDelay: 50 });
-  if (outputBackedUp) fs.rmSync(outputBackup, { force: true, maxRetries: 6, retryDelay: 50 });
+  const warnings = [];
+  if (mediaBackedUp) cleanupAfterPromotion(mediaBackup, { recursive: true, force: true }, operations, warnings);
+  if (outputBackedUp) cleanupAfterPromotion(outputBackup, { force: true }, operations, warnings);
+  return { cleanupWarnings: warnings };
 }
 
 function reviewMedia(review) {
