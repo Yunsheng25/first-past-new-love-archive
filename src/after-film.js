@@ -176,11 +176,14 @@ export function bindFilmExit(
     }
   };
   const handleClick = (event) => {
+    if (!active || exited) return;
     event?.preventDefault?.();
     exitFilm();
   };
   const handleKeydown = (event) => {
-    if (event?.key === 'Escape') exitFilm();
+    if (event?.key !== 'Escape' || !active || exited) return;
+    event?.preventDefault?.();
+    exitFilm();
   };
 
   exitControl.addEventListener?.('click', handleClick);

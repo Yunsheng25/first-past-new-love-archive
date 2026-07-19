@@ -53,6 +53,7 @@ function fakeEventTarget() {
       for (const listener of listeners.get(type) ?? []) listener({ type, ...event });
     },
     listenerCount(type) { return (listeners.get(type) ?? []).length; },
+    listener(type) { return (listeners.get(type) ?? [])[0]; },
   };
 }
 
@@ -98,9 +99,11 @@ test('film exit responds only to Escape and remains idempotent across repeated i
   assert.equal(harness.video.pauseCalls, 0);
   assert.deepEqual(harness.destinations, []);
 
-  harness.documentRef.dispatch('keydown', { key: 'Escape' });
+  let escapePrevented = false;
+  harness.documentRef.dispatch('keydown', { key: 'Escape', preventDefault() { escapePrevented = true; } });
   harness.exit.dispatch('click', { preventDefault() {} });
   harness.documentRef.dispatch('keydown', { key: 'Escape' });
+  assert.equal(escapePrevented, true);
   assert.equal(harness.video.pauseCalls, 1);
   assert.deepEqual(harness.destinations, ['#after']);
 });
@@ -114,12 +117,18 @@ test('film exit cleanup removes exact listeners and makes queued events inert', 
 
   assert.equal(harness.exit.listenerCount('click'), 1);
   assert.equal(harness.documentRef.listenerCount('keydown'), 1);
+  const staleClick = harness.exit.listener('click');
+  const staleKeydown = harness.documentRef.listener('keydown');
   cleanup();
   cleanup();
-  harness.exit.dispatch('click', { preventDefault() {} });
-  harness.documentRef.dispatch('keydown', { key: 'Escape' });
+  let clickPrevented = false;
+  let keyPrevented = false;
+  staleClick({ preventDefault() { clickPrevented = true; } });
+  staleKeydown({ key: 'Escape', preventDefault() { keyPrevented = true; } });
   assert.equal(harness.exit.listenerCount('click'), 0);
   assert.equal(harness.documentRef.listenerCount('keydown'), 0);
+  assert.equal(clickPrevented, false);
+  assert.equal(keyPrevented, false);
   assert.equal(harness.video.pauseCalls, 0);
   assert.deepEqual(harness.destinations, []);
 });
