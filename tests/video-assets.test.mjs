@@ -15,6 +15,7 @@ const BUILD_SCRIPT = path.join(PROJECT_ROOT, "scripts", "build-video-assets.ps1"
 const FFMPEG = "C:\\Users\\chenx\\AppData\\Local\\JianyingPro\\Apps\\10.9.0.14199\\ffmpeg.exe";
 const POWERSHELL = "powershell.exe";
 const FIXTURE_PARENT = mkdtempSync(path.join(tmpdir(), "first-love-video-assets-"));
+const VERSIONED_VIDEO_LIMIT = 100 * 1024 * 1024;
 
 function removeFixtureTree(target) {
   rmSync(target, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
@@ -43,10 +44,30 @@ function scriptArgs(workspace, source, extra = []) {
     "-Ffmpeg", FFMPEG,
     "-BackgroundEncoder", "h264_qsv",
     "-BackgroundVideoBitrate", "700k",
+    "-FullFilmEncoder", "h264_qsv",
+    "-FullFilmVideoBitrate", "900k",
+    "-FullFilmAudioBitrate", "96k",
     "-AllowTemporaryWorkspace",
     ...extra,
   ];
 }
+
+test("the two website video assets are versioned and small enough for a clean checkout", () => {
+  const expected = [
+    "assets/video/intro-background.mp4",
+    "assets/video/full-film.mp4",
+  ];
+  const tracked = execFileSync("git", ["ls-files", "--", "assets/video"], {
+    cwd: PROJECT_ROOT,
+    encoding: "utf8",
+  }).trim().split(/\r?\n/).filter(Boolean).sort();
+
+  assert.deepEqual(tracked, expected.slice().sort());
+  for (const relative of expected) {
+    const size = statSync(path.join(PROJECT_ROOT, relative)).size;
+    assert.ok(size > 0 && size < VERSIONED_VIDEO_LIMIT, `${relative} must be present and under 100 MiB`);
+  }
+});
 
 function makeFixture(t) {
   const fixtureRoot = path.join(FIXTURE_PARENT, `${process.pid}-${Date.now()}`);
@@ -130,10 +151,13 @@ test("build creates a four-times-speed silent background and a stream-compatible
   assertFastStart(backgroundPath);
 
   assert.ok(Math.abs(fullFilm.durationSeconds - input.durationSeconds) <= 0.05);
-  assert.equal(fullFilm.video.codec, input.video.codec);
-  assert.equal(fullFilm.audio.codec, input.audio.codec);
+  assert.equal(fullFilm.video.codec, "h264");
+  assert.equal(fullFilm.video.pixelFormat, "yuv420p");
+  assert.ok(fullFilm.video.width <= Math.min(1280, input.video.width));
+  assert.ok(fullFilm.video.height <= Math.min(720, input.video.height));
+  assert.equal(fullFilm.audio.codec, "aac");
   assert.equal(fullFilm.audio.sampleRate, input.audio.sampleRate);
-  assert.ok(statSync(fullFilmPath).size <= statSync(source).size * 1.02);
+  assert.ok(statSync(fullFilmPath).size < statSync(source).size);
   assertFastStart(fullFilmPath);
 
   assert.deepEqual({ hash: sha256(source), mtimeMs: statSync(source).mtimeMs }, before);

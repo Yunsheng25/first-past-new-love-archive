@@ -3,11 +3,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import crypto from "node:crypto";
 
 import { paginateBlocks, parseReview, writeReviewData } from "../scripts/build-review-data.mjs";
 
 const reviewPath = "D:/\u9ed1\u66dc\u77f3/\u4ea7\u54c1\u8d44\u6599/\u300a\u521d\u604b\u65e7\u7231\u65b0\u6b22\u300b\u89c6\u9891\u590d\u76d8/\u300a\u521d\u604b\u65e7\u7231\u65b0\u6b22\u300b\u590d\u76d8\u624b\u8bb0.md";
 const obsidianRoot = "D:/\u9ed1\u66dc\u77f3";
+const committedReviewPath = "data/review.json";
+const committedMediaDir = "assets/review-media";
 const originTitle = "\u9879\u76ee\u7f18\u8d77\uff1a\u6211\u4e3a\u4ec0\u4e48\u8981\u505a\u8fd9\u4e2a\u89c6\u9891";
 const expectedChapters = [
   ["origin", originTitle],
@@ -17,11 +20,196 @@ const expectedChapters = [
   ["closing", "\u5199\u5728\u6700\u540e"],
 ];
 
+const chapterByTitle = new Map(expectedChapters.map(([slug, title]) => [title, slug]));
+
+function independentMediaDetails(rawRef) {
+  const ref = rawRef.split("|")[0].trim();
+  const extension = path.extname(ref).toLowerCase();
+  const type = [".png", ".jpg", ".jpeg", ".webp", ".gif"].includes(extension)
+    ? "image"
+    : [".mp4", ".webm", ".mov"].includes(extension)
+      ? "video"
+      : "media";
+  return { type, ref };
+}
+
+function independentStableName(ref, number) {
+  const basename = path.win32.basename(ref).replace(/[<>:"/\\|?*\x00-\x1F]/g, "-");
+  return `${String(number).padStart(3, "0")}-${basename}`;
+}
+
+function independentlyParseAuthoredBlocks(markdown) {
+  const chapters = [];
+  let chapter;
+  let section;
+  let paragraph = [];
+
+  const appendText = (text) => {
+    const normalized = text.replace(/\r?\n/g, "\n").trim();
+    if (normalized) chapter.blocks.push({ type: "text", text: normalized, section: section.title });
+  };
+  const flushParagraph = () => {
+    if (!chapter || paragraph.length === 0) return;
+    const text = paragraph.map((line) => line.replace(/^\s*>\s?/, "")).join("\n");
+    const embeds = /!\[\[([^\]]+)\]\]/g;
+    let cursor = 0;
+    let match;
+    while ((match = embeds.exec(text))) {
+      appendText(text.slice(cursor, match.index));
+      const rawRef = match[1].trim();
+      chapter.blocks.push({ ...independentMediaDetails(rawRef), rawRef, section: section.title });
+      cursor = match.index + match[0].length;
+    }
+    appendText(text.slice(cursor));
+    paragraph = [];
+  };
+
+  for (const line of String(markdown).replace(/^\uFEFF/, "").split(/\r?\n/)) {
+    const heading = line.match(/^(#{2,6})\s+(.+?)\s*#*\s*$/);
+    if (heading) {
+      flushParagraph();
+      const level = heading[1].length;
+      const title = heading[2];
+      const slug = level === 2 ? chapterByTitle.get(title) : undefined;
+      if (slug) {
+        chapter = { slug, title, sections: [], blocks: [] };
+        chapters.push(chapter);
+        section = { title, level, index: 0 };
+        chapter.sections.push(section);
+      } else if (chapter) {
+        section = { title, level, index: chapter.blocks.length };
+        chapter.sections.push(section);
+        chapter.blocks.push({ type: "heading", text: title, level, section: title });
+      }
+    } else if (chapter && line.trim() === "") {
+      flushParagraph();
+    } else if (chapter) {
+      paragraph.push(line);
+    }
+  }
+  flushParagraph();
+
+  const srcByRef = new Map();
+  let uniqueNumber = 0;
+  for (const item of chapters) {
+    for (const block of item.blocks) {
+      if (!["image", "video", "media"].includes(block.type)) continue;
+      if (!srcByRef.has(block.ref)) {
+        srcByRef.set(block.ref, `assets/review-media/${independentStableName(block.ref, ++uniqueNumber)}`);
+      }
+      block.src = srcByRef.get(block.ref);
+    }
+  }
+  return chapters;
+}
+
+function normalizeVaultRef(ref) {
+  return String(ref).replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/\/+/g, "/").toLowerCase();
+}
+
+function independentlyResolveSourceMedia(refs, vaultRoot) {
+  const wantedBasenames = new Set(refs.map((ref) => path.posix.basename(normalizeVaultRef(ref))));
+  const byBasename = new Map();
+  const byRelativePath = new Map();
+  const walk = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+        continue;
+      }
+      const relativePath = normalizeVaultRef(path.relative(vaultRoot, fullPath));
+      const basename = path.posix.basename(relativePath);
+      if (!wantedBasenames.has(basename)) continue;
+      byRelativePath.set(relativePath, fullPath);
+      byBasename.set(basename, [...(byBasename.get(basename) || []), fullPath]);
+    }
+  };
+  walk(vaultRoot);
+
+  return new Map(refs.map((ref) => {
+    const normalized = normalizeVaultRef(ref);
+    if (normalized.includes("/")) {
+      const source = byRelativePath.get(normalized);
+      assert.ok(source, `independent source resolution for ${ref}`);
+      return [ref, source];
+    }
+    const candidates = byBasename.get(path.posix.basename(normalized)) || [];
+    assert.equal(candidates.length, 1, `independent source resolution for ${ref}`);
+    return [ref, candidates[0]];
+  }));
+}
+
+function sha256(filePath) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function assertReviewAssetIntegrity(mediaDirectory) {
+  const authored = independentlyParseAuthoredBlocks(fs.readFileSync(reviewPath, "utf8"));
+  const media = authored.flatMap((chapter) => chapter.blocks)
+    .filter((block) => ["image", "video", "media"].includes(block.type));
+  const refs = [...new Set(media.map((block) => block.ref))];
+  const sourceByRef = independentlyResolveSourceMedia(refs, obsidianRoot);
+  const expectedLocalNames = refs.map((ref, index) => independentStableName(ref, index + 1));
+
+  assert.equal(media.length, 51);
+  assert.equal(refs.length, 49);
+  assert.deepEqual(fs.readdirSync(mediaDirectory).sort(), expectedLocalNames.toSorted());
+  for (const [index, ref] of refs.entries()) {
+    const localPath = path.join(mediaDirectory, expectedLocalNames[index]);
+    assert.equal(sha256(localPath), sha256(sourceByRef.get(ref)), `SHA-256 mismatch for ${ref}`);
+  }
+}
+
 function mediaBlocks(review) {
   return review.chapters.flatMap((chapter) =>
     chapter.blocks.filter((block) => block.type === "image" || block.type === "video"),
   );
 }
+
+test("committed review JSON preserves every independently parsed authored block and page occurrence", () => {
+  const expected = independentlyParseAuthoredBlocks(fs.readFileSync(reviewPath, "utf8"));
+  const committed = JSON.parse(fs.readFileSync(committedReviewPath, "utf8"));
+
+  assert.deepEqual(
+    committed.chapters.map(({ slug, title, sections, blocks }) => ({ slug, title, sections, blocks })),
+    expected,
+  );
+  assert.equal(committed.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0), 27);
+  for (const chapter of committed.chapters) {
+    assert.ok(chapter.pages.every((page) => page.length > 0), `${chapter.slug} has no empty page`);
+    assert.deepEqual(chapter.pages.flat(), chapter.blocks, `${chapter.slug} pages preserve its complete block sequence`);
+  }
+
+  const media = mediaBlocks(committed);
+  assert.equal(media.length, 51);
+  assert.equal(new Set(media.map((block) => block.ref)).size, 49);
+});
+
+test("every committed review asset has the independently resolved source SHA-256 for its authored ref", () => {
+  assertReviewAssetIntegrity(committedMediaDir);
+});
+
+test("review asset integrity rejects two authored destination files whose contents are swapped", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-media-swap-"));
+  const names = fs.readdirSync(committedMediaDir).sort();
+  try {
+    for (const name of names) {
+      fs.linkSync(path.resolve(committedMediaDir, name), path.join(tempDir, name));
+    }
+    fs.rmSync(path.join(tempDir, names[0]));
+    fs.rmSync(path.join(tempDir, names[1]));
+    fs.linkSync(path.resolve(committedMediaDir, names[1]), path.join(tempDir, names[0]));
+    fs.linkSync(path.resolve(committedMediaDir, names[0]), path.join(tempDir, names[1]));
+
+    assert.throws(
+      () => assertReviewAssetIntegrity(tempDir),
+      /SHA-256 mismatch for Pasted image 20260619214557\.png/,
+    );
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
 
 test("parseReview extracts the five authored chapters, sections, and every media occurrence", () => {
   const markdown = fs.readFileSync(reviewPath, "utf8");
@@ -113,7 +301,7 @@ test("writeReviewData copies all media and writes readable UTF-8 pages", () => {
   const mediaOutputDir = path.join(tempDir, "review-media");
 
   try {
-    const review = writeReviewData({ markdownPath: reviewPath, obsidianRoot, outputPath, mediaOutputDir });
+    const review = writeReviewData({ workspace: tempDir, markdownPath: reviewPath, obsidianRoot, outputPath, mediaOutputDir });
     const written = JSON.parse(fs.readFileSync(outputPath, "utf8"));
     const media = mediaBlocks(review);
     const pageCount = review.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0);
@@ -146,6 +334,7 @@ test("writeReviewData reports every missing media filename", () => {
     let error;
     assert.throws(
       () => writeReviewData({
+        workspace: tempDir,
         markdownPath: fixturePath,
         obsidianRoot: vaultDir,
         outputPath: path.join(tempDir, "review.json"),
@@ -154,6 +343,7 @@ test("writeReviewData reports every missing media filename", () => {
     );
     try {
       writeReviewData({
+        workspace: tempDir,
         markdownPath: fixturePath,
         obsidianRoot: vaultDir,
         outputPath: path.join(tempDir, "review.json"),
@@ -183,6 +373,7 @@ test("writeReviewData copies fixture media into the requested media directory", 
 
   try {
     const review = writeReviewData({
+      workspace: tempDir,
       markdownPath: fixturePath,
       obsidianRoot: sourceDir,
       outputPath: path.join(tempDir, "review.json"),
@@ -211,6 +402,7 @@ test("writeReviewData resolves directory-qualified duplicate basenames and rejec
   try {
     fs.writeFileSync(fixturePath, `## ${originTitle}\n\n![[a/same.png]] ![[b/same.png]]`, "utf8");
     const qualified = writeReviewData({
+      workspace: tempDir,
       markdownPath: fixturePath,
       obsidianRoot: vaultDir,
       outputPath: path.join(tempDir, "review.json"),
@@ -224,6 +416,7 @@ test("writeReviewData resolves directory-qualified duplicate basenames and rejec
     let error;
     try {
       writeReviewData({
+        workspace: tempDir,
         markdownPath: fixturePath,
         obsidianRoot: vaultDir,
         outputPath: path.join(tempDir, "review.json"),
@@ -319,6 +512,47 @@ test("writeReviewData protects workspace, source, and output path boundaries", (
   }
 });
 
+test("writeReviewData rejects sibling outputs before changing external markers", async (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-workspace-boundary-"));
+  const workspace = path.join(tempDir, "workspace");
+  const vaultDir = path.join(tempDir, "vault");
+  const markdownPath = path.join(tempDir, "notes", "fixture.md");
+  const externalMedia = path.join(tempDir, "external-media");
+  const externalOutput = path.join(tempDir, "external-review.json");
+  fs.mkdirSync(workspace, { recursive: true });
+  fs.mkdirSync(vaultDir, { recursive: true });
+  fs.mkdirSync(path.dirname(markdownPath), { recursive: true });
+  fs.mkdirSync(externalMedia, { recursive: true });
+  fs.writeFileSync(path.join(vaultDir, "asset.png"), "source", "utf8");
+  fs.writeFileSync(markdownPath, `## ${originTitle}\n\n![[asset.png]]`, "utf8");
+  fs.writeFileSync(path.join(externalMedia, "marker.txt"), "media marker", "utf8");
+  fs.writeFileSync(externalOutput, "output marker", "utf8");
+
+  try {
+    await t.test("rejects mediaOutputDir outside workspace", () => {
+      assert.throws(() => writeReviewData({
+        workspace,
+        markdownPath,
+        obsidianRoot: vaultDir,
+        mediaOutputDir: externalMedia,
+      }), /Unsafe media output directory/);
+      assert.equal(fs.readFileSync(path.join(externalMedia, "marker.txt"), "utf8"), "media marker");
+    });
+
+    await t.test("rejects outputPath outside workspace", () => {
+      assert.throws(() => writeReviewData({
+        workspace,
+        markdownPath,
+        obsidianRoot: vaultDir,
+        outputPath: externalOutput,
+      }), /Unsafe review output path/);
+      assert.equal(fs.readFileSync(externalOutput, "utf8"), "output marker");
+    });
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("writeReviewData keeps existing output intact when copying fails", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-atomic-"));
   const sourceDir = path.join(tempDir, "source");
@@ -336,6 +570,7 @@ test("writeReviewData keeps existing output intact when copying fails", () => {
 
   try {
     assert.throws(() => writeReviewData({
+      workspace: tempDir,
       markdownPath: fixturePath,
       obsidianRoot: sourceDir,
       outputPath,
@@ -365,6 +600,7 @@ test("writeReviewData accepts an injected clock for reproducible metadata", () =
 
   try {
     writeReviewData({
+      workspace: tempDir,
       markdownPath: fixturePath,
       obsidianRoot: vaultDir,
       outputPath,
@@ -390,6 +626,7 @@ test("writeReviewData reports indexing and copy stages", () => {
 
   try {
     writeReviewData({
+      workspace: tempDir,
       markdownPath: fixturePath,
       obsidianRoot: sourceDir,
       outputPath: path.join(tempDir, "review.json"),

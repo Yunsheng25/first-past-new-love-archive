@@ -5,7 +5,12 @@ param(
     [string]$WorkspaceRoot,
     [string]$BackgroundEncoder = 'h264_qsv',
     [ValidatePattern('^\d+[kKmM]$')]
-    [string]$BackgroundVideoBitrate = '2500k',
+    [string]$BackgroundVideoBitrate = '1200k',
+    [string]$FullFilmEncoder = 'h264_qsv',
+    [ValidatePattern('^\d+[kKmM]$')]
+    [string]$FullFilmVideoBitrate = '1500k',
+    [ValidatePattern('^\d+[kKmM]$')]
+    [string]$FullFilmAudioBitrate = '128k',
     [switch]$AllowTemporaryWorkspace,
     [switch]$TestFailAfterInstall,
     [switch]$TestFailSecondInstall,
@@ -240,16 +245,22 @@ try {
         throw 'Background video encode did not create a valid file.'
     }
 
+    $fullFilmScale = "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2"
     $fullFilmArguments = @(
         '-hide_banner', '-y',
         '-i', $input,
         '-map', '0:v:0',
         '-map', '0:a?',
-        '-c', 'copy',
+        '-vf', $fullFilmScale,
+        '-c:v', $FullFilmEncoder,
+        '-b:v', $FullFilmVideoBitrate,
+        '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac',
+        '-b:a', $FullFilmAudioBitrate,
         '-movflags', '+faststart',
         $fullFilmTemp
     )
-    Invoke-Ffmpeg $fullFilmArguments 'Full-film remux'
+    Invoke-Ffmpeg $fullFilmArguments 'Full-film web encode'
     if (-not (Test-Path -LiteralPath $fullFilmTemp -PathType Leaf) -or (Get-Item $fullFilmTemp).Length -le 0) {
         throw 'Full-film remux did not create a valid file.'
     }

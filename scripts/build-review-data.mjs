@@ -261,22 +261,26 @@ function validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath, o
   const root = path.parse(resolvedMediaDir).root;
   if (
     resolvedMediaDir.toLowerCase() === root.toLowerCase()
+    || !isSameOrDescendant(resolvedMediaDir, workspace)
     || isSameOrDescendant(workspace, resolvedMediaDir)
     || pathsOverlap(resolvedMediaDir, markdownPath)
     || pathsOverlap(resolvedMediaDir, obsidianRoot)
     || sourcePaths.some((sourcePath) => pathsOverlap(resolvedMediaDir, sourcePath))
+    || (fs.existsSync(resolvedMediaDir) && !fs.statSync(resolvedMediaDir).isDirectory())
   ) {
     throw new Error(`Unsafe media output directory: ${resolvedMediaDir}`);
   }
 }
 
-function validateReviewOutputPath(outputPath, mediaOutputDir, markdownPath, obsidianRoot, sourcePaths = []) {
+function validateReviewOutputPath(outputPath, workspace, mediaOutputDir, markdownPath, obsidianRoot, sourcePaths = []) {
   const resolvedOutputPath = path.resolve(outputPath);
   if (
     pathsOverlap(resolvedOutputPath, mediaOutputDir)
-    || resolvedOutputPath.toLowerCase() === path.resolve(markdownPath).toLowerCase()
-    || isSameOrDescendant(resolvedOutputPath, obsidianRoot)
-    || sourcePaths.some((sourcePath) => isSameOrDescendant(resolvedOutputPath, sourcePath))
+    || !isSameOrDescendant(resolvedOutputPath, workspace)
+    || isSameOrDescendant(workspace, resolvedOutputPath)
+    || pathsOverlap(resolvedOutputPath, markdownPath)
+    || pathsOverlap(resolvedOutputPath, obsidianRoot)
+    || sourcePaths.some((sourcePath) => pathsOverlap(resolvedOutputPath, sourcePath))
     || (fs.existsSync(resolvedOutputPath) && fs.statSync(resolvedOutputPath).isDirectory())
   ) {
     throw new Error(`Unsafe review output path: ${resolvedOutputPath}`);
@@ -336,7 +340,7 @@ export function writeReviewData(options = {}) {
   const copyFile = options.copyFile || fs.copyFileSync;
   const clock = options.clock || (() => new Date());
   validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath, obsidianRoot);
-  validateReviewOutputPath(outputPath, mediaOutputDir, markdownPath, obsidianRoot);
+  validateReviewOutputPath(outputPath, workspace, mediaOutputDir, markdownPath, obsidianRoot);
   const review = parseReview(fs.readFileSync(markdownPath, "utf8"));
   const media = reviewMedia(review);
   const uniqueRefs = [...new Set(media.map((block) => block.ref))];
@@ -347,7 +351,7 @@ export function writeReviewData(options = {}) {
   const found = walkMedia(obsidianRoot, wantedRelativePaths, wantedNames);
   const sources = resolveMediaSources(uniqueRefs, found);
   validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath, obsidianRoot, [...sources.values()]);
-  validateReviewOutputPath(outputPath, mediaOutputDir, markdownPath, obsidianRoot, [...sources.values()]);
+  validateReviewOutputPath(outputPath, workspace, mediaOutputDir, markdownPath, obsidianRoot, [...sources.values()]);
 
   onProgress("copying-media", { uniqueAssets: uniqueRefs.length, mediaOutputDir });
   const temporaryMediaDir = temporarySibling(mediaOutputDir, "tmp");
