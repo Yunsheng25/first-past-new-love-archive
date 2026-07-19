@@ -245,6 +245,28 @@ test("keeps promoted outputs successful when the first backup cleanup attempt fa
   }
 });
 
+test("archive promotion keeps committed outputs when both backup cleanups persistently fail", () => {
+  const replaceOutputs = required(archiveModule, "replaceOutputs");
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-persistent-cleanup-"));
+  const mediaOutputDir = path.join(tempDir, "media"); const temporaryMediaDir = path.join(tempDir, "media-next");
+  const outputPath = path.join(tempDir, "archive.json"); const temporaryOutputPath = path.join(tempDir, "archive-next.json");
+  fs.mkdirSync(mediaOutputDir); fs.mkdirSync(temporaryMediaDir);
+  fs.writeFileSync(path.join(mediaOutputDir, "old"), "old"); fs.writeFileSync(path.join(temporaryMediaDir, "new"), "new");
+  fs.writeFileSync(outputPath, "old"); fs.writeFileSync(temporaryOutputPath, "new");
+  const attempts = []; const delays = []; const warnings = [];
+  try {
+    const result = replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath }, {
+      remove(target) { attempts.push(target); throw new Error("locked"); }, sleep() { delays.push(true); },
+      onCleanupWarning: (warning) => warnings.push(warning),
+    });
+    assert.equal(fs.readFileSync(path.join(mediaOutputDir, "new"), "utf8"), "new");
+    assert.equal(fs.readFileSync(outputPath, "utf8"), "new");
+    assert.equal(attempts.filter((target) => target.includes(".media.backup-")).length, 3);
+    assert.equal(attempts.filter((target) => target.includes(".archive.json.backup-")).length, 3);
+    assert.equal(delays.length, 4); assert.equal(warnings.length, 6); assert.equal(result.cleanupWarnings.length, 6);
+  } finally { fs.rmSync(tempDir, { recursive: true, force: true }); }
+});
+
 test("keeps existing archive outputs intact when a copy fails", () => {
   const writeArchiveData = required(archiveModule, "writeArchiveData");
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-atomic-"));

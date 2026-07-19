@@ -662,3 +662,24 @@ test("writeReviewData reports indexing and copy stages", () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 });
+
+test("writeReviewData surfaces persistent promotion cleanup warnings while keeping new outputs", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-public-cleanup-"));
+  const notes = path.join(tempDir, "notes"); const vault = path.join(tempDir, "vault"); const workspace = path.join(tempDir, "site");
+  const markdownPath = path.join(notes, "fixture.md"); const source = path.join(vault, "fixture.png");
+  fs.mkdirSync(notes, { recursive: true }); fs.mkdirSync(vault, { recursive: true });
+  fs.writeFileSync(markdownPath, `## ${originTitle}\n\n![[fixture.png]]`, "utf8"); fs.writeFileSync(source, "OLD");
+  try {
+    writeReviewData({ workspace, markdownPath, obsidianRoot: vault });
+    fs.writeFileSync(source, "NEW");
+    const stages = []; const attempts = [];
+    writeReviewData({ workspace, markdownPath, obsidianRoot: vault, onProgress: (stage, details) => stages.push([stage, details]),
+      promotionOperations: { remove(target) { attempts.push(target); throw new Error("locked"); }, sleep() {} },
+    });
+    assert.equal(fs.readFileSync(path.join(workspace, "assets", "review-media", "001-fixture.png"), "utf8"), "NEW");
+    assert.ok(stages.some(([stage]) => stage === "written"));
+    assert.ok(stages.some(([stage]) => stage === "cleanup-warning"));
+    assert.ok(attempts.some((target) => target.includes(".review-media.backup-")));
+    assert.ok(attempts.some((target) => target.includes(".review.json.backup-")));
+  } finally { fs.rmSync(tempDir, { recursive: true, force: true }); }
+});
