@@ -385,3 +385,70 @@ test('a rejecting fade fails closed without an unhandled operation rejection', a
   assert.equal(await manager.startFromGesture(), false);
   assert.equal(manager.state().unavailable, true);
 });
+
+test('a late play success after destroy is immediately paused', async () => {
+  const audio = createFakeAudio();
+  let resolvePlay;
+  audio.play = function play() {
+    this.playCalls += 1;
+    return new Promise((resolve) => {
+      resolvePlay = () => { this.paused = false; resolve(); };
+    });
+  };
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  const start = manager.startFromGesture();
+  manager.destroy();
+  assert.equal(await start, false);
+  resolvePlay();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(manager.state().playing, false);
+  assert.equal(audio.pauseCalls, 2);
+});
+
+test('a late play success after disabling BGM is immediately paused', async () => {
+  const audio = createFakeAudio();
+  let resolvePlay;
+  audio.play = function play() {
+    this.playCalls += 1;
+    return new Promise((resolve) => {
+      resolvePlay = () => { this.paused = false; resolve(); };
+    });
+  };
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  const start = manager.startFromGesture();
+  await manager.toggle();
+  assert.equal(await start, false);
+  resolvePlay();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(manager.state().playing, false);
+  assert.equal(audio.pauseCalls, 2);
+});
+
+test('a late obsolete success does not pause newer valid playback', async () => {
+  const audio = createFakeAudio();
+  let resolveFirst;
+  audio.play = function play() {
+    this.playCalls += 1;
+    if (this.playCalls === 1) {
+      return new Promise((resolve) => {
+        resolveFirst = () => { this.paused = false; resolve(); };
+      });
+    }
+    this.paused = false;
+    return Promise.resolve();
+  };
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  const start = manager.startFromGesture();
+  await manager.enterFilm();
+  assert.equal(await manager.leaveFilm(), true);
+  resolveFirst();
+  await Promise.all([start, new Promise((resolve) => setImmediate(resolve))]);
+
+  assert.equal(manager.state().playing, true);
+  assert.equal(audio.pauseCalls, 1);
+});

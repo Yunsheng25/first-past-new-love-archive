@@ -65,6 +65,7 @@ export function createAudioManager({ audio, storage, fade } = {}) {
   let transition = 0;
   let playAttempt = null;
   let targetVolume = 0;
+  let playbackOwnerVersion = null;
 
   if (player) {
     player.loop = true;
@@ -81,6 +82,7 @@ export function createAudioManager({ audio, storage, fade } = {}) {
   const beginTransition = (target) => {
     transition += 1;
     targetVolume = target;
+    if (target === 0) playbackOwnerVersion = null;
     volumeFade.cancel?.();
     cancelPlayAttempt();
     return transition;
@@ -118,6 +120,7 @@ export function createAudioManager({ audio, storage, fade } = {}) {
     let cancel;
     const cancelled = new Promise((resolve) => { cancel = () => resolve({ cancelled: true }); });
     let browserPlay;
+    let attempt;
     try {
       browserPlay = Promise.resolve(player.play()).then(
         () => ({ played: true }),
@@ -126,11 +129,20 @@ export function createAudioManager({ audio, storage, fade } = {}) {
     } catch {
       browserPlay = Promise.resolve({ failed: true });
     }
-    const attempt = {
+    attempt = {
       version,
       cancel,
       promise: null,
     };
+    browserPlay.then(
+      (result) => {
+        if (!result.played || attempt === playAttempt && version === transition) return;
+        const newerPlaybackOwnsPlayer = playbackOwnerVersion === transition
+          && enabled && gestureReceived && !filmActive && !unavailable && !destroyed;
+        if (!newerPlaybackOwnsPlayer) pause();
+      },
+      () => {},
+    );
     const operation = (async () => {
       const result = await Promise.race([browserPlay, cancelled]);
       if (result.cancelled || destroyed || version !== transition) return false;
@@ -144,7 +156,9 @@ export function createAudioManager({ audio, storage, fade } = {}) {
         return false;
       }
       if (playAttempt === attempt) playAttempt = null;
-      const completed = await fadeTo(BGM_VOLUME, 280);
+      const fading = fadeTo(BGM_VOLUME, 280);
+      playbackOwnerVersion = transition;
+      const completed = await fading;
       return completed && !destroyed && !filmActive && enabled && !unavailable;
     })().catch(() => {
       if (!destroyed && version === transition) {
