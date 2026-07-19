@@ -445,6 +445,50 @@ function loadingView() {
   return `<section class="review-status-view app-view" data-review-loading><p>REVIEW NOTES</p><h1>正在打开复盘手记</h1><span>请稍候……</span></section>`;
 }
 
+let reviewDataCache = new Map();
+
+function availableFetch(fetchImpl) {
+  return typeof fetchImpl === 'function' ? fetchImpl : null;
+}
+
+export function peekReviewData(fetchImpl = globalThis.fetch) {
+  const implementation = availableFetch(fetchImpl);
+  return implementation ? reviewDataCache.get(implementation)?.data ?? null : null;
+}
+
+export function resetReviewDataCache() {
+  reviewDataCache = new Map();
+}
+
+export function loadReviewData(fetchImpl = globalThis.fetch, { force = false } = {}) {
+  const implementation = availableFetch(fetchImpl);
+  if (!implementation) return Promise.reject(new Error('No fetch implementation is available for review data.'));
+
+  const current = reviewDataCache.get(implementation);
+  if (!force && current) return current.fulfilled ? Promise.resolve(current.data) : current.promise;
+
+  const entry = {};
+  entry.promise = Promise.resolve()
+    .then(() => implementation('data/review.json'))
+    .then((response) => {
+      if (!response?.ok) throw new Error(`Review data request failed: ${response?.status ?? 'unknown'}`);
+      return response.json();
+    })
+    .then((data) => {
+      if (reviewDataCache.get(implementation) === entry) {
+        entry.data = data;
+        entry.fulfilled = true;
+      }
+      return data;
+    })
+    .catch((error) => {
+      if (reviewDataCache.get(implementation) === entry) reviewDataCache.delete(implementation);
+      throw error;
+    });
+  reviewDataCache.set(implementation, entry);
+  return entry.promise;
+}
+
 function errorView() {
   return `<section class="review-status-view app-view" data-review-error><p>REVIEW NOTES</p><h1>复盘手记暂时无法载入</h1><span>请检查连接后重试。</span><button type="button" data-retry-review>重新载入</button><a href="#after">返回片后</a></section>`;
 }
@@ -454,16 +498,16 @@ function missingChapterView() {
 }
 
 export function mountReviewRoute(app, route, {
-  fetchImpl = fetch,
+  fetchImpl = globalThis.fetch,
   storage = globalThis.localStorage,
   documentRef = document,
   windowRef = window,
 } = {}) {
   let active = true;
-  let requestController = null;
   let interactionCleanup = () => {};
   let retryButton = null;
   let retryHandler = null;
+  let loadVersion = 0;
 
   const clearRetry = () => {
     retryButton?.removeEventListener?.('click', retryHandler);
@@ -471,39 +515,46 @@ export function mountReviewRoute(app, route, {
     retryHandler = null;
   };
 
-  const load = async () => {
+  const renderData = (data) => {
     interactionCleanup();
     clearRetry();
-    requestController?.abort();
-    requestController = new AbortController();
+    if (route.name === 'review-index') {
+      app.innerHTML = buildReviewIndex(data, readReviewProgress(storage));
+    } else {
+      const target = normalizeReviewTarget(data, route.chapter, route.page);
+      if (!target) {
+        app.innerHTML = missingChapterView();
+      } else {
+        app.innerHTML = buildReviewPage(data, target);
+        writeReviewProgress(storage, { chapter: target.chapter.slug, page: target.page });
+        const scrollRegion = app.querySelector?.('[data-review-scroll]');
+        if (scrollRegion) scrollRegion.scrollTop = 0;
+      }
+    }
+    interactionCleanup = bindReviewInteractions(app, { documentRef, windowRef });
+    app.focus?.({ preventScroll: true });
+  };
+
+  const load = async ({ force = false } = {}) => {
+    const version = ++loadVersion;
+    interactionCleanup();
+    clearRetry();
+    const cached = !force && peekReviewData(fetchImpl);
+    if (cached) {
+      if (active && version === loadVersion) renderData(cached);
+      return;
+    }
     app.innerHTML = loadingView();
 
     try {
-      const response = await fetchImpl('data/review.json', { signal: requestController.signal });
-      if (!response.ok) throw new Error(`Review data request failed: ${response.status}`);
-      const data = await response.json();
-      if (!active || requestController.signal.aborted) return;
-
-      if (route.name === 'review-index') {
-        app.innerHTML = buildReviewIndex(data, readReviewProgress(storage));
-      } else {
-        const target = normalizeReviewTarget(data, route.chapter, route.page);
-        if (!target) {
-          app.innerHTML = missingChapterView();
-        } else {
-          app.innerHTML = buildReviewPage(data, target);
-          writeReviewProgress(storage, { chapter: target.chapter.slug, page: target.page });
-          const scrollRegion = app.querySelector?.('[data-review-scroll]');
-          if (scrollRegion) scrollRegion.scrollTop = 0;
-        }
-      }
-      interactionCleanup = bindReviewInteractions(app, { documentRef, windowRef });
-      app.focus?.({ preventScroll: true });
+      const data = await loadReviewData(fetchImpl, { force });
+      if (!active || version !== loadVersion) return;
+      renderData(data);
     } catch (error) {
-      if (!active || error?.name === 'AbortError' || requestController.signal.aborted) return;
+      if (!active || version !== loadVersion || error?.name === 'AbortError') return;
       app.innerHTML = errorView();
       retryButton = app.querySelector?.('[data-retry-review]');
-      retryHandler = () => load();
+      retryHandler = () => load({ force: true });
       retryButton?.addEventListener?.('click', retryHandler);
       app.focus?.({ preventScroll: true });
     }
@@ -512,7 +563,7 @@ export function mountReviewRoute(app, route, {
   load();
   return () => {
     active = false;
-    requestController?.abort();
+    loadVersion += 1;
     clearRetry();
     interactionCleanup();
   };

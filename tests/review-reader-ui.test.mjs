@@ -11,8 +11,11 @@ import {
   estimateReadingMinutes,
   mountReviewRoute,
   normalizeReviewTarget,
+  peekReviewData,
   readReviewProgress,
+  resetReviewDataCache,
   renderInlineMarkdown,
+  loadReviewData,
   writeReviewProgress,
 } from '../src/review-reader.js';
 
@@ -51,6 +54,128 @@ function deferred() {
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 }
+
+test('review data cache deduplicates successful loads and peeks the exact result', async () => {
+  resetReviewDataCache();
+  const data = { chapters: [] };
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    return { ok: true, json: async () => data };
+  };
+
+  assert.equal(peekReviewData(fetchImpl), null);
+  const [first, second] = await Promise.all([loadReviewData(fetchImpl), loadReviewData(fetchImpl)]);
+  assert.equal(first, data);
+  assert.equal(second, data);
+  assert.equal(peekReviewData(fetchImpl), data);
+  assert.equal(calls, 1);
+});
+
+test('review data cache isolates fetch implementations and retries failures', async () => {
+  resetReviewDataCache();
+  const firstData = { chapters: ['first'] };
+  const secondData = { chapters: ['second'] };
+  let firstCalls = 0;
+  let failureCalls = 0;
+  const firstFetch = async () => ({ ok: true, json: async () => firstData });
+  const secondFetch = async () => ({ ok: true, json: async () => secondData });
+  const failingThenWorkingFetch = async () => {
+    failureCalls += 1;
+    if (failureCalls === 1) throw new Error('offline');
+    return { ok: true, json: async () => firstData };
+  };
+
+  await loadReviewData(firstFetch);
+  await loadReviewData(secondFetch);
+  await assert.rejects(loadReviewData(failingThenWorkingFetch), /offline/);
+  assert.equal(peekReviewData(firstFetch), firstData);
+  assert.equal(peekReviewData(secondFetch), secondData);
+  assert.equal(peekReviewData(failingThenWorkingFetch), null);
+  await loadReviewData(failingThenWorkingFetch);
+  assert.equal(failureCalls, 2);
+  assert.equal(firstCalls, 0);
+});
+
+test('forced and reset cache requests ignore late older completions', async () => {
+  resetReviewDataCache();
+  const oldRequest = deferred();
+  const forcedRequest = deferred();
+  let calls = 0;
+  const fetchImpl = () => (calls += 1) === 1 ? oldRequest.promise : forcedRequest.promise;
+  const oldLoad = loadReviewData(fetchImpl);
+  const forcedLoad = loadReviewData(fetchImpl, { force: true });
+  forcedRequest.resolve({ ok: true, json: async () => ({ version: 'new' }) });
+  assert.deepEqual(await forcedLoad, { version: 'new' });
+  oldRequest.resolve({ ok: true, json: async () => ({ version: 'old' }) });
+  assert.deepEqual(await oldLoad, { version: 'old' });
+  assert.deepEqual(peekReviewData(fetchImpl), { version: 'new' });
+
+  const resetRequest = deferred();
+  const resetFetch = () => resetRequest.promise;
+  const resetLoad = loadReviewData(resetFetch);
+  resetReviewDataCache();
+  resetRequest.resolve({ ok: true, json: async () => ({ version: 'stale' }) });
+  await resetLoad;
+  assert.equal(peekReviewData(resetFetch), null);
+  assert.equal(calls, 2);
+});
+
+test('review data cache is safe when no fetch implementation is available', async () => {
+  resetReviewDataCache();
+  assert.equal(peekReviewData(null), null);
+  await assert.rejects(loadReviewData(null), /fetch implementation/i);
+});
+
+test('mount renders a cached route synchronously without a loading write', async () => {
+  resetReviewDataCache();
+  const fetchImpl = async () => ({ ok: true, json: async () => reviewData });
+  await loadReviewData(fetchImpl);
+  const writes = [];
+  const app = {
+    querySelector() { return null; }, querySelectorAll() { return []; },
+    addEventListener() {}, removeEventListener() {}, focus() {},
+  };
+  Object.defineProperty(app, 'innerHTML', { set(value) { writes.push(value); }, get() { return writes.at(-1) ?? ''; } });
+
+  mountReviewRoute(app, { name: 'review-page', chapter: 'production', page: 7 }, {
+    fetchImpl, storage: fakeStorage(),
+    documentRef: { addEventListener() {}, removeEventListener() {} }, windowRef: { location: {} },
+  });
+
+  assert.equal(writes.length, 1);
+  assert.match(writes[0], /data-review-page/);
+  assert.doesNotMatch(writes[0], /data-review-loading/);
+});
+
+test('mount cold load shows loading and retry forces a fresh request', async () => {
+  resetReviewDataCache();
+  let calls = 0;
+  const retryButton = { addEventListener(type, handler) { this.handler = handler; }, removeEventListener() {} };
+  const app = {
+    innerHTML: '', querySelector(selector) { return selector === '[data-retry-review]' ? retryButton : null; },
+    querySelectorAll() { return []; }, addEventListener() {}, removeEventListener() {}, focus() {},
+  };
+  const fetchImpl = async () => {
+    calls += 1;
+    if (calls === 1) throw new Error('offline');
+    return { ok: true, json: async () => reviewData };
+  };
+  mountReviewRoute(app, { name: 'review-index' }, {
+    fetchImpl, storage: fakeStorage(),
+    documentRef: { addEventListener() {}, removeEventListener() {} }, windowRef: { location: {} },
+  });
+  assert.match(app.innerHTML, /data-review-loading/);
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.match(app.innerHTML, /data-review-error/);
+  retryButton.handler();
+  assert.match(app.innerHTML, /data-review-loading/);
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls, 2);
+  assert.match(app.innerHTML, /review-index-view/);
+});
 
 test('review index renders all five chapters and 27 pages in source JSON order', () => {
   const html = buildReviewIndex(reviewData, null);
