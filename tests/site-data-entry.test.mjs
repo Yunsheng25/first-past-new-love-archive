@@ -61,6 +61,31 @@ test("package build:data rebuilds both ordered site datasets from configured sou
       archive.cases.map((item) => item.images[0].originalRef),
       ["first.png", "second.png"],
     );
+
+    const firstReviewBytes = fs.readFileSync(path.join(workspace, "data", "review.json"));
+    const firstArchiveBytes = fs.readFileSync(path.join(workspace, "data", "archive.json"));
+    const repeat = spawnSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "npm.cmd run build:data"], {
+      cwd: projectRoot,
+      env: {
+        ...process.env,
+        SITE_DATA_WORKSPACE: workspace,
+        REVIEW_MARKDOWN_PATH: markdownPath,
+        REVIEW_OBSIDIAN_ROOT: vault,
+        ARCHIVE_CANVAS_PATH: canvasPath,
+        ARCHIVE_OBSIDIAN_ROOT: vault,
+      },
+      encoding: "utf8",
+      timeout: 120_000,
+      maxBuffer: 1024 * 1024,
+    });
+    assert.equal(repeat.status, 0, `${repeat.stdout}\n${repeat.stderr}`);
+    assert.deepEqual(fs.readFileSync(path.join(workspace, "data", "review.json")), firstReviewBytes);
+    assert.deepEqual(fs.readFileSync(path.join(workspace, "data", "archive.json")), firstArchiveBytes);
+    const generatedBackups = [
+      ...fs.readdirSync(path.join(workspace, "assets")),
+      ...fs.readdirSync(path.join(workspace, "data")),
+    ].filter((name) => /^\.(?:canvas-images|review-media)\.backup-|^\.(?:archive|review)\.json\.backup-/.test(name));
+    assert.deepEqual(generatedBackups, [], "a successful rebuild must clean only its own backup siblings");
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }

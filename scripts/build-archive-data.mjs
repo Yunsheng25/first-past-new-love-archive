@@ -129,15 +129,35 @@ function temporarySibling(targetPath, label) {
   );
 }
 
-function backupSiblings(targetPath) {
-  const directory = path.dirname(targetPath);
-  const prefix = `.${path.basename(targetPath)}.backup-`;
+function preserveGeneratedAt(outputPath, payload) {
   try {
-    return fs.readdirSync(directory)
-      .filter((name) => name.startsWith(prefix))
-      .map((name) => path.join(directory, name));
+    const previous = JSON.parse(fs.readFileSync(outputPath, "utf8"));
+    const { generatedAt: previousGeneratedAt, ...previousContent } = previous;
+    const { generatedAt, ...nextContent } = payload;
+    if (typeof previousGeneratedAt === "string" && JSON.stringify(previousContent) === JSON.stringify(nextContent)) {
+      return { ...payload, generatedAt: previousGeneratedAt };
+    }
   } catch {
-    return [];
+    // A missing or malformed previous output must be replaced with a fresh payload.
+  }
+  return payload;
+}
+
+function serializedPayload(payload) {
+  return `${JSON.stringify(payload, null, 2)}\n`;
+}
+
+function archiveOutputIsCurrent(outputPath, payload, mediaOutputDir, refs, imagesByRef, sources) {
+  try {
+    if (!fs.readFileSync(outputPath).equals(Buffer.from(serializedPayload(payload), "utf8"))) return false;
+    const localFiles = fs.readdirSync(mediaOutputDir, { withFileTypes: true }).filter((entry) => entry.isFile());
+    if (localFiles.length !== refs.length) return false;
+    return refs.every((ref) => {
+      const localPath = path.join(mediaOutputDir, path.basename(imagesByRef.get(ref).src));
+      return fs.existsSync(localPath) && fileSha256(localPath) === fileSha256(sources.get(ref));
+    });
+  } catch {
+    return false;
   }
 }
 
@@ -148,7 +168,7 @@ function cleanupAfterPromotion(targetPath, options, operations, warnings) {
   if (!exists(targetPath)) return true;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
-      remove(targetPath, options);
+      remove(targetPath, { ...options, maxRetries: 6, retryDelay: 50 });
       return !exists(targetPath);
     } catch (error) {
       const warning = new Error(`Archive backup cleanup attempt ${attempt} failed for ${targetPath}: ${error.message}`);
@@ -164,10 +184,6 @@ export function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, 
   const rename = operations.rename || fs.renameSync;
   const remove = operations.remove || fs.rmSync;
   const warnings = [];
-  for (const stale of [...backupSiblings(mediaOutputDir), ...backupSiblings(outputPath)]) {
-    const cleaned = cleanupAfterPromotion(stale, { recursive: fs.statSync(stale).isDirectory(), force: true }, operations, warnings);
-    if (!cleaned) throw new Error(`Unable to clean stale archive backup before promotion: ${stale}`);
-  }
   const mediaBackup = temporarySibling(mediaOutputDir, "backup");
   const outputBackup = temporarySibling(outputPath, "backup");
   let mediaBackedUp = false;
@@ -194,8 +210,12 @@ export function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, 
     if (mediaBackedUp) rename(mediaBackup, mediaOutputDir);
     throw error;
   }
-  if (mediaBackedUp) cleanupAfterPromotion(mediaBackup, { recursive: true, force: true }, operations, warnings);
-  if (outputBackedUp) cleanupAfterPromotion(outputBackup, { force: true }, operations, warnings);
+  if (mediaBackedUp && !cleanupAfterPromotion(mediaBackup, { recursive: true, force: true }, operations, warnings)) {
+    throw new Error(`Unable to clean archive backup after promotion: ${mediaBackup}`);
+  }
+  if (outputBackedUp && !cleanupAfterPromotion(outputBackup, { force: true }, operations, warnings)) {
+    throw new Error(`Unable to clean archive backup after promotion: ${outputBackup}`);
+  }
   return { cleanupWarnings: warnings };
 }
 
@@ -207,7 +227,7 @@ function writeVerifiedJsonOnly(outputPath, payload) {
   const previous = fs.existsSync(outputPath) ? fs.readFileSync(outputPath) : null;
   try {
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, JSON.stringify(payload, null, 2), "utf8");
+    fs.writeFileSync(outputPath, serializedPayload(payload), "utf8");
   } catch (error) {
     if (previous) fs.writeFileSync(outputPath, previous);
     else fs.rmSync(outputPath, { force: true });
@@ -240,12 +260,17 @@ export function writeArchiveData(options = {}) {
       if (!imagesByRef.has(image.originalRef)) imagesByRef.set(image.originalRef, image);
     }
   }
-  const payload = {
+  const payload = preserveGeneratedAt(outputPath, {
     generatedAt: clock().toISOString(),
     source: { canvas: path.basename(canvasPath), visualOrder: "y, x, nodeId" },
     summary: { ...archive.summary, missingImages: 0 },
     cases: archive.cases,
-  };
+  });
+
+  if (!options.reuseExistingMedia && archiveOutputIsCurrent(outputPath, payload, mediaOutputDir, refs, imagesByRef, sources)) {
+    onProgress("written", { outputPath, reusedImages: refs.length });
+    return payload;
+  }
 
   if (options.reuseExistingMedia) {
     onProgress("verifying-existing-images", { uniqueImages: refs.length, mediaOutputDir });
@@ -284,7 +309,7 @@ export function writeArchiveData(options = {}) {
     }
 
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(temporaryOutputPath, JSON.stringify(payload, null, 2), "utf8");
+    fs.writeFileSync(temporaryOutputPath, serializedPayload(payload), "utf8");
     const replacement = replaceOutputs(
       { mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath },
       {

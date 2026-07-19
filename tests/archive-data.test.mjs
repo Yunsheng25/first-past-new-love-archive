@@ -335,7 +335,7 @@ test("can refresh archive JSON from already verified local assets without copyin
   const workspace = path.join(tempDir, "workspace");
 
   try {
-    writeArchiveData({ workspace, canvasPath: sourcePath, obsidianRoot: vault });
+    const initial = writeArchiveData({ workspace, canvasPath: sourcePath, obsidianRoot: vault });
     const refreshed = writeArchiveData({
       workspace,
       canvasPath: sourcePath,
@@ -346,7 +346,7 @@ test("can refresh archive JSON from already verified local assets without copyin
         throw new Error("reuse mode must not copy");
       },
     });
-    assert.equal(refreshed.generatedAt, "2026-07-19T00:00:00.000Z");
+    assert.equal(refreshed.generatedAt, initial.generatedAt);
     assert.equal(fs.readFileSync(path.join(workspace, "assets", "canvas-images", "001-one.png"), "utf8"), "ONE");
     assert.equal(JSON.parse(fs.readFileSync(path.join(workspace, "data", "archive.json"), "utf8")).summary.cases, 1);
   } finally {

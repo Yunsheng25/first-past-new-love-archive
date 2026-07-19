@@ -293,6 +293,39 @@ function temporarySibling(targetPath, label) {
   return path.join(directory, `.${base}.${label}-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 }
 
+function preserveGeneratedAt(outputPath, payload) {
+  try {
+    const previous = JSON.parse(fs.readFileSync(outputPath, "utf8"));
+    const { generatedAt: previousGeneratedAt, ...previousContent } = previous;
+    const { generatedAt, ...nextContent } = payload;
+    if (typeof previousGeneratedAt === "string" && JSON.stringify(previousContent) === JSON.stringify(nextContent)) {
+      return { ...payload, generatedAt: previousGeneratedAt };
+    }
+  } catch {
+    // A missing or malformed previous output must be replaced with a fresh payload.
+  }
+  return payload;
+}
+
+function serializedPayload(payload) {
+  return `${JSON.stringify(payload, null, 2)}\n`;
+}
+
+function reviewOutputIsCurrent(outputPath, payload, mediaOutputDir, media, sources) {
+  try {
+    if (!fs.readFileSync(outputPath).equals(Buffer.from(serializedPayload(payload), "utf8"))) return false;
+    const copiedRefs = new Set();
+    return media.every((block) => {
+      if (copiedRefs.has(block.ref)) return true;
+      copiedRefs.add(block.ref);
+      const localPath = path.join(mediaOutputDir, path.basename(block.src));
+      return fs.existsSync(localPath) && fs.readFileSync(localPath).equals(fs.readFileSync(sources.get(block.ref)));
+    });
+  } catch {
+    return false;
+  }
+}
+
 function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath }) {
   const mediaBackup = temporarySibling(mediaOutputDir, "backup");
   const outputBackup = temporarySibling(outputPath, "backup");
@@ -322,8 +355,8 @@ function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, tempora
     throw error;
   }
 
-  if (mediaBackedUp) fs.rmSync(mediaBackup, { recursive: true, force: true });
-  if (outputBackedUp) fs.rmSync(outputBackup, { force: true });
+  if (mediaBackedUp) fs.rmSync(mediaBackup, { recursive: true, force: true, maxRetries: 6, retryDelay: 50 });
+  if (outputBackedUp) fs.rmSync(outputBackup, { force: true, maxRetries: 6, retryDelay: 50 });
 }
 
 function reviewMedia(review) {
@@ -352,6 +385,12 @@ export function writeReviewData(options = {}) {
   const sources = resolveMediaSources(uniqueRefs, found);
   validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath, obsidianRoot, [...sources.values()]);
   validateReviewOutputPath(outputPath, workspace, mediaOutputDir, markdownPath, obsidianRoot, [...sources.values()]);
+  const payload = preserveGeneratedAt(outputPath, { generatedAt: clock().toISOString(), chapters: review.chapters });
+
+  if (reviewOutputIsCurrent(outputPath, payload, mediaOutputDir, media, sources)) {
+    onProgress("written", { outputPath, reusedMedia: uniqueRefs.length });
+    return payload;
+  }
 
   onProgress("copying-media", { uniqueAssets: uniqueRefs.length, mediaOutputDir });
   const temporaryMediaDir = temporarySibling(mediaOutputDir, "tmp");
@@ -368,9 +407,8 @@ export function writeReviewData(options = {}) {
       throw new Error(`Copied review media count mismatch: expected ${uniqueRefs.length}, got ${copied.size}`);
     }
 
-    const payload = { generatedAt: clock().toISOString(), chapters: review.chapters };
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(temporaryOutputPath, JSON.stringify(payload, null, 2), "utf8");
+    fs.writeFileSync(temporaryOutputPath, serializedPayload(payload), "utf8");
     replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath });
     onProgress("written", { outputPath });
     return payload;
