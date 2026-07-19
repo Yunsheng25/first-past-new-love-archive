@@ -195,7 +195,7 @@ function blockMarkup(block, blockIndex, chapterSlug, page, { sectionTitle = fals
 function navigationLink(href, direction, label) {
   if (!href) return `<span class="review-page-nav-disabled">${label}</span>`;
   const attribute = direction === 'previous' ? 'data-review-prev' : 'data-review-next';
-  return `<a href="${href}" ${attribute}>${label}</a>`;
+  return `<a href="${href}" ${attribute} data-review-direction="${direction}">${label}</a>`;
 }
 
 export function buildReviewPage(data, target) {

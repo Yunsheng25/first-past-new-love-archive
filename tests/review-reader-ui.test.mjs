@@ -18,6 +18,7 @@ import {
   loadReviewData,
   writeReviewProgress,
 } from '../src/review-reader.js';
+import { createReviewTurnController } from '../src/review-turn.js';
 
 const projectRoot = new URL('../', import.meta.url);
 const reviewData = JSON.parse(await readFile(new URL('data/review.json', projectRoot), 'utf8'));
@@ -653,4 +654,132 @@ test('script routes both review destinations through cancellable review mounting
   assert.match(script, /route\.name === 'review-page'/);
   assert.match(script, /currentViewCleanup\s*=\s*mountReviewRoute/);
   assert.match(script, /currentViewCleanup\(\)/);
+});
+
+test('review page links declare their actual turn direction', () => {
+  const target = normalizeReviewTarget(reviewData, reviewData.chapters[0].slug, 2);
+  const html = buildReviewPage(reviewData, target);
+  assert.match(html, /data-review-prev[^>]*data-review-direction="previous"/);
+  assert.match(html, /data-review-next[^>]*data-review-direction="next"/);
+});
+
+function reviewRoute(page) { return { name: 'review-page', chapter: 'story', page }; }
+
+function turnHarness({ cached = true, reducedMotion = false, transition, timers = null } = {}) {
+  const classes = new Set();
+  const documentRef = {
+    documentElement: { classList: { add: (name) => classes.add(name), remove: (name) => classes.delete(name) } },
+    startViewTransition: transition,
+  };
+  const windowRef = { location: { hash: '#review/story/1' } };
+  const rendered = [];
+  const controller = createReviewTurnController({
+    documentRef, windowRef,
+    parseRoute: (hash) => reviewRoute(Number(hash.split('/').at(-1))),
+    renderRoute: (route) => rendered.push(route),
+    peekReviewData: () => cached ? {} : null,
+    reducedMotion: () => reducedMotion,
+    setTimeoutFn: timers?.setTimeout ?? setTimeout,
+    clearTimeoutFn: timers?.clearTimeout ?? clearTimeout,
+  });
+  controller.renderInitial(reviewRoute(1));
+  return { controller, windowRef, rendered, classes };
+}
+
+test('cached forward review navigation renders inside a view transition and cleans its direction class', async () => {
+  let update;
+  let finish;
+  const transition = (callback) => { update = callback; return { finished: new Promise((resolve) => { finish = resolve; }) }; };
+  const { controller, windowRef, rendered, classes } = turnHarness({ transition });
+  controller.recordIntent({ button: 0, target: { closest: () => ({ dataset: { reviewDirection: 'next' } }) } });
+  windowRef.location.hash = '#review/story/2';
+  controller.handleHashChange();
+  assert.equal(rendered.length, 1);
+  assert.equal(classes.has('review-turn-next'), true);
+  update();
+  assert.deepEqual(rendered.at(-1), reviewRoute(2));
+  finish();
+  await Promise.resolve();
+  assert.equal(classes.has('review-turn-next'), false);
+});
+
+test('previous review turns are symmetric and all unsafe cases render normally', () => {
+  const calls = [];
+  const transition = (callback) => { calls.push(callback); return { finished: Promise.resolve() }; };
+  const previous = turnHarness({ transition });
+  previous.controller.recordIntent({ button: 0, target: { closest: () => ({ dataset: { reviewDirection: 'previous' } }) } });
+  previous.windowRef.location.hash = '#review/story/2';
+  previous.controller.handleHashChange();
+  assert.equal(previous.classes.has('review-turn-previous'), true);
+  calls[0]();
+  for (const options of [{ cached: false, transition }, { reducedMotion: true, transition }, {}]) {
+    const harness = turnHarness(options);
+    harness.controller.recordIntent({ button: 0, target: { closest: () => ({ dataset: { reviewDirection: 'next' } }) } });
+    harness.windowRef.location.hash = '#review/story/2';
+    harness.controller.handleHashChange();
+    assert.deepEqual(harness.rendered.at(-1), reviewRoute(2));
+  }
+});
+
+test('modifier and middle review clicks do not record page-turn intent', () => {
+  const harness = turnHarness({ transition: () => { throw new Error('must not transition'); } });
+  const target = { closest: () => ({ dataset: { reviewDirection: 'next' } }) };
+  harness.controller.recordIntent({ button: 1, target });
+  harness.controller.recordIntent({ button: 0, metaKey: true, target });
+  harness.windowRef.location.hash = '#review/story/2';
+  harness.controller.handleHashChange();
+  assert.deepEqual(harness.rendered.at(-1), reviewRoute(2));
+});
+
+test('a rejected or stalled transition releases the turn class without unhandled state', async () => {
+  let reject;
+  const rejected = turnHarness({ transition: () => ({ finished: new Promise((_, fail) => { reject = fail; }) }) });
+  rejected.controller.recordIntent({ button: 0, target: { closest: () => ({ dataset: { reviewDirection: 'next' } }) } });
+  rejected.windowRef.location.hash = '#review/story/2';
+  rejected.controller.handleHashChange();
+  reject(new Error('cancelled'));
+  await Promise.resolve();
+  assert.equal(rejected.classes.size, 0);
+
+  let timeout;
+  const stalled = turnHarness({
+    transition: () => ({ finished: new Promise(() => {}) }),
+    timers: { setTimeout(callback) { timeout = callback; return 1; }, clearTimeout() {} },
+  });
+  stalled.controller.recordIntent({ button: 0, target: { closest: () => ({ dataset: { reviewDirection: 'next' } }) } });
+  stalled.windowRef.location.hash = '#review/story/2';
+  stalled.controller.handleHashChange();
+  timeout();
+  assert.equal(stalled.classes.size, 0);
+});
+
+test('rapid review hash changes coalesce to the latest page after the active turn', async () => {
+  const updates = [];
+  const finishes = [];
+  const transition = (callback) => {
+    updates.push(callback);
+    return { finished: new Promise((resolve) => finishes.push(resolve)) };
+  };
+  const harness = turnHarness({ transition });
+  const click = (direction) => harness.controller.recordIntent({ button: 0, target: { closest: () => ({ dataset: { reviewDirection: direction } }) } });
+  click('next');
+  harness.windowRef.location.hash = '#review/story/2';
+  harness.controller.handleHashChange();
+  updates[0]();
+  click('next');
+  harness.windowRef.location.hash = '#review/story/3';
+  harness.controller.handleHashChange();
+  finishes[0]();
+  await Promise.resolve();
+  updates[1]();
+  assert.deepEqual(harness.controller.currentRenderedRoute, reviewRoute(3));
+});
+
+test('review turn CSS uses restrained directional 620ms motion and disables it for reduced motion', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  assert.match(css, /\.review-paper\s*\{[\s\S]*view-transition-name:\s*review-paper/);
+  assert.match(css, /::view-transition-group\(review-paper\)[\s\S]*620ms[\s\S]*cubic-bezier\(\.52,\s*\.08,\s*\.28,\s*\.98\)[\s\S]*perspective:\s*1800px/);
+  assert.match(css, /review-turn-next-old[\s\S]*rotateY\(-82deg\)/);
+  assert.match(css, /review-turn-previous-old[\s\S]*rotateY\(82deg\)/);
+  assert.match(css, /prefers-reduced-motion:\s*reduce[\s\S]*\.review-paper\s*\{\s*view-transition-name:\s*none/);
 });

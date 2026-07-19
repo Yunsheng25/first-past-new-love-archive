@@ -923,6 +923,7 @@ video:focus-visible {
 }
 
 .review-paper {
+  view-transition-name: review-paper;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
@@ -935,6 +936,21 @@ video:focus-visible {
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.34);
   color: #332f2a;
 }
+
+::view-transition-group(review-paper) {
+  animation-duration: 620ms;
+  animation-timing-function: cubic-bezier(.52, .08, .28, .98);
+  perspective: 1800px;
+}
+
+.review-turn-next::view-transition-old(review-paper) { transform-origin: left center; animation-name: review-turn-next-old; }
+.review-turn-previous::view-transition-old(review-paper) { transform-origin: right center; animation-name: review-turn-previous-old; }
+.review-turn-next::view-transition-new(review-paper),
+.review-turn-previous::view-transition-new(review-paper) { animation-name: review-turn-new; }
+
+@keyframes review-turn-next-old { to { opacity: .18; transform: rotateY(-82deg); } }
+@keyframes review-turn-previous-old { to { opacity: .18; transform: rotateY(82deg); } }
+@keyframes review-turn-new { from { opacity: .72; transform: translateZ(-8px); box-shadow: 0 12px 38px rgba(0, 0, 0, .16); } to { opacity: 1; transform: none; } }
 
 .review-paper-meta {
   display: grid;
@@ -2378,6 +2394,12 @@ button.archive-filter-chip {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .review-paper { view-transition-name: none; }
+  ::view-transition-group(review-paper),
+  .review-turn-next::view-transition-old(review-paper),
+  .review-turn-previous::view-transition-old(review-paper),
+  .review-turn-next::view-transition-new(review-paper),
+  .review-turn-previous::view-transition-new(review-paper) { animation: none !important; transform: none !important; }
   *,
   *::before,
   *::after {

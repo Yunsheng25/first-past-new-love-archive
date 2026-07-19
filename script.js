@@ -8,7 +8,8 @@ import {
 } from './src/after-film.js';
 import { bindFilmMedia, bindIntroMedia, focusRenderedView } from './src/media-ui.js';
 import { mountArchiveRoute } from './src/archive-ui.js';
-import { mountReviewRoute } from './src/review-reader.js';
+import { mountReviewRoute, peekReviewData } from './src/review-reader.js';
+import { createReviewTurnController } from './src/review-turn.js';
 import { buildAfterView, buildFilmView, buildIntroView, buildPendingView } from './src/views.js';
 import { createAudioManager } from './src/audio-manager.js';
 import { createBgmController } from './src/bgm-ui.js';
@@ -94,7 +95,17 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
   focusRenderedView(app);
 }
 
+const reviewTurnController = createReviewTurnController({
+  documentRef: document,
+  windowRef: window,
+  parseRoute,
+  renderRoute,
+  peekReviewData: () => peekReviewData(globalThis.fetch),
+  reducedMotion: () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+});
+
 document.addEventListener('click', (event) => {
+  reviewTurnController.recordIntent(event);
   const playLink = event.target.closest('[data-play-film]');
   if (!playLink) return;
 
@@ -111,7 +122,7 @@ window.addEventListener('hashchange', () => {
     return;
   }
   ignoreNextFilmHashChange = false;
-  renderRoute();
+  reviewTurnController.handleHashChange();
 });
 
-renderRoute();
+reviewTurnController.renderInitial(currentRoute());
