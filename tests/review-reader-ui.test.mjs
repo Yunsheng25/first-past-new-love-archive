@@ -654,6 +654,7 @@ test('script routes both review destinations through cancellable review mounting
   assert.match(script, /route\.name === 'review-page'/);
   assert.match(script, /currentViewCleanup\s*=\s*mountReviewRoute/);
   assert.match(script, /currentViewCleanup\(\)/);
+  assert.match(script, /getRoute:\s*currentRoute/);
 });
 
 test('review page links declare their actual turn direction', () => {
@@ -675,7 +676,7 @@ function turnHarness({ cached = true, reducedMotion = false, transition, timers 
   const rendered = [];
   const controller = createReviewTurnController({
     documentRef, windowRef,
-    parseRoute: (hash) => reviewRoute(Number(hash.split('/').at(-1))),
+    getRoute: () => reviewRoute(Number(windowRef.location.hash.split('/').at(-1))),
     renderRoute: (route) => rendered.push(route),
     peekReviewData: () => cached ? {} : null,
     reducedMotion: () => reducedMotion,
@@ -685,6 +686,22 @@ function turnHarness({ cached = true, reducedMotion = false, transition, timers 
   controller.renderInitial(reviewRoute(1));
   return { controller, windowRef, rendered, classes };
 }
+
+test('hash changes use the wrapped current route resolver for #about', () => {
+  const rendered = [];
+  const windowRef = { location: { hash: '#review/story/1' } };
+  const controller = createReviewTurnController({
+    documentRef: { documentElement: { classList: { add() {}, remove() {} } } },
+    windowRef,
+    getRoute: () => windowRef.location.hash === '#about' ? { name: 'about' } : reviewRoute(1),
+    renderRoute: (route) => rendered.push(route),
+    peekReviewData: () => null,
+  });
+  controller.renderInitial(reviewRoute(1));
+  windowRef.location.hash = '#about';
+  controller.handleHashChange();
+  assert.deepEqual(rendered.at(-1), { name: 'about' });
+});
 
 test('cached forward review navigation renders inside a view transition and cleans its direction class', async () => {
   let update;
@@ -743,8 +760,12 @@ test('a rejected or stalled transition releases the turn class without unhandled
 
   let timeout;
   let lateUpdate;
+  let skipped = 0;
   const stalled = turnHarness({
-    transition: (callback) => { lateUpdate = callback; return { finished: new Promise(() => {}) }; },
+    transition: (callback) => {
+      lateUpdate = callback;
+      return { finished: new Promise(() => {}), skipTransition() { skipped += 1; } };
+    },
     timers: { setTimeout(callback) { timeout = callback; return 1; }, clearTimeout() {} },
   });
   stalled.controller.recordIntent({ button: 0, target: { closest: () => ({ dataset: { reviewDirection: 'next' } }) } });
@@ -752,11 +773,46 @@ test('a rejected or stalled transition releases the turn class without unhandled
   stalled.controller.handleHashChange();
   timeout();
   assert.equal(stalled.classes.size, 0);
+  assert.equal(skipped, 1);
   assert.deepEqual(stalled.rendered.at(-1), reviewRoute(2));
   assert.deepEqual(stalled.controller.currentRenderedRoute, reviewRoute(2));
   const renderCount = stalled.rendered.length;
   lateUpdate();
   assert.equal(stalled.rendered.length, renderCount);
+});
+
+test('destroy skips an active native review transition and makes its late update inert', () => {
+  let lateUpdate;
+  let skipped = 0;
+  const harness = turnHarness({
+    transition: (callback) => {
+      lateUpdate = callback;
+      return { finished: new Promise(() => {}), skipTransition() { skipped += 1; } };
+    },
+    timers: { setTimeout() { return 1; }, clearTimeout() {} },
+  });
+  harness.controller.recordIntent({ button: 0, target: { closest: () => ({ dataset: { reviewDirection: 'next' } }) } });
+  harness.windowRef.location.hash = '#review/story/2';
+  harness.controller.handleHashChange();
+  harness.controller.destroy();
+  assert.equal(skipped, 1);
+  assert.equal(harness.classes.size, 0);
+  const renderCount = harness.rendered.length;
+  lateUpdate();
+  assert.equal(harness.rendered.length, renderCount);
+});
+
+test('missing or throwing native skipTransition never prevents timeout cleanup', () => {
+  let timeout;
+  const harness = turnHarness({
+    transition: () => ({ finished: new Promise(() => {}), skipTransition() { throw new Error('ignored'); } }),
+    timers: { setTimeout(callback) { timeout = callback; return 1; }, clearTimeout() {} },
+  });
+  harness.controller.recordIntent({ button: 0, target: { closest: () => ({ dataset: { reviewDirection: 'next' } }) } });
+  harness.windowRef.location.hash = '#review/story/2';
+  harness.controller.handleHashChange();
+  assert.doesNotThrow(timeout);
+  assert.equal(harness.classes.size, 0);
 });
 
 test('rapid review hash changes coalesce to the latest page after the active turn', async () => {

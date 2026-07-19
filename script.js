@@ -98,7 +98,7 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
 const reviewTurnController = createReviewTurnController({
   documentRef: document,
   windowRef: window,
-  parseRoute,
+  getRoute: currentRoute,
   renderRoute,
   peekReviewData: () => peekReviewData(globalThis.fetch),
   reducedMotion: () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,

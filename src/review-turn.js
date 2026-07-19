@@ -10,7 +10,7 @@ function eligibleActivation(event) {
 export function createReviewTurnController({
   documentRef = document,
   windowRef = window,
-  parseRoute,
+  getRoute,
   renderRoute,
   peekReviewData,
   reducedMotion = () => false,
@@ -29,10 +29,13 @@ export function createReviewTurnController({
     currentRenderedRoute = route;
   };
 
-  const finish = (token, { renderMissing = !destroyed } = {}) => {
+  const finish = (token, { renderMissing = !destroyed, skipNative = false } = {}) => {
     if (active?.token !== token) return;
     const turn = active;
     clearTimeoutFn(turn.timeout);
+    if (skipNative) {
+      try { turn.transition?.skipTransition?.(); } catch {}
+    }
     if (renderMissing && !turn.rendered) render(turn.route);
     documentRef.documentElement.classList.remove(turn.className);
     active = null;
@@ -67,7 +70,8 @@ export function createReviewTurnController({
           render(route);
         }
       });
-      active.timeout = setTimeoutFn(() => finish(token), timeoutMs);
+      active.transition = transition;
+      active.timeout = setTimeoutFn(() => finish(token, { skipNative: true }), timeoutMs);
       Promise.resolve(transition?.finished).then(() => finish(token), () => finish(token));
     } catch {
       finish(token);
@@ -76,7 +80,7 @@ export function createReviewTurnController({
 
   const handleHashChange = () => {
     if (destroyed) return;
-    const route = parseRoute(windowRef.location.hash);
+    const route = getRoute();
     const direction = intent;
     intent = null;
     if (active) {
@@ -98,7 +102,7 @@ export function createReviewTurnController({
     destroy() {
       destroyed = true;
       pending = null;
-      if (active) finish(active.token, { renderMissing: false });
+      if (active) finish(active.token, { renderMissing: false, skipNative: true });
     },
     get currentRenderedRoute() { return currentRenderedRoute; },
   };
