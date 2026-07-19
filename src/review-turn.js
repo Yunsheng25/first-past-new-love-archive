@@ -29,10 +29,12 @@ export function createReviewTurnController({
     currentRenderedRoute = route;
   };
 
-  const finish = (token) => {
+  const finish = (token, { renderMissing = !destroyed } = {}) => {
     if (active?.token !== token) return;
-    clearTimeoutFn(active.timeout);
-    documentRef.documentElement.classList.remove(active.className);
+    const turn = active;
+    clearTimeoutFn(turn.timeout);
+    if (renderMissing && !turn.rendered) render(turn.route);
+    documentRef.documentElement.classList.remove(turn.className);
     active = null;
     if (pending) {
       const next = pending;
@@ -57,16 +59,18 @@ export function createReviewTurnController({
     const token = Symbol('review-turn');
     const className = `review-turn-${direction}`;
     documentRef.documentElement.classList.add(className);
-    active = { token, className, timeout: null };
+    active = { token, className, route, rendered: false, timeout: null };
     try {
       const transition = documentRef.startViewTransition(() => {
-        if (!destroyed && active?.token === token) render(route);
+        if (!destroyed && active?.token === token) {
+          active.rendered = true;
+          render(route);
+        }
       });
       active.timeout = setTimeoutFn(() => finish(token), timeoutMs);
       Promise.resolve(transition?.finished).then(() => finish(token), () => finish(token));
     } catch {
       finish(token);
-      render(route);
     }
   };
 
@@ -94,7 +98,7 @@ export function createReviewTurnController({
     destroy() {
       destroyed = true;
       pending = null;
-      if (active) finish(active.token);
+      if (active) finish(active.token, { renderMissing: false });
     },
     get currentRenderedRoute() { return currentRenderedRoute; },
   };

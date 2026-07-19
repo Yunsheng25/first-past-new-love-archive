@@ -742,8 +742,9 @@ test('a rejected or stalled transition releases the turn class without unhandled
   assert.equal(rejected.classes.size, 0);
 
   let timeout;
+  let lateUpdate;
   const stalled = turnHarness({
-    transition: () => ({ finished: new Promise(() => {}) }),
+    transition: (callback) => { lateUpdate = callback; return { finished: new Promise(() => {}) }; },
     timers: { setTimeout(callback) { timeout = callback; return 1; }, clearTimeout() {} },
   });
   stalled.controller.recordIntent({ button: 0, target: { closest: () => ({ dataset: { reviewDirection: 'next' } }) } });
@@ -751,6 +752,11 @@ test('a rejected or stalled transition releases the turn class without unhandled
   stalled.controller.handleHashChange();
   timeout();
   assert.equal(stalled.classes.size, 0);
+  assert.deepEqual(stalled.rendered.at(-1), reviewRoute(2));
+  assert.deepEqual(stalled.controller.currentRenderedRoute, reviewRoute(2));
+  const renderCount = stalled.rendered.length;
+  lateUpdate();
+  assert.equal(stalled.rendered.length, renderCount);
 });
 
 test('rapid review hash changes coalesce to the latest page after the active turn', async () => {
