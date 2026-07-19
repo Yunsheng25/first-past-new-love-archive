@@ -56,7 +56,7 @@ test('film view plays the full film at normal speed with sound-capable controls'
   const filmVideo = html.match(/<video\b[\s\S]*?<\/video>/)?.[0] ?? '';
 
   assert.match(filmVideo, /src="assets\/video\/full-film\.mp4"/);
-  assert.match(filmVideo, /controls/);
+  assert.match(filmVideo, /\scontrols(?:\s|=|>)/i);
   assert.match(filmVideo, /controlsList="nofullscreen"/);
   assert.match(filmVideo, /playsinline/);
   assert.doesNotMatch(html, /\bmuted\b/);
