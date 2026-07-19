@@ -452,3 +452,33 @@ test('a late obsolete success does not pause newer valid playback', async () => 
   assert.equal(manager.state().playing, true);
   assert.equal(audio.pauseCalls, 1);
 });
+
+test('leaving film adopts already-playing BGM before an obsolete play fulfills', async () => {
+  const audio = createFakeAudio();
+  let resolvePlay;
+  let resolveFilmFade;
+  audio.play = function play() {
+    this.playCalls += 1;
+    this.paused = false;
+    return new Promise((resolve) => { resolvePlay = resolve; });
+  };
+  const fade = async (_player, target) => {
+    if (target === 0) await new Promise((resolve) => { resolveFilmFade = resolve; });
+    audio.volume = target;
+  };
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade });
+
+  const start = manager.startFromGesture();
+  const entering = manager.enterFilm();
+  assert.equal(await manager.leaveFilm(), true);
+  assert.equal(audio.paused, false);
+  assert.equal(audio.volume, BGM_VOLUME);
+
+  resolvePlay();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(audio.paused, false);
+  assert.equal(audio.volume, BGM_VOLUME);
+
+  resolveFilmFade();
+  await Promise.all([start, entering]);
+});

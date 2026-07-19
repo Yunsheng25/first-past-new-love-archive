@@ -110,8 +110,13 @@ export function createAudioManager({ audio, storage, fade } = {}) {
     if (playAttempt?.version === transition) return playAttempt.promise;
     cancelPlayAttempt();
     if (isPlaying()) {
-      if (!forceFade) return true;
-      return fadeTo(BGM_VOLUME, 280).then((completed) => (
+      if (!forceFade) {
+        playbackOwnerVersion = transition;
+        return true;
+      }
+      const fading = fadeTo(BGM_VOLUME, 280);
+      playbackOwnerVersion = transition;
+      return fading.then((completed) => (
         completed && !destroyed && !filmActive && enabled && !unavailable
       ));
     }
