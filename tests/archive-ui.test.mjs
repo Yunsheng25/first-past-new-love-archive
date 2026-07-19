@@ -346,13 +346,95 @@ test('successful textarea copy fallback restores the original selection, focus, 
   assert.equal(originalActive.focused, true);
 });
 
+test('real copy click keeps its button focus through successful textarea fallback and resets aria busy state', async () => {
+  const listeners = new Map();
+  const status = { textContent: '' };
+  const classes = new Set();
+  const copyButton = {
+    attributes: new Map(),
+    classList: { toggle(name, active) { if (active) classes.add(name); else classes.delete(name); } },
+    closest(selector) { return selector === '[data-copy-prompt]' ? this : null; },
+    setAttribute(name, value) { this.attributes.set(name, String(value)); },
+    getAttribute(name) { return this.attributes.get(name) ?? null; },
+    focus() { documentRef.activeElement = this; },
+  };
+  const selection = { rangeCount: 0, removeAllRanges() {}, addRange() {} };
+  const textarea = {
+    style: {}, removed: false, setAttribute() {},
+    select() { documentRef.activeElement = this; },
+    remove() { this.removed = true; },
+  };
+  const documentRef = {
+    activeElement: copyButton,
+    getSelection: () => selection,
+    createElement: () => textarea,
+    body: { append() {} },
+    execCommand: () => true,
+    addEventListener() {}, removeEventListener() {},
+  };
+  const root = {
+    querySelector: (selector) => selector === '[data-copy-status]' ? status : null,
+    querySelectorAll: () => [],
+    addEventListener: (type, handler) => listeners.set(type, handler),
+    removeEventListener() {},
+  };
+  bindArchiveDetailInteractions(root, { prompt: 'clean', documentRef, navigatorRef: {} });
+  await listeners.get('click')({ target: copyButton });
+  assert.equal(documentRef.activeElement, copyButton);
+  assert.equal(copyButton.getAttribute('aria-disabled'), 'false');
+  assert.equal(classes.has('is-copying'), false);
+  assert.equal(textarea.removed, true);
+  assert.equal(status.textContent, '提示词已复制');
+  assert.equal('disabled' in copyButton && copyButton.disabled, false);
+});
+
+test('real copy click ignores rapid reentry while keeping a focusable aria busy button', async () => {
+  const listeners = new Map();
+  let resolveCopy;
+  let calls = 0;
+  const pending = new Promise((resolve) => { resolveCopy = resolve; });
+  const attributes = new Map();
+  const classes = new Set();
+  const copyButton = {
+    classList: { toggle(name, active) { if (active) classes.add(name); else classes.delete(name); } },
+    closest: (selector) => selector === '[data-copy-prompt]' ? copyButton : null,
+    setAttribute: (name, value) => attributes.set(name, String(value)),
+  };
+  const status = { textContent: '' };
+  const root = {
+    querySelector: (selector) => selector === '[data-copy-status]' ? status : null,
+    querySelectorAll: () => [],
+    addEventListener: (type, handler) => listeners.set(type, handler),
+    removeEventListener() {},
+  };
+  const documentRef = { addEventListener() {}, removeEventListener() {} };
+  bindArchiveDetailInteractions(root, {
+    prompt: 'clean', documentRef,
+    copyPrompt: async () => { calls += 1; return pending; },
+  });
+  const first = listeners.get('click')({ target: copyButton });
+  const second = listeners.get('click')({ target: copyButton });
+  await Promise.resolve();
+  assert.equal(calls, 1);
+  assert.equal(attributes.get('aria-disabled'), 'true');
+  assert.equal(classes.has('is-copying'), true);
+  assert.equal(status.textContent, '正在复制…');
+  assert.equal('disabled' in copyButton, false);
+  resolveCopy(true);
+  await Promise.all([first, second]);
+  assert.equal(attributes.get('aria-disabled'), 'false');
+  assert.equal(classes.has('is-copying'), false);
+});
+
 test('final copy failure selects the visible clean prompt and announces manual copy accessibly', async () => {
   const listeners = new Map();
   const status = { textContent: '' };
-  const visiblePrompt = { focused: false, focus() { this.focused = true; } };
+  const visiblePrompt = { focused: false, focus() { this.focused = true; documentRef.activeElement = this; } };
   const copyButton = {
-    disabled: false,
+    attributes: new Map(),
     closest(selector) { return selector === '[data-copy-prompt]' ? this : null; },
+    setAttribute(name, value) { this.attributes.set(name, String(value)); },
+    getAttribute(name) { return this.attributes.get(name) ?? null; },
   };
   const range = {
     target: null,
@@ -393,8 +475,10 @@ test('final copy failure selects the visible clean prompt and announces manual c
   assert.equal(selection.removed, true);
   assert.equal(selection.added, range);
   assert.equal(visiblePrompt.focused, true);
+  assert.equal(documentRef.activeElement, visiblePrompt);
   assert.equal(status.textContent, '复制失败，已选中提示词，请手动复制');
-  assert.equal(copyButton.disabled, false);
+  assert.equal(copyButton.getAttribute('aria-disabled'), 'false');
+  assert.equal('disabled' in copyButton, false);
 });
 
 test('selection API failure after copy failure never throws and still reports a manual action', async () => {

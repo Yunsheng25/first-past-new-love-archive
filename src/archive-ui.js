@@ -323,6 +323,7 @@ export function bindArchiveDetailInteractions(root, {
   let currentIndex = -1;
   let returnFocus = null;
   let active = true;
+  let copyInFlight = false;
 
   const updateLightbox = () => {
     const item = activeImages[currentIndex];
@@ -379,19 +380,33 @@ export function bindArchiveDetailInteractions(root, {
     if (closest('[data-archive-lightbox-next]')) { moveLightbox(1); return; }
     const copyButton = closest('[data-copy-prompt]');
     if (copyButton) {
+      if (copyInFlight) return;
       const status = root.querySelector?.('[data-copy-status]');
-      copyButton.disabled = true;
-      const success = await copyPrompt(prompt, { navigatorRef, documentRef });
-      if (!active) return;
-      copyButton.disabled = false;
-      if (status) {
-        if (success) {
-          status.textContent = '提示词已复制';
-        } else if (selectVisibleArchivePrompt(root, documentRef)) {
-          status.textContent = '复制失败，已选中提示词，请手动复制';
-        } else {
-          status.textContent = '复制失败，请手动选择提示词';
+      copyInFlight = true;
+      copyButton.setAttribute?.('aria-disabled', 'true');
+      copyButton.classList?.toggle?.('is-copying', true);
+      if (status) status.textContent = '正在复制…';
+      try {
+        let success = false;
+        try {
+          success = await copyPrompt(prompt, { navigatorRef, documentRef });
+        } catch {
+          success = false;
         }
+        if (!active) return;
+        if (status) {
+          if (success) {
+            status.textContent = '提示词已复制';
+          } else if (selectVisibleArchivePrompt(root, documentRef)) {
+            status.textContent = '复制失败，已选中提示词，请手动复制';
+          } else {
+            status.textContent = '复制失败，请手动选择提示词';
+          }
+        }
+      } finally {
+        copyInFlight = false;
+        copyButton.setAttribute?.('aria-disabled', 'false');
+        copyButton.classList?.toggle?.('is-copying', false);
       }
     }
   };

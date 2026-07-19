@@ -2124,6 +2124,12 @@ button.archive-filter-chip {
   opacity: 0.4;
 }
 
+.archive-prompt-heading button.is-copying,
+.archive-prompt-heading button[aria-disabled="true"] {
+  cursor: progress;
+  opacity: 0.68;
+}
+
 .archive-copy-status {
   min-height: 25px;
   padding-top: 7px;
