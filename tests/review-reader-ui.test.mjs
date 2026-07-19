@@ -686,7 +686,21 @@ test('reader media elements remain fully opaque and unfiltered', async () => {
   const media = cssRule(css, '.review-media img,\n.review-media video');
 
   assert.match(media, /opacity:\s*1/);
-  assert.doesNotMatch(media, /filter\s*:/);
+  assert.match(media, /filter:\s*none/);
+  const mediaRules = [...css.matchAll(/\.review-media(?:\s+img|\s+video|\s+img,\s*\.review-media\s+video)[^{]*\{([^}]*)\}/g)];
+  assert.ok(mediaRules.length >= 1);
+  for (const [, body] of mediaRules) {
+    for (const [, value] of body.matchAll(/opacity\s*:\s*([^;]+);?/g)) assert.equal(value.trim(), '1');
+    for (const [, value] of body.matchAll(/filter\s*:\s*([^;]+);?/g)) assert.equal(value.trim(), 'none');
+  }
+});
+
+test('sidebar page counts stay readable against the warm-charcoal sidebar', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  const count = cssRule(css, '.review-chapter-link small');
+
+  assert.match(count, /font-size:\s*(?:11|12)px/);
+  assert.match(count, /color:\s*#c9beb2/);
 });
 
 test('reader content surfaces use scoped warm-charcoal treatments', async () => {

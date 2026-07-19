@@ -918,8 +918,8 @@ video:focus-visible {
 
 .review-chapter-link small {
   grid-column: 2;
-  color: rgba(201, 190, 178, 0.42);
-  font-size: 9px;
+  color: #c9beb2;
+  font-size: 11px;
   letter-spacing: 0.12em;
 }
 
@@ -1149,6 +1149,7 @@ h5.review-heading { font-size: clamp(17px, 1.4vw, 20px); }
   background: #171412;
   object-fit: contain;
   opacity: 1;
+  filter: none;
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.28);
 }
 
@@ -1459,8 +1460,9 @@ h5.review-heading { font-size: clamp(17px, 1.4vw, 20px); }
   }
 
   .review-return-after {
-    bottom: max(10px, env(safe-area-inset-bottom));
+    bottom: calc(env(safe-area-inset-bottom) + 68px);
     left: max(10px, env(safe-area-inset-left));
+    min-height: 44px;
     padding: 8px 11px;
     font-size: 10px;
   }
@@ -2528,6 +2530,7 @@ button.archive-filter-chip {
     width: calc(100vw - 24px);
     max-width: 100%;
     min-width: 0;
+    padding: 0;
     margin: 10px auto 12px;
   }
 
