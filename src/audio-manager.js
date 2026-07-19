@@ -147,7 +147,11 @@ export function createAudioManager({ audio, storage, fade } = {}) {
         if (!result.played || attempt === playAttempt && version === transition) return;
         const newerPlaybackOwnsPlayer = playbackOwnerVersion === transition
           && enabled && gestureReceived && !filmActive && !unavailable && !destroyed;
-        if (!newerPlaybackOwnsPlayer) pause();
+        const newerAttemptProvisionallyOwnsPlayer = playAttempt
+          && playAttempt !== attempt
+          && playAttempt.version === transition
+          && canResume();
+        if (!newerPlaybackOwnsPlayer && !newerAttemptProvisionallyOwnsPlayer) pause();
       },
       () => {},
     );

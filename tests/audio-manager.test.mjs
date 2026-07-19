@@ -522,3 +522,31 @@ test('enabling BGM during film keeps stale fades silent and paused', async () =>
   assert.deepEqual(manager.state(), { enabled: true, gestureReceived: true, filmActive: true, unavailable: false, playing: false });
   assert.equal(audio.volume, 0);
 });
+
+test('an obsolete play success preserves a newer pending BGM attempt', async () => {
+  const audio = createFakeAudio();
+  let resolveFirst;
+  let resolveSecond;
+  audio.play = function play() {
+    this.playCalls += 1;
+    return new Promise((resolve) => {
+      if (this.playCalls === 1) resolveFirst = () => { this.paused = false; resolve(); };
+      else resolveSecond = () => { this.paused = false; resolve(); };
+    });
+  };
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  const start = manager.startFromGesture();
+  await manager.enterFilm();
+  const leaving = manager.leaveFilm();
+  resolveFirst();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(audio.pauseCalls, 1);
+  assert.equal(manager.state().unavailable, false);
+
+  resolveSecond();
+  assert.equal(await leaving, true);
+  assert.equal(await start, false);
+  assert.deepEqual(manager.state(), { enabled: true, gestureReceived: true, filmActive: false, unavailable: false, playing: true });
+  assert.equal(audio.volume, BGM_VOLUME);
+});
