@@ -1,7 +1,7 @@
 export const BGM_PREFERENCE_KEY = 'bgm:enabled';
 export const BGM_VOLUME = 0.14;
 
-export function createVolumeFade({ schedule = setTimeout, cancel = clearTimeout } = {}) {
+export function createVolumeFade({ schedule = setTimeout, cancel = clearTimeout, now = Date.now } = {}) {
   let active = null;
 
   const stopActive = () => {
@@ -32,9 +32,9 @@ export function createVolumeFade({ schedule = setTimeout, cancel = clearTimeout 
       },
     };
     active = run;
-    const startedAt = Date.now();
+    const startedAt = now();
     const step = () => {
-      const progress = Math.min(1, (Date.now() - startedAt) / total);
+      const progress = Math.min(1, (now() - startedAt) / total);
       audio.volume = start + ((target - start) * progress);
       if (progress === 1) {
         run.settle();
@@ -63,7 +63,7 @@ export function createAudioManager({ audio, storage, fade } = {}) {
   let unavailable = !player;
   let destroyed = false;
   let transition = 0;
-  let resumePromise = null;
+  let playAttempt = null;
   let targetVolume = 0;
 
   if (player) {
@@ -74,12 +74,30 @@ export function createAudioManager({ audio, storage, fade } = {}) {
   const isPlaying = () => Boolean(player && !player.paused);
   const pause = () => { player?.pause(); };
 
+  const cancelPlayAttempt = () => {
+    playAttempt?.cancel();
+  };
+
+  const beginTransition = (target) => {
+    transition += 1;
+    targetVolume = target;
+    volumeFade.cancel?.();
+    cancelPlayAttempt();
+    return transition;
+  };
+
   const fadeTo = async (target, duration) => {
     if (!player) return false;
-    volumeFade.cancel?.();
-    const currentTransition = ++transition;
-    targetVolume = target;
-    await volumeFade(player, target, duration);
+    const currentTransition = beginTransition(target);
+    try {
+      await volumeFade(player, target, duration);
+    } catch {
+      if (currentTransition === transition && !destroyed) {
+        unavailable = true;
+        pause();
+      }
+      return false;
+    }
     const completed = !destroyed && currentTransition === transition;
     if (!completed && !destroyed) player.volume = targetVolume;
     return completed;
@@ -87,7 +105,8 @@ export function createAudioManager({ audio, storage, fade } = {}) {
 
   const resume = ({ forceFade = false } = {}) => {
     if (destroyed || !enabled || !gestureReceived || filmActive || unavailable || !player) return false;
-    if (resumePromise) return resumePromise;
+    if (playAttempt?.version === transition) return playAttempt.promise;
+    cancelPlayAttempt();
     if (isPlaying()) {
       if (!forceFade) return true;
       return fadeTo(BGM_VOLUME, 280).then((completed) => (
@@ -95,10 +114,27 @@ export function createAudioManager({ audio, storage, fade } = {}) {
       ));
     }
 
+    const version = transition;
+    let cancel;
+    const cancelled = new Promise((resolve) => { cancel = () => resolve({ cancelled: true }); });
+    let browserPlay;
+    try {
+      browserPlay = Promise.resolve(player.play()).then(
+        () => ({ played: true }),
+        () => ({ failed: true }),
+      );
+    } catch {
+      browserPlay = Promise.resolve({ failed: true });
+    }
+    const attempt = {
+      version,
+      cancel,
+      promise: null,
+    };
     const operation = (async () => {
-      try {
-        await player.play();
-      } catch {
+      const result = await Promise.race([browserPlay, cancelled]);
+      if (result.cancelled || destroyed || version !== transition) return false;
+      if (result.failed) {
         unavailable = true;
         pause();
         return false;
@@ -107,13 +143,22 @@ export function createAudioManager({ audio, storage, fade } = {}) {
         pause();
         return false;
       }
+      if (playAttempt === attempt) playAttempt = null;
       const completed = await fadeTo(BGM_VOLUME, 280);
       return completed && !destroyed && !filmActive && enabled && !unavailable;
-    })();
-    resumePromise = operation;
-    operation.finally(() => {
-      if (resumePromise === operation) resumePromise = null;
+    })().catch(() => {
+      if (!destroyed && version === transition) {
+        unavailable = true;
+        pause();
+      }
+      return false;
     });
+    attempt.promise = operation;
+    playAttempt = attempt;
+    operation.then(
+      () => { if (playAttempt === attempt) playAttempt = null; },
+      () => { if (playAttempt === attempt) playAttempt = null; },
+    );
     return operation;
   };
 
@@ -133,7 +178,7 @@ export function createAudioManager({ audio, storage, fade } = {}) {
     async leaveFilm() {
       if (destroyed) return false;
       filmActive = false;
-      transition += 1;
+      beginTransition(BGM_VOLUME);
       return resume({ forceFade: true });
     },
     async toggle() {
@@ -145,6 +190,7 @@ export function createAudioManager({ audio, storage, fade } = {}) {
         if (completed) pause();
         return false;
       }
+      beginTransition(BGM_VOLUME);
       return resume({ forceFade: true });
     },
     state() {
@@ -154,6 +200,7 @@ export function createAudioManager({ audio, storage, fade } = {}) {
       if (destroyed) return;
       destroyed = true;
       transition += 1;
+      cancelPlayAttempt();
       volumeFade.cancel?.();
       pause();
     },

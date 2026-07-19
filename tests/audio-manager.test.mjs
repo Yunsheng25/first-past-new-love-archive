@@ -128,14 +128,23 @@ test('marks playback as unavailable when play is rejected', async () => {
 
 test('volume fade interpolates to its target and settles immediately for zero duration', async () => {
   const audio = { volume: 0 };
-  const fade = createVolumeFade();
+  let clock = 0;
+  const scheduled = [];
+  const fade = createVolumeFade({
+    now: () => clock,
+    schedule(callback) { scheduled.push(callback); return callback; },
+    cancel() {},
+  });
 
   await fade(audio, 0.7, 0);
   assert.equal(audio.volume, 0.7);
 
-  const completion = fade(audio, 0.2, 40);
-  await new Promise((resolve) => setTimeout(resolve, 20));
-  assert.ok(audio.volume < 0.7 && audio.volume > 0.2);
+  const completion = fade(audio, 0.2, 100);
+  clock = 50;
+  scheduled.shift()();
+  assert.ok(Math.abs(audio.volume - 0.45) < 1e-9);
+  clock = 100;
+  scheduled.shift()();
   await completion;
   assert.equal(audio.volume, 0.2);
 });
@@ -235,7 +244,7 @@ test('destroy during a fade settles the pending call without stale side effects'
   const manager = createAudioManager({ audio, storage: createFakeStorage(), fade });
 
   const start = manager.startFromGesture();
-  await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
   pending.shift().resolve();
   await start;
   const disabling = manager.toggle();
@@ -252,7 +261,7 @@ test('leaving film supersedes a stale fade and restores BGM volume while already
   const manager = createAudioManager({ audio, storage: createFakeStorage(), fade });
 
   const start = manager.startFromGesture();
-  await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
   pending.shift().resolve();
   await start;
   const entering = manager.enterFilm();
@@ -273,7 +282,7 @@ test('re-enabling BGM supersedes a stale disable fade', async () => {
   const manager = createAudioManager({ audio, storage: createFakeStorage(), fade });
 
   const start = manager.startFromGesture();
-  await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
   pending.shift().resolve();
   await start;
   const disabling = manager.toggle();
@@ -287,4 +296,92 @@ test('re-enabling BGM supersedes a stale disable fade', async () => {
   assert.deepEqual(manager.state(), { enabled: true, gestureReceived: true, filmActive: false, unavailable: false, playing: true });
   assert.equal(audio.volume, BGM_VOLUME);
   assert.equal(audio.pauseCalls, 0);
+});
+
+test('new film transition supersedes a pending start and leaves BGM playing', async () => {
+  const audio = createFakeAudio();
+  let firstPlay = true;
+  audio.play = function play() {
+    this.playCalls += 1;
+    if (firstPlay) {
+      firstPlay = false;
+      return new Promise(() => {});
+    }
+    this.paused = false;
+    return Promise.resolve();
+  };
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  const start = manager.startFromGesture();
+  const entering = manager.enterFilm();
+  const leaving = manager.leaveFilm();
+  assert.deepEqual(await Promise.all([start, entering, leaving]), [false, false, true]);
+  assert.equal(audio.playCalls, 2);
+  assert.deepEqual(manager.state(), { enabled: true, gestureReceived: true, filmActive: false, unavailable: false, playing: true });
+  assert.equal(audio.volume, BGM_VOLUME);
+});
+
+test('re-enabling during startup supersedes the old play attempt', async () => {
+  const audio = createFakeAudio();
+  let firstPlay = true;
+  audio.play = function play() {
+    this.playCalls += 1;
+    if (firstPlay) {
+      firstPlay = false;
+      return new Promise(() => {});
+    }
+    this.paused = false;
+    return Promise.resolve();
+  };
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  const start = manager.startFromGesture();
+  const disabling = manager.toggle();
+  const enabling = manager.toggle();
+  assert.deepEqual(await Promise.all([start, disabling, enabling]), [false, false, true]);
+  assert.equal(audio.playCalls, 2);
+  assert.equal(audio.volume, BGM_VOLUME);
+  assert.equal(manager.state().enabled, true);
+});
+
+test('an obsolete AbortError from play does not mark BGM unavailable', async () => {
+  const audio = createFakeAudio();
+  let rejectFirst;
+  audio.play = function play() {
+    this.playCalls += 1;
+    if (this.playCalls === 1) return new Promise((_, reject) => { rejectFirst = reject; });
+    this.paused = false;
+    return Promise.resolve();
+  };
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  const start = manager.startFromGesture();
+  await manager.enterFilm();
+  rejectFirst(new DOMException('cancelled', 'AbortError'));
+  assert.equal(await start, false);
+  assert.equal(await manager.leaveFilm(), true);
+  assert.equal(audio.playCalls, 2);
+  assert.equal(manager.state().unavailable, false);
+});
+
+test('destroy settles a start whose browser play promise never resolves', async () => {
+  const audio = createFakeAudio({ playResult: new Promise(() => {}) });
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade: immediateFade(audio) });
+
+  const start = manager.startFromGesture();
+  manager.destroy();
+  assert.equal(await start, false);
+  assert.equal(audio.pauseCalls, 1);
+});
+
+test('a rejecting fade fails closed without an unhandled operation rejection', async () => {
+  const audio = createFakeAudio();
+  const manager = createAudioManager({
+    audio,
+    storage: createFakeStorage(),
+    fade: async () => { throw new Error('fade failed'); },
+  });
+
+  assert.equal(await manager.startFromGesture(), false);
+  assert.equal(manager.state().unavailable, true);
 });
