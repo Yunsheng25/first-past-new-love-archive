@@ -550,3 +550,36 @@ test('an obsolete play success preserves a newer pending BGM attempt', async () 
   assert.deepEqual(manager.state(), { enabled: true, gestureReceived: true, filmActive: false, unavailable: false, playing: true });
   assert.equal(audio.volume, BGM_VOLUME);
 });
+
+test('storage read and write failures do not prevent BGM state transitions', async () => {
+  const audio = createFakeAudio();
+  const storage = {
+    getItem() { throw new Error('storage read blocked'); },
+    setItem() { throw new Error('storage write blocked'); },
+  };
+  const manager = createAudioManager({ audio, storage, fade: immediateFade(audio) });
+
+  assert.equal(manager.state().enabled, true);
+  assert.equal(await manager.startFromGesture(), true);
+  assert.equal(await manager.toggle(), false);
+  assert.equal(manager.state().enabled, false);
+  assert.equal(await manager.toggle(), true);
+  assert.equal(manager.state().enabled, true);
+  assert.equal(audio.playCalls, 2);
+});
+
+test('a throwing global localStorage getter falls back to enabled BGM', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const audio = createFakeAudio();
+  try {
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get() { throw new Error('storage access blocked'); },
+    });
+    const manager = createAudioManager({ audio, fade: immediateFade(audio) });
+    assert.equal(manager.state().enabled, true);
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor);
+    else delete globalThis.localStorage;
+  }
+});

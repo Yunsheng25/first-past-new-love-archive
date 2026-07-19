@@ -55,9 +55,21 @@ export function createVolumeFade({ schedule = setTimeout, cancel = clearTimeout,
 
 export function createAudioManager({ audio, storage, fade } = {}) {
   const player = audio ?? (typeof Audio === 'function' ? new Audio('assets/audio/memory-piano.wav') : null);
-  const preferenceStore = storage ?? (typeof localStorage !== 'undefined' ? localStorage : null);
+  let preferenceStore = storage;
+  if (preferenceStore === undefined) {
+    try {
+      preferenceStore = typeof localStorage !== 'undefined' ? localStorage : null;
+    } catch {
+      preferenceStore = null;
+    }
+  }
   const volumeFade = fade ?? createVolumeFade();
-  let enabled = preferenceStore?.getItem(BGM_PREFERENCE_KEY) !== 'false';
+  let enabled = true;
+  try {
+    enabled = preferenceStore?.getItem(BGM_PREFERENCE_KEY) !== 'false';
+  } catch {
+    enabled = true;
+  }
   let gestureReceived = false;
   let filmActive = false;
   let unavailable = !player;
@@ -215,7 +227,11 @@ export function createAudioManager({ audio, storage, fade } = {}) {
     async toggle() {
       if (destroyed) return false;
       enabled = !enabled;
-      preferenceStore?.setItem(BGM_PREFERENCE_KEY, String(enabled));
+      try {
+        preferenceStore?.setItem(BGM_PREFERENCE_KEY, String(enabled));
+      } catch {
+        // Playback state remains authoritative when browser storage is unavailable.
+      }
       if (!enabled) {
         const completed = await fadeTo(0, 280);
         if (completed) pause();

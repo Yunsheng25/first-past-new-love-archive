@@ -1,6 +1,8 @@
 export function createBgmController({ document, button, manager }) {
   let stateVersion = 0;
   let gestureStarted = false;
+  let bound = false;
+  let cleanup = null;
 
   const sync = () => {
     if (!button) return;
@@ -28,7 +30,10 @@ export function createBgmController({ document, button, manager }) {
     return run(() => manager.startFromGesture(), ++stateVersion);
   };
 
-  const toggle = () => run(() => manager.toggle(), ++stateVersion);
+  const toggle = () => run(async () => {
+    if (!manager.state().enabled) await manager.startFromGesture();
+    return manager.toggle();
+  }, ++stateVersion);
 
   const setRoute = (route) => {
     const version = ++stateVersion;
@@ -39,17 +44,30 @@ export function createBgmController({ document, button, manager }) {
     );
   };
 
+  const onGesture = (event) => {
+    if (event.target?.closest?.('[data-bgm-toggle]')) return;
+    document.removeEventListener('pointerdown', onGesture, true);
+    document.removeEventListener('keydown', onGesture, true);
+    void startFromGesture(event);
+  };
+
+  const onToggle = () => { void toggle(); };
+
   const bind = () => {
-    const onGesture = (event) => {
-      if (event.target?.closest?.('[data-bgm-toggle]')) return;
-      document.removeEventListener('pointerdown', onGesture, true);
-      document.removeEventListener('keydown', onGesture, true);
-      void startFromGesture(event);
-    };
+    if (bound) return cleanup;
+    bound = true;
     document.addEventListener('pointerdown', onGesture, { capture: true });
     document.addEventListener('keydown', onGesture, { capture: true });
-    button?.addEventListener('click', () => { void toggle(); });
+    button?.addEventListener('click', onToggle);
     sync();
+    cleanup = () => {
+      if (!bound) return;
+      bound = false;
+      document.removeEventListener('pointerdown', onGesture, true);
+      document.removeEventListener('keydown', onGesture, true);
+      button?.removeEventListener('click', onToggle);
+    };
+    return cleanup;
   };
 
   return { bind, setRoute, startFromGesture, toggle };

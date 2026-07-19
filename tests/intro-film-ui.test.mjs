@@ -9,6 +9,8 @@ import {
   buildIntroView,
   buildPendingView,
 } from '../src/views.js';
+import { BGM_PREFERENCE_KEY, createAudioManager } from '../src/audio-manager.js';
+import { createBgmController } from '../src/bgm-ui.js';
 
 const projectRoot = new URL('../', import.meta.url);
 
@@ -305,6 +307,61 @@ test('BGM controller starts only the first non-toggle gesture and toggles button
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(buttonHarness.calls.start, 0);
   assert.equal(buttonHarness.calls.toggle, 1);
+});
+
+test('BGM controller enables stored-off music from its first button click after registering the gesture', async () => {
+  const documentTarget = createEventTarget();
+  const button = {
+    ...createEventTarget(),
+    attributes: new Map(),
+    disabled: false,
+    setAttribute(name, value) { this.attributes.set(name, String(value)); },
+    getAttribute(name) { return this.attributes.get(name); },
+    closest(selector) { return selector === '[data-bgm-toggle]' ? this : null; },
+  };
+  const audio = {
+    volume: 0,
+    paused: true,
+    playCalls: 0,
+    pause() { this.paused = true; },
+    play() { this.playCalls += 1; this.paused = false; return Promise.resolve(); },
+  };
+  const manager = createAudioManager({
+    audio,
+    storage: { getItem: (key) => key === BGM_PREFERENCE_KEY ? 'false' : null, setItem() {} },
+    fade: async (player, target) => { player.volume = target; },
+  });
+  const controller = createBgmController({ document: documentTarget, button, manager });
+
+  controller.bind();
+  button.dispatch('click', { target: button });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(manager.state().enabled, true);
+  assert.equal(manager.state().gestureReceived, true);
+  assert.equal(audio.playCalls, 1);
+  assert.equal(button.getAttribute('aria-pressed'), 'true');
+});
+
+test('BGM controller bind is idempotent and its cleanup removes listeners', async () => {
+  const harness = createBgmHarness();
+  const controller = createBgmController({
+    document: harness.documentTarget,
+    button: harness.button,
+    manager: harness.manager,
+  });
+  const cleanup = controller.bind();
+  controller.bind();
+  harness.button.dispatch('click', { target: harness.button });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(harness.calls.toggle, 1);
+
+  cleanup();
+  harness.documentTarget.dispatch('pointerdown', { target: { closest: () => null } });
+  harness.button.dispatch('click', { target: harness.button });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(harness.calls.start, 0);
+  assert.equal(harness.calls.toggle, 1);
 });
 
 test('BGM controller applies the newest route state and contains rejected audio actions', async () => {
