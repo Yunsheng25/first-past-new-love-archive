@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const originTitle = "\u9879\u76ee\u7f18\u8d77\uff1a\u6211\u4e3a\u4ec0\u4e48\u8981\u505a\u8fd9\u4e2a\u89c6\u9891";
@@ -89,4 +89,35 @@ test("package build:data rebuilds both ordered site datasets from configured sou
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
+});
+
+test("offline archive tunnel pins and vendors the Three.js r160 module with MIT attributions", async () => {
+  const packagePath = path.join(projectRoot, "package.json");
+  const lockPath = path.join(projectRoot, "package-lock.json");
+  const vendorPath = path.join(projectRoot, "vendor", "three.module.min.js");
+  const vendorScriptPath = path.join(projectRoot, "scripts", "vendor-three.mjs");
+  const noticesPath = path.join(projectRoot, "THIRD_PARTY_NOTICES.md");
+
+  const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+  const lockfile = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+  const vendor = fs.readFileSync(vendorPath, "utf8");
+  const vendorScript = fs.readFileSync(vendorScriptPath, "utf8");
+  const notices = fs.readFileSync(noticesPath, "utf8");
+
+  assert.equal(packageJson.dependencies.three, "0.160.1");
+  assert.equal(packageJson.scripts["vendor:three"], "node scripts/vendor-three.mjs");
+  assert.equal(lockfile.packages["node_modules/three"].version, "0.160.1");
+  assert.match(lockfile.packages["node_modules/three"].integrity, /^sha512-/);
+  assert.match(vendorScript, /import\.meta\.url/);
+  assert.match(vendorScript, /"node_modules", "three", "build", "three\.module\.min\.js"/);
+  assert.match(vendorScript, /"vendor"[\s\S]*"three\.module\.min\.js"/);
+  const three = await import(pathToFileURL(vendorPath).href);
+  assert.equal(three.REVISION, "160");
+  assert.match(vendor, /export\s*\{/);
+  assert.ok(Object.keys(three).length > 0, "the vendored build must expose ESM exports");
+  assert.ok(Buffer.byteLength(vendor) > 100_000, "the vendored ESM build must be nonempty");
+  assert.match(notices, /Three\.js[\s\S]*0\.160\.1/);
+  assert.match(notices, /The MIT License[\s\S]*Copyright © 2010-2023 three\.js authors[\s\S]*Permission is hereby granted, free of charge/);
+  assert.match(notices, /FranzLy\/TimeChannel/);
+  assert.match(notices, /The MIT License[\s\S]*Copyright \(c\) 2026 Yu Li[\s\S]*Permission is hereby granted, free of charge/);
 });
