@@ -74,6 +74,9 @@ export function createAudioManager({ audio, storage, fade } = {}) {
 
   const isPlaying = () => Boolean(player && !player.paused);
   const pause = () => { player?.pause(); };
+  const canResume = () => Boolean(
+    player && enabled && gestureReceived && !filmActive && !unavailable && !destroyed,
+  );
 
   const cancelPlayAttempt = () => {
     playAttempt?.cancel();
@@ -106,7 +109,7 @@ export function createAudioManager({ audio, storage, fade } = {}) {
   };
 
   const resume = ({ forceFade = false } = {}) => {
-    if (destroyed || !enabled || !gestureReceived || filmActive || unavailable || !player) return false;
+    if (!canResume()) return false;
     if (playAttempt?.version === transition) return playAttempt.promise;
     cancelPlayAttempt();
     if (isPlaying()) {
@@ -197,6 +200,11 @@ export function createAudioManager({ audio, storage, fade } = {}) {
     async leaveFilm() {
       if (destroyed) return false;
       filmActive = false;
+      if (!canResume()) {
+        beginTransition(0);
+        pause();
+        return false;
+      }
       beginTransition(BGM_VOLUME);
       return resume({ forceFade: true });
     },
@@ -207,6 +215,11 @@ export function createAudioManager({ audio, storage, fade } = {}) {
       if (!enabled) {
         const completed = await fadeTo(0, 280);
         if (completed) pause();
+        return false;
+      }
+      if (!canResume()) {
+        beginTransition(0);
+        pause();
         return false;
       }
       beginTransition(BGM_VOLUME);

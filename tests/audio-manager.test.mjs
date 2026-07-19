@@ -482,3 +482,43 @@ test('leaving film adopts already-playing BGM before an obsolete play fulfills',
   resolveFilmFade();
   await Promise.all([start, entering]);
 });
+
+test('leaving film while disabled keeps stale fades silent and paused', async () => {
+  const audio = createFakeAudio();
+  const { fade, pending } = createDeferredFade(audio);
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade });
+
+  const start = manager.startFromGesture();
+  await new Promise((resolve) => setImmediate(resolve));
+  pending.shift().resolve();
+  await start;
+  const entering = manager.enterFilm();
+  const disabling = manager.toggle();
+  assert.equal(await manager.leaveFilm(), false);
+  pending.shift().resolve();
+  pending.shift().resolve();
+  await Promise.all([entering, disabling]);
+
+  assert.deepEqual(manager.state(), { enabled: false, gestureReceived: true, filmActive: false, unavailable: false, playing: false });
+  assert.equal(audio.volume, 0);
+});
+
+test('enabling BGM during film keeps stale fades silent and paused', async () => {
+  const audio = createFakeAudio();
+  const { fade, pending } = createDeferredFade(audio);
+  const manager = createAudioManager({ audio, storage: createFakeStorage(), fade });
+
+  const start = manager.startFromGesture();
+  await new Promise((resolve) => setImmediate(resolve));
+  pending.shift().resolve();
+  await start;
+  const entering = manager.enterFilm();
+  const disabling = manager.toggle();
+  assert.equal(await manager.toggle(), false);
+  pending.shift().resolve();
+  pending.shift().resolve();
+  await Promise.all([entering, disabling]);
+
+  assert.deepEqual(manager.state(), { enabled: true, gestureReceived: true, filmActive: true, unavailable: false, playing: false });
+  assert.equal(audio.volume, 0);
+});
