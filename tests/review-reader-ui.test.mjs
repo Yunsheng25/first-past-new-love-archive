@@ -23,6 +23,13 @@ import { createReviewTurnController } from '../src/review-turn.js';
 const projectRoot = new URL('../', import.meta.url);
 const reviewData = JSON.parse(await readFile(new URL('data/review.json', projectRoot), 'utf8'));
 
+function cssRule(css, selector) {
+  const start = css.indexOf(`${selector} {`);
+  assert.notEqual(start, -1, `missing CSS rule for ${selector}`);
+  const bodyStart = start + selector.length + 2;
+  return css.slice(bodyStart, css.indexOf('}', bodyStart));
+}
+
 function expectedSignature(chapter, pageIndex) {
   return chapter.pages[pageIndex].map((block, blockIndex) => ({
     type: block.type,
@@ -644,6 +651,42 @@ test('reader CSS keeps one route page inside a 100dvh shell with an internal scr
   assert.match(css, /\.review-index-list[\s\S]*min-height:\s*0[\s\S]*max-height:/);
   assert.match(css, /\.review-chapter-drawer[\s\S]*min-height:\s*0[\s\S]*overflow-y:\s*auto[\s\S]*overscroll-behavior:\s*contain/);
   assert.match(css, /@media\s*\(max-height:\s*650px\)[\s\S]*\.review-index-list/);
+});
+
+test('reader CSS uses the integrated warm-charcoal palette in scoped reading rules', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  const view = cssRule(css, '.review-reader-view');
+  const paper = cssRule(css, '.review-paper');
+  const copy = cssRule(css, '.review-paragraph');
+  const title = cssRule(css, '.review-paper-content > h1');
+  const kicker = cssRule(css, '.review-paper-kicker');
+
+  assert.match(view, /background:\s*#0d0c0b/);
+  assert.match(paper, /background:\s*#25211e/);
+  assert.doesNotMatch(paper, /#(?:f[\da-f]{2}|fff(?:fff)?|e8e0d4)/i);
+  assert.match(copy, /color:\s*#c9beb2/);
+  assert.match(title, /color:\s*#eee4d8/);
+  assert.match(kicker, /color:\s*#aa8c77/);
+});
+
+test('reader CSS gives chapter openers a larger rhythm than continuation pages', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  const opener = cssRule(css, '.review-chapter-opener');
+  const continuation = cssRule(css, 'article[data-review-page="continuation"]');
+
+  const openerPadding = Number(opener.match(/padding-top:\s*(\d+)px/)?.[1]);
+  const continuationPadding = Number(continuation.match(/padding-top:\s*(\d+)px/)?.[1]);
+  assert.ok(openerPadding > continuationPadding, 'chapter opener padding must exceed continuation padding');
+  assert.match(cssRule(css, '.review-chapter-opener > h1'), /font-size:\s*clamp\(/);
+  assert.match(cssRule(css, '.review-heading'), /font-size:\s*clamp\(18px/);
+});
+
+test('reader media elements remain fully opaque and unfiltered', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  const media = cssRule(css, '.review-media img,\n.review-media video');
+
+  assert.match(media, /opacity:\s*1/);
+  assert.doesNotMatch(media, /filter\s*:/);
 });
 
 test('script routes both review destinations through cancellable review mounting', async () => {
