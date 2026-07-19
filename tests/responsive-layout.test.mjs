@@ -46,17 +46,39 @@ test('mobile review reader keeps its paper, drawer, media, and navigation inside
   assert.match(mobile, /\.review-page-nav\s*\{[^}]*padding:\s*7px 14px/s);
 });
 
-test('390px review reader containment is explicit and locally scrolls long content', () => {
+test('390px review reader models paper-child navigation containment and locally scrolls long content', () => {
+  // Chrome 390px evidence: paper x=12/w=366; its border-box child nav x=13/w=364.
+  const viewportWidth = 390;
+  const globalBoxSizing = declarationBlock(css, '*');
+  const basePaper = declarationBlock(css, '.review-paper');
+  const mobile = mediaBlock(css, '@media (max-width: 760px)');
   const narrow = mediaBlock(css, '@media (max-width: 420px)');
   const paper = declarationBlock(narrow, '.review-paper');
   const widthMatch = paper.match(/width:\s*calc\(100vw\s*-\s*(\d+)px\)/);
+  const borderMatch = basePaper.match(/border:\s*(\d+)px\s+solid/);
+  const nav = declarationBlock(narrow, '.review-page-nav');
+  const navMaxWidthMatch = nav.match(/max-width:\s*(\d+)%/);
+  const mobileNav = declarationBlock(mobile, '.review-page-nav');
+  const navPaddingMatch = mobileNav.match(/padding:\s*\d+px\s+(\d+)px/);
 
   assert.ok(widthMatch, 'paper must use a viewport-bounded width calculation');
+  assert.ok(borderMatch, 'paper must expose a measurable border for its child containing block');
+  assert.ok(navMaxWidthMatch, 'navigation must declare a percentage max width');
+  assert.ok(navPaddingMatch, 'mobile navigation must declare horizontal padding');
+  assert.match(globalBoxSizing, /box-sizing:\s*border-box/);
   const inset = Number(widthMatch[1]);
-  const paperWidth = 390 - inset;
-  assert.ok(inset > 0 && inset < 390, 'paper inset must be a positive value smaller than the viewport');
+  const borderWidth = Number(borderMatch[1]);
+  const paperWidth = viewportWidth - inset;
+  const paperInnerWidth = paperWidth - (borderWidth * 2);
+  const navPercentage = Number(navMaxWidthMatch[1]);
+  const navUpperBound = (paperInnerWidth * navPercentage) / 100;
+  const navHorizontalPadding = Number(navPaddingMatch[1]);
+  const navGridContentWidth = navUpperBound - (navHorizontalPadding * 2);
+
+  assert.ok(inset > 0 && inset < viewportWidth, 'paper inset must be a positive value smaller than the viewport');
   assert.equal(paperWidth, 366);
-  assert.ok(paperWidth > 0 && paperWidth <= 390, '390px paper width must stay positive and inside the viewport');
+  assert.equal(paperInnerWidth, 364, 'a 1px border on each side leaves the child containing block at 364px');
+  assert.ok(paperWidth > 0 && paperWidth <= viewportWidth, 'paper border box must stay inside the viewport');
   assert.match(paper, /box-sizing:\s*border-box/);
   assert.match(paper, /max-width:\s*100%/);
   assert.match(paper, /padding:\s*0/);
@@ -68,15 +90,14 @@ test('390px review reader containment is explicit and locally scrolls long conte
   assert.match(declarationBlock(narrow, '.review-paper-content pre'), /overflow-x:\s*auto/);
   assert.match(declarationBlock(narrow, '.review-paper-content table'), /overflow-x:\s*auto/);
   const drawer = declarationBlock(narrow, '.review-chapter-drawer');
-  const nav = declarationBlock(narrow, '.review-page-nav');
-  const navMaxWidthMatch = nav.match(/max-width:\s*(\d+)%/);
   assert.match(drawer, /width:\s*min\(calc\(100vw\s*-\s*20px\),\s*360px\)/);
-  assert.equal(Math.min(390 - 20, 360), 360);
-  assert.ok(Math.min(390 - 20, 360) <= 390, 'drawer width must fit 390px');
-  assert.ok(navMaxWidthMatch, 'navigation must declare a percentage max width');
-  const navMaxWidth = (390 * Number(navMaxWidthMatch[1])) / 100;
-  assert.equal(navMaxWidth, 390, 'navigation max width must resolve to the 390px viewport width');
-  assert.ok(navMaxWidth <= paperWidth + inset, 'navigation max width must not exceed the viewport');
+  const drawerWidth = Math.min(viewportWidth - 20, 360);
+  assert.equal(drawerWidth, 360);
+  assert.ok(drawerWidth <= viewportWidth, 'drawer width must fit the viewport');
+  assert.equal(navUpperBound, 364, '100% navigation max width resolves against the paper content box');
+  assert.ok(navUpperBound > 0 && navUpperBound <= paperInnerWidth, 'navigation upper bound must fit its paper containing block');
+  assert.equal(navHorizontalPadding, 14);
+  assert.ok(navGridContentWidth > 0, 'navigation grid must retain positive content width after horizontal padding');
   assert.match(nav, /grid-template-columns:\s*minmax\(0,\s*1fr\) auto minmax\(0,\s*1fr\)/);
 });
 
