@@ -157,13 +157,14 @@ export function buildReviewIndex(data, progress = null) {
     </section>`;
 }
 
-function blockMarkup(block, blockIndex, chapterSlug, page) {
+function blockMarkup(block, blockIndex, chapterSlug, page, { sectionTitle = false } = {}) {
   const occurrence = `${chapterSlug}-p${page}-b${blockIndex}`;
   const common = `data-block-type="${escapeHtml(block.type)}" data-block-index="${blockIndex}"`;
 
   if (block.type === 'heading') {
     const level = Math.min(5, Math.max(3, Number(block.level) || 3));
-    return `<h${level} class="review-block review-heading" ${common}>${renderInlineMarkdown(block.text)}</h${level}>`;
+    const sectionTitleId = sectionTitle ? ' id="review-section-title"' : '';
+    return `<h${level} class="review-block review-heading" ${common}${sectionTitleId}>${renderInlineMarkdown(block.text)}</h${level}>`;
   }
 
   if (block.type === 'image') {
@@ -205,12 +206,19 @@ export function buildReviewPage(data, target) {
   const normalized = normalizeReviewTarget(data, chapter.slug, pageIndex + 1);
   const blocks = chapter.pages[pageIndex];
   const section = blocks.find((block) => block.section)?.section || chapter.title;
+  const isChapterOpener = pageIndex === 0;
+  const firstHeadingIndex = isChapterOpener ? -1 : blocks.findIndex((block) => block.type === 'heading');
+  const hasSectionTitle = firstHeadingIndex >= 0;
+  const readerLabel = `复盘阅读：${chapter.title} · ${section}`;
+  const articleLabel = hasSectionTitle ? 'aria-labelledby="review-section-title"' : `aria-label="${escapeHtml(readerLabel)}"`;
   const renderedBlocks = blocks
-    .map((block, blockIndex) => blockMarkup(block, blockIndex, chapter.slug, pageIndex + 1))
+    .map((block, blockIndex) => blockMarkup(block, blockIndex, chapter.slug, pageIndex + 1, {
+      sectionTitle: blockIndex === firstHeadingIndex,
+    }))
     .join('\n');
 
   return `
-    <section class="review-reader-view app-view" aria-labelledby="review-reader-title">
+    <section class="review-reader-view app-view" ${isChapterOpener ? 'aria-labelledby="review-reader-title"' : `aria-label="${escapeHtml(readerLabel)}"`}>
       <a class="review-return-after" href="#after" data-return-after>← 返回片后</a>
       <header class="review-reader-header">
         <a class="review-wordmark" href="#">初恋 · 旧爱 · 新欢</a>
@@ -229,10 +237,10 @@ export function buildReviewPage(data, target) {
             <span>全篇 ${normalized.overallPage} / ${normalized.totalPages} · 本章 ${pageIndex + 1} / ${chapter.pages.length}</span>
           </div>
           <div class="review-paper-scroll" data-review-scroll tabindex="0">
-            <article class="review-paper-content">
-              <p class="review-paper-kicker">CHAPTER ${String(chapterIndex + 1).padStart(2, '0')}</p>
-              <h1 id="review-reader-title">${escapeHtml(chapter.title)}</h1>
-              <div class="review-blocks">${renderedBlocks}</div>
+            <article class="review-paper-content${isChapterOpener ? ' review-chapter-opener' : ''}" data-review-page="${isChapterOpener ? 'opener' : 'continuation'}" ${articleLabel}>
+              ${isChapterOpener ? `<p class="review-paper-kicker">CHAPTER ${String(chapterIndex + 1).padStart(2, '0')}</p>
+              <h1 id="review-reader-title">${escapeHtml(chapter.title)}</h1>` : ''}
+              <div class="review-blocks"${hasSectionTitle ? ' aria-labelledby="review-section-title"' : ''}>${renderedBlocks}</div>
             </article>
           </div>
           <nav class="review-page-nav" aria-label="分页阅读">
