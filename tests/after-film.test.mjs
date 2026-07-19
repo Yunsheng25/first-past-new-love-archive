@@ -9,6 +9,7 @@ import {
   applyStoredLastFrame,
   bindFilmCompletion,
   bindFilmExit,
+  bindFilmFullscreen,
   captureFilmFrame,
   clearStoredLastFrame,
 } from '../src/after-film.js';
@@ -71,6 +72,78 @@ function createFilmExitHarness({ pauseThrows = false } = {}) {
   const destinations = [];
   return { video, exit, documentRef, root, destinations };
 }
+
+function createFilmFullscreenHarness() {
+  const stage = { ...fakeEventTarget(), requestCalls: 0, requestFullscreen() { this.requestCalls += 1; return Promise.resolve(); } };
+  const video = { ...fakeEventTarget(), requestCalls: 0, webkitExitCalls: 0, requestFullscreen() { this.requestCalls += 1; }, webkitExitFullscreen() { this.webkitExitCalls += 1; } };
+  const button = {
+    ...fakeEventTarget(),
+    attributes: new Map(),
+    setAttribute(name, value) { this.attributes.set(name, String(value)); },
+    getAttribute(name) { return this.attributes.get(name); },
+  };
+  const documentRef = {
+    ...fakeEventTarget(),
+    fullscreenElement: null,
+    exitCalls: 0,
+    exitFullscreen() { this.exitCalls += 1; return Promise.resolve(); },
+  };
+  const root = {
+    querySelector(selector) {
+      if (selector === '[data-film-stage]') return stage;
+      if (selector === '.film-video') return video;
+      if (selector === '[data-film-fullscreen]') return button;
+      return null;
+    },
+  };
+  return { stage, video, button, documentRef, root };
+}
+
+test('film fullscreen button requests fullscreen for the stage and exits on its second click', () => {
+  const harness = createFilmFullscreenHarness();
+  bindFilmFullscreen(harness.root, { documentRef: harness.documentRef });
+
+  harness.button.dispatch('click');
+  assert.equal(harness.stage.requestCalls, 1);
+  assert.equal(harness.video.requestCalls, 0);
+
+  harness.documentRef.fullscreenElement = harness.stage;
+  harness.documentRef.dispatch('fullscreenchange');
+  assert.equal(harness.button.getAttribute('aria-pressed'), 'true');
+  assert.equal(harness.button.getAttribute('aria-label'), '退出全屏观看');
+  harness.button.dispatch('click');
+  assert.equal(harness.documentRef.exitCalls, 1);
+});
+
+test('film fullscreen immediately escapes video-only and WebKit fullscreen fallbacks', () => {
+  const harness = createFilmFullscreenHarness();
+  bindFilmFullscreen(harness.root, { documentRef: harness.documentRef });
+
+  harness.documentRef.fullscreenElement = harness.video;
+  harness.documentRef.dispatch('fullscreenchange');
+  harness.video.dispatch('webkitbeginfullscreen');
+  assert.equal(harness.documentRef.exitCalls, 1);
+  assert.equal(harness.video.webkitExitCalls, 1);
+  assert.equal(harness.button.getAttribute('aria-pressed'), 'false');
+});
+
+test('film fullscreen cleanup makes captured handlers inert', () => {
+  const harness = createFilmFullscreenHarness();
+  const cleanup = bindFilmFullscreen(harness.root, { documentRef: harness.documentRef });
+  const staleClick = harness.button.listener('click');
+  const staleChange = harness.documentRef.listener('fullscreenchange');
+  const staleWebkit = harness.video.listener('webkitbeginfullscreen');
+
+  cleanup();
+  cleanup();
+  harness.documentRef.fullscreenElement = harness.video;
+  staleClick();
+  staleChange();
+  staleWebkit();
+  assert.equal(harness.stage.requestCalls, 0);
+  assert.equal(harness.documentRef.exitCalls, 0);
+  assert.equal(harness.video.webkitExitCalls, 0);
+});
 
 test('film exit click pauses immediately and navigates to the after screen once', () => {
   const harness = createFilmExitHarness();

@@ -206,6 +206,68 @@ export function bindFilmExit(
   };
 }
 
+export function bindFilmFullscreen(
+  root,
+  { documentRef = globalThis.document } = {},
+) {
+  const stage = root?.querySelector?.('[data-film-stage]');
+  const video = root?.querySelector?.('.film-video');
+  const button = root?.querySelector?.('[data-film-fullscreen]');
+  if (!stage || !video || !button) return () => {};
+
+  let active = true;
+  const safely = (callback) => {
+    try {
+      const result = callback();
+      result?.catch?.(() => {});
+    } catch {
+      // Fullscreen support and permissions vary by browser; leave playback usable.
+    }
+  };
+  const sync = () => {
+    if (!active) return;
+    const stageIsFullscreen = documentRef?.fullscreenElement === stage;
+    button.setAttribute?.('aria-pressed', String(stageIsFullscreen));
+    button.setAttribute?.('aria-label', stageIsFullscreen ? '退出全屏观看' : '全屏观看');
+  };
+  const handleClick = () => {
+    if (!active) return;
+    if (documentRef?.fullscreenElement === stage) {
+      safely(() => documentRef?.exitFullscreen?.());
+      return;
+    }
+    safely(() => stage.requestFullscreen?.());
+  };
+  const handleFullscreenChange = () => {
+    if (!active) return;
+    if (documentRef?.fullscreenElement === video) {
+      safely(() => documentRef?.exitFullscreen?.());
+    }
+    sync();
+  };
+  const handleWebkitBeginFullscreen = () => {
+    if (!active) return;
+    safely(() => video.webkitExitFullscreen?.());
+    sync();
+  };
+  const handleWebkitEndFullscreen = () => sync();
+
+  button.addEventListener?.('click', handleClick);
+  documentRef?.addEventListener?.('fullscreenchange', handleFullscreenChange);
+  video.addEventListener?.('webkitbeginfullscreen', handleWebkitBeginFullscreen);
+  video.addEventListener?.('webkitendfullscreen', handleWebkitEndFullscreen);
+  sync();
+
+  return () => {
+    if (!active) return;
+    active = false;
+    try { button.removeEventListener?.('click', handleClick); } catch {}
+    try { documentRef?.removeEventListener?.('fullscreenchange', handleFullscreenChange); } catch {}
+    try { video.removeEventListener?.('webkitbeginfullscreen', handleWebkitBeginFullscreen); } catch {}
+    try { video.removeEventListener?.('webkitendfullscreen', handleWebkitEndFullscreen); } catch {}
+  };
+}
+
 function isStoredFrame(value) {
   return /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=_-]+$/i.test(value ?? '');
 }

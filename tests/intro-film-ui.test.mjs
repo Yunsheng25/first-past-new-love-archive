@@ -54,7 +54,12 @@ test('intro does not reveal either post-film choice before the film', () => {
 test('film view plays the full film at normal speed with sound-capable controls', () => {
   const html = buildFilmView();
   const filmVideo = html.match(/<video\b[\s\S]*?<\/video>/)?.[0] ?? '';
+  const fullscreenButton = html.match(/<button\b[^>]*data-film-fullscreen[^>]*>[\s\S]*?<\/button>/)?.[0] ?? '';
 
+  assert.match(html, /data-film-stage/);
+  assert.match(fullscreenButton, /class="film-fullscreen"/);
+  assert.match(fullscreenButton, /aria-label="全屏观看"/);
+  assert.match(fullscreenButton, />\s*全屏观看\s*<\/button>/);
   assert.match(filmVideo, /src="assets\/video\/full-film\.mp4"/);
   assert.match(filmVideo, /\scontrols(?:\s|=|>)/i);
   assert.match(filmVideo, /controlsList="nofullscreen"/);
@@ -205,6 +210,7 @@ test('site shell is a module-driven, single-viewport application', async () => {
   assert.match(script, /bindIntroMedia\(app/);
   assert.match(script, /bindFilmMedia\(app/);
   assert.match(script, /bindFilmExit\(app/);
+  assert.match(script, /bindFilmFullscreen\(app/);
   assert.match(script, /focusRenderedView\(app/);
 
   const syntax = spawnSync(process.execPath, ['--check', fileURLToPath(new URL('script.js', projectRoot))], {
@@ -250,6 +256,10 @@ test('film exit stays visible above video and recovery layers with a mobile-safe
   assert.match(exitBlock, /min-(?:width|height):\s*44px/);
   assert.match(exitBlock, /z-index:\s*(?:[7-9]|[1-9]\d)/);
   assert.match(css, /\.film-video::\-webkit-media-controls-fullscreen-button\s*{\s*display:\s*none/);
+  const fullscreenBlock = css.match(/\.film-fullscreen\s*{([^}]*)}/)?.[1] ?? '';
+  assert.match(fullscreenBlock, /position:\s*absolute/);
+  assert.match(fullscreenBlock, /min-(?:width|height):\s*44px/);
+  assert.match(css, /\.film-stage:fullscreen\s*{[\s\S]*background:\s*#000/);
   assert.match(css, /@media\s*\(max-width:\s*760px\)[\s\S]*\.film-exit/);
 });
 

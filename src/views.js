@@ -59,20 +59,23 @@ export function buildIntroView() {
 export function buildFilmView() {
   return `
     <section class="film-view app-view" aria-label="完整成片播放器">
-      <video
-        class="film-video"
-        src="assets/video/full-film.mp4"
-        controls
-        controlsList="nofullscreen"
-        playsinline
-        preload="metadata"
-      ></video>
-      <div class="media-status film-media-status" role="status" aria-live="polite" hidden>
-        <span data-film-media-message>影片加载失败</span>
-        <button type="button" data-retry-film>重新播放</button>
+      <div class="film-stage" data-film-stage>
+        <video
+          class="film-video"
+          src="assets/video/full-film.mp4"
+          controls
+          controlsList="nofullscreen"
+          playsinline
+          preload="metadata"
+        ></video>
+        <div class="media-status film-media-status" role="status" aria-live="polite" hidden>
+          <span data-film-media-message>影片加载失败</span>
+          <button type="button" data-retry-film>重新播放</button>
+        </div>
+        <a href="#after" class="film-exit" data-exit-film><span aria-hidden="true">×</span> 退出影片</a>
+        <button type="button" class="film-fullscreen" data-film-fullscreen aria-pressed="false" aria-label="全屏观看">全屏观看</button>
+        <p class="film-caption">《初恋 · 旧爱 · 新欢》<span>A FILM ARCHIVE · 2026</span></p>
       </div>
-      <a href="#after" class="film-exit" data-exit-film><span aria-hidden="true">×</span> 退出影片</a>
-      <p class="film-caption">《初恋 · 旧爱 · 新欢》<span>A FILM ARCHIVE · 2026</span></p>
     </section>`;
 }
 
