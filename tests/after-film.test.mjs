@@ -139,6 +139,21 @@ test('a rejected fullscreen request disables the unavailable control without an 
   assert.match(harness.button.getAttribute('aria-label'), /不可用/);
 });
 
+test('a fullscreen rejection queued after cleanup does not mutate the detached button', async () => {
+  const harness = createFilmFullscreenHarness();
+  let reject;
+  harness.stage.requestFullscreen = () => new Promise((resolve, rejectRequest) => { reject = rejectRequest; });
+  const cleanup = bindFilmFullscreen(harness.root, { documentRef: harness.documentRef });
+
+  harness.button.dispatch('click');
+  cleanup();
+  reject(new Error('permission denied'));
+  await Promise.resolve();
+
+  assert.equal(harness.button.disabled, false);
+  assert.equal(harness.button.getAttribute('aria-disabled'), 'false');
+});
+
 test('film fullscreen immediately escapes video-only and WebKit fullscreen fallbacks', () => {
   const harness = createFilmFullscreenHarness();
   bindFilmFullscreen(harness.root, { documentRef: harness.documentRef });

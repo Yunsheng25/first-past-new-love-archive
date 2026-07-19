@@ -314,6 +314,9 @@ function serializedPayload(payload) {
 function reviewOutputIsCurrent(outputPath, payload, mediaOutputDir, media, sources) {
   try {
     if (!fs.readFileSync(outputPath).equals(Buffer.from(serializedPayload(payload), "utf8"))) return false;
+    const expected = new Set(media.map((block) => path.basename(block.src)));
+    const local = fs.readdirSync(mediaOutputDir, { withFileTypes: true }).filter((entry) => entry.isFile());
+    if (local.length !== expected.size || local.some((entry) => !expected.has(entry.name))) return false;
     const copiedRefs = new Set();
     return media.every((block) => {
       if (copiedRefs.has(block.ref)) return true;
@@ -385,7 +388,11 @@ export function writeReviewData(options = {}) {
   const sources = resolveMediaSources(uniqueRefs, found);
   validateMediaOutputDirectory(mediaOutputDir, workspace, markdownPath, obsidianRoot, [...sources.values()]);
   validateReviewOutputPath(outputPath, workspace, mediaOutputDir, markdownPath, obsidianRoot, [...sources.values()]);
-  const payload = preserveGeneratedAt(outputPath, { generatedAt: clock().toISOString(), chapters: review.chapters });
+  const generatedAt = clock().toISOString();
+  let payload = preserveGeneratedAt(outputPath, { generatedAt, chapters: review.chapters });
+  if (payload.generatedAt !== generatedAt && !reviewOutputIsCurrent(outputPath, payload, mediaOutputDir, media, sources)) {
+    payload = { ...payload, generatedAt };
+  }
 
   if (reviewOutputIsCurrent(outputPath, payload, mediaOutputDir, media, sources)) {
     onProgress("written", { outputPath, reusedMedia: uniqueRefs.length });

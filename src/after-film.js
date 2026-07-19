@@ -218,6 +218,7 @@ export function bindFilmFullscreen(
   let active = true;
   let unavailable = typeof stage.requestFullscreen !== 'function';
   const markUnavailable = () => {
+    if (!active) return;
     unavailable = true;
     button.disabled = true;
     button.setAttribute?.('aria-disabled', 'true');

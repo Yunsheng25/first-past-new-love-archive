@@ -147,9 +147,8 @@ function serializedPayload(payload) {
   return `${JSON.stringify(payload, null, 2)}\n`;
 }
 
-function archiveOutputIsCurrent(outputPath, payload, mediaOutputDir, refs, imagesByRef, sources) {
+function archiveMediaIsCurrent(mediaOutputDir, refs, imagesByRef, sources) {
   try {
-    if (!fs.readFileSync(outputPath).equals(Buffer.from(serializedPayload(payload), "utf8"))) return false;
     const localFiles = fs.readdirSync(mediaOutputDir, { withFileTypes: true }).filter((entry) => entry.isFile());
     if (localFiles.length !== refs.length) return false;
     return refs.every((ref) => {
@@ -159,6 +158,13 @@ function archiveOutputIsCurrent(outputPath, payload, mediaOutputDir, refs, image
   } catch {
     return false;
   }
+}
+
+function archiveOutputIsCurrent(outputPath, payload, mediaOutputDir, refs, imagesByRef, sources) {
+  try {
+    return fs.readFileSync(outputPath).equals(Buffer.from(serializedPayload(payload), "utf8"))
+      && archiveMediaIsCurrent(mediaOutputDir, refs, imagesByRef, sources);
+  } catch { return false; }
 }
 
 function cleanupAfterPromotion(targetPath, options, operations, warnings) {
@@ -210,12 +216,8 @@ export function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, 
     if (mediaBackedUp) rename(mediaBackup, mediaOutputDir);
     throw error;
   }
-  if (mediaBackedUp && !cleanupAfterPromotion(mediaBackup, { recursive: true, force: true }, operations, warnings)) {
-    throw new Error(`Unable to clean archive backup after promotion: ${mediaBackup}`);
-  }
-  if (outputBackedUp && !cleanupAfterPromotion(outputBackup, { force: true }, operations, warnings)) {
-    throw new Error(`Unable to clean archive backup after promotion: ${outputBackup}`);
-  }
+  if (mediaBackedUp) cleanupAfterPromotion(mediaBackup, { recursive: true, force: true }, operations, warnings);
+  if (outputBackedUp) cleanupAfterPromotion(outputBackup, { force: true }, operations, warnings);
   return { cleanupWarnings: warnings };
 }
 
@@ -260,12 +262,16 @@ export function writeArchiveData(options = {}) {
       if (!imagesByRef.has(image.originalRef)) imagesByRef.set(image.originalRef, image);
     }
   }
-  const payload = preserveGeneratedAt(outputPath, {
-    generatedAt: clock().toISOString(),
+  const generatedAt = clock().toISOString();
+  let payload = preserveGeneratedAt(outputPath, {
+    generatedAt,
     source: { canvas: path.basename(canvasPath), visualOrder: "y, x, nodeId" },
     summary: { ...archive.summary, missingImages: 0 },
     cases: archive.cases,
   });
+  if (payload.generatedAt !== generatedAt && !archiveMediaIsCurrent(mediaOutputDir, refs, imagesByRef, sources)) {
+    payload = { ...payload, generatedAt };
+  }
 
   if (!options.reuseExistingMedia && archiveOutputIsCurrent(outputPath, payload, mediaOutputDir, refs, imagesByRef, sources)) {
     onProgress("written", { outputPath, reusedImages: refs.length });
