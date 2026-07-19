@@ -171,8 +171,9 @@ function cleanupAfterPromotion(targetPath, options, operations, warnings) {
   const exists = operations.exists || fs.existsSync;
   const remove = operations.remove || fs.rmSync;
   const onCleanupWarning = operations.onCleanupWarning || (() => {});
+  const sleep = operations.sleep || (() => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25));
   if (!exists(targetPath)) return true;
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
       remove(targetPath, { ...options, maxRetries: 6, retryDelay: 50 });
       return !exists(targetPath);
@@ -180,6 +181,7 @@ function cleanupAfterPromotion(targetPath, options, operations, warnings) {
       const warning = new Error(`Archive backup cleanup attempt ${attempt} failed for ${targetPath}: ${error.message}`);
       warnings.push(warning);
       onCleanupWarning(warning);
+      if (attempt < 3) sleep();
     }
   }
   return !exists(targetPath);

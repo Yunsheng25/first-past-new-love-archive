@@ -435,7 +435,13 @@ export function writeReviewData(options = {}) {
 
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(temporaryOutputPath, serializedPayload(payload), "utf8");
-    replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath });
+    const replacement = replaceOutputs(
+      { mediaOutputDir, temporaryMediaDir, outputPath, temporaryOutputPath },
+      options.promotionOperations || {},
+    );
+    for (const warning of replacement.cleanupWarnings) {
+      onProgress("cleanup-warning", { message: warning.message });
+    }
     onProgress("written", { outputPath });
     return payload;
   } catch (error) {
