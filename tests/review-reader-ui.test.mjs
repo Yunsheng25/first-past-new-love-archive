@@ -689,6 +689,38 @@ test('reader media elements remain fully opaque and unfiltered', async () => {
   assert.doesNotMatch(media, /filter\s*:/);
 });
 
+test('reader content surfaces use scoped warm-charcoal treatments', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  const blockquote = cssRule(css, '.review-paper-content blockquote');
+  const pre = cssRule(css, '.review-paper-content pre');
+  const table = cssRule(css, '.review-paper-content table');
+  const headingCell = cssRule(css, '.review-paper-content th');
+  const dataCell = cssRule(css, '.review-paper-content td');
+
+  assert.match(blockquote, /background:\s*#211c18/);
+  assert.match(blockquote, /border-left:\s*3px solid #aa8c77/);
+  assert.match(pre, /background:\s*#171412/);
+  assert.match(pre, /overflow-x:\s*auto/);
+  assert.match(table, /display:\s*block/);
+  assert.match(table, /overflow-x:\s*auto/);
+  assert.match(headingCell, /background:\s*#211c18/);
+  assert.match(headingCell, /color:\s*#eee4d8/);
+  assert.match(dataCell, /border:\s*1px solid rgba\(170, 140, 119, 0\.24\)/);
+  assert.match(dataCell, /color:\s*#c9beb2/);
+});
+
+test('review status shell and actions use the exact warm-charcoal system', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  const status = cssRule(css, '.review-status-view');
+  const actions = cssRule(css, '.review-status-view a,\n.review-status-view button');
+
+  assert.match(status, /background:\s*#0d0c0b/);
+  assert.match(status, /color:\s*#c9beb2/);
+  assert.match(actions, /background:\s*#211c18/);
+  assert.match(actions, /color:\s*#eee4d8/);
+  assert.match(actions, /min-height:\s*44px/);
+});
+
 test('script routes both review destinations through cancellable review mounting', async () => {
   const script = await readFile(new URL('script.js', projectRoot), 'utf8');
 

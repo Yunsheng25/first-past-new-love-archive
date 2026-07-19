@@ -628,9 +628,9 @@ video:focus-visible {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 68% 18%, rgba(107, 86, 67, 0.16), transparent 36%),
-    #0b0b0b;
+  background: #0d0c0b;
+  background-image: radial-gradient(circle at 68% 18%, rgba(107, 86, 67, 0.16), transparent 36%);
+  color: #c9beb2;
 }
 
 .review-return-after {
@@ -1033,6 +1033,62 @@ article[data-review-page="continuation"] {
   font-size: 0.86em;
 }
 
+.review-paper-content blockquote {
+  margin: 1.8em 0;
+  padding: 16px 18px;
+  border-left: 3px solid #aa8c77;
+  background: #211c18;
+  color: #c9beb2;
+  line-height: 1.9;
+}
+
+.review-paper-content pre {
+  margin: 1.8em 0;
+  padding: 16px 18px;
+  overflow-x: auto;
+  border: 1px solid rgba(170, 140, 119, 0.24);
+  border-radius: 4px;
+  background: #171412;
+  color: #e0d2c3;
+  line-height: 1.65;
+  white-space: pre;
+}
+
+.review-paper-content pre code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+}
+
+.review-paper-content table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 1.8em 0;
+  overflow-x: auto;
+  border: 1px solid rgba(170, 140, 119, 0.24);
+  border-collapse: collapse;
+  background: #1b1714;
+}
+
+.review-paper-content th {
+  padding: 12px 14px;
+  border: 1px solid rgba(170, 140, 119, 0.24);
+  background: #211c18;
+  color: #eee4d8;
+  font-weight: 500;
+  text-align: left;
+}
+
+.review-paper-content td {
+  padding: 12px 14px;
+  border: 1px solid rgba(170, 140, 119, 0.24);
+  color: #c9beb2;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
 .review-heading {
   margin: 2.4em 0 0.8em;
   color: #e3d6c8;
@@ -1175,6 +1231,8 @@ h5.review-heading { font-size: clamp(17px, 1.4vw, 20px); }
   place-content: center;
   justify-items: center;
   padding: 28px;
+  background: #0d0c0b;
+  color: #c9beb2;
   text-align: center;
 }
 
@@ -1200,6 +1258,10 @@ h5.review-heading { font-size: clamp(17px, 1.4vw, 20px); }
 .review-status-view a,
 .review-status-view button {
   margin: 5px;
+  min-height: 44px;
+  background: #211c18;
+  color: #eee4d8;
+  border-color: rgba(170, 140, 119, 0.52);
 }
 
 @media (max-width: 1020px) {
@@ -2427,6 +2489,71 @@ button.archive-filter-chip {
   .archive-index-sidebar { padding-top: 18px; }
   .archive-index-sidebar h1 { margin-top: 8px; font-size: clamp(37px, 7.5dvh, 55px); }
   .archive-detail-layout { padding-top: 24px; }
+}
+
+@media (max-width: 420px) {
+  .review-reader-view {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .review-reader-layout {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .review-paper-content {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .review-blocks {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .review-media {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .review-page-nav {
+    min-width: 0;
+    max-width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  .review-paper {
+    box-sizing: border-box;
+    width: calc(100vw - 24px);
+    max-width: 100%;
+    min-width: 0;
+    margin: 10px auto 12px;
+  }
+
+  .review-paper-content,
+  .review-blocks,
+  .review-page-nav a,
+  .review-page-nav-disabled {
+    overflow-wrap: anywhere;
+  }
+
+  .review-paper-content pre {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .review-paper-content table {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .review-chapter-drawer {
+    box-sizing: border-box;
+    width: min(calc(100vw - 20px), 360px);
+    max-width: 100%;
+  }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
