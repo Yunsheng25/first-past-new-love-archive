@@ -2202,9 +2202,9 @@ button.archive-filter-chip {
 
 .bgm-toggle {
   position: fixed;
-  z-index: 120;
-  top: max(18px, env(safe-area-inset-top));
-  right: max(18px, env(safe-area-inset-right));
+  z-index: 90;
+  inset-inline-start: max(18px, env(safe-area-inset-left));
+  inset-block-end: max(120px, calc(env(safe-area-inset-bottom) + 102px));
   display: inline-flex;
   min-width: 44px;
   min-height: 44px;

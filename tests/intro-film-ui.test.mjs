@@ -209,10 +209,11 @@ test('site shell is a module-driven, single-viewport application', async () => {
 });
 
 test('global BGM control persists outside routes and is wired to route audio state', async () => {
-  const [documentHtml, css, script] = await Promise.all([
+  const [documentHtml, css, script, bgmUi] = await Promise.all([
     readFile(new URL('index.html', projectRoot), 'utf8'),
     readFile(new URL('style.css', projectRoot), 'utf8'),
     readFile(new URL('script.js', projectRoot), 'utf8'),
+    readFile(new URL('src/bgm-ui.js', projectRoot), 'utf8'),
   ]);
 
   assert.match(documentHtml, /<button[^>]*class="bgm-toggle"[^>]*data-bgm-toggle[^>]*aria-pressed="true"/);
@@ -220,14 +221,121 @@ test('global BGM control persists outside routes and is wired to route audio sta
   assert.match(documentHtml, /<main id="app"[\s\S]*<\/main>\s*<button[^>]*data-bgm-toggle/);
   assert.match(script, /import\s*{\s*createAudioManager\s*}\s*from\s*['"]\.\/src\/audio-manager\.js['"]/);
   assert.match(script, /createAudioManager\(/);
+  assert.match(script, /createBgmController\(/);
   assert.match(script, /\[data-bgm-toggle\]/);
-  assert.match(script, /startFromGesture\(/);
-  assert.match(script, /enterFilm\(/);
-  assert.match(script, /leaveFilm\(/);
-  assert.match(script, /aria-pressed/);
+  assert.match(script, /bgmController\.setRoute\(route\)/);
+  assert.match(bgmUi, /startFromGesture\(/);
+  assert.match(bgmUi, /enterFilm\(/);
+  assert.match(bgmUi, /leaveFilm\(/);
+  assert.match(bgmUi, /aria-pressed/);
   assert.match(css, /\.bgm-toggle\s*{[\s\S]*position:\s*fixed/);
   assert.match(css, /\.bgm-toggle\s*{[\s\S]*min-(?:width|height):\s*44px/);
   assert.match(css, /\.bgm-toggle:focus-visible/);
   assert.match(css, /\.bgm-toggle\s*{[\s\S]*env\(safe-area-inset-(?:right|bottom)\)/);
   assert.match(css, /\.bgm-toggle:disabled/);
+});
+
+function createEventTarget() {
+  const listeners = new Map();
+  return {
+    addEventListener(type, listener) {
+      listeners.set(type, [...(listeners.get(type) ?? []), listener]);
+    },
+    removeEventListener(type, listener) {
+      listeners.set(type, (listeners.get(type) ?? []).filter((candidate) => candidate !== listener));
+    },
+    dispatch(type, event = {}) {
+      for (const listener of listeners.get(type) ?? []) listener({ type, ...event });
+    },
+  };
+}
+
+function createBgmHarness({ enabled = true } = {}) {
+  const documentTarget = createEventTarget();
+  const button = {
+    ...createEventTarget(),
+    attributes: new Map(),
+    disabled: false,
+    setAttribute(name, value) { this.attributes.set(name, String(value)); },
+    getAttribute(name) { return this.attributes.get(name); },
+    closest(selector) { return selector === '[data-bgm-toggle]' ? this : null; },
+  };
+  const state = { enabled, unavailable: false };
+  const calls = { start: 0, toggle: 0, enter: 0, leave: 0 };
+  const manager = {
+    state: () => ({ ...state }),
+    startFromGesture: () => { calls.start += 1; return true; },
+    toggle: () => { calls.toggle += 1; state.enabled = !state.enabled; return true; },
+    enterFilm: () => { calls.enter += 1; return true; },
+    leaveFilm: () => { calls.leave += 1; return true; },
+  };
+  return { documentTarget, button, state, calls, manager };
+}
+
+test('BGM controller starts only the first non-toggle gesture and toggles button clicks once', async () => {
+  let bgmUi;
+  try {
+    bgmUi = await import('../src/bgm-ui.js');
+  } catch {
+    bgmUi = {};
+  }
+  assert.equal(typeof bgmUi.createBgmController, 'function');
+
+  const harness = createBgmHarness();
+  const controller = bgmUi.createBgmController({
+    document: harness.documentTarget,
+    button: harness.button,
+    manager: harness.manager,
+  });
+  controller.bind();
+  harness.documentTarget.dispatch('pointerdown', { target: { closest: () => null } });
+  harness.documentTarget.dispatch('keydown', { target: { closest: () => null } });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(harness.calls.start, 1);
+
+  const buttonHarness = createBgmHarness();
+  const buttonController = bgmUi.createBgmController({
+    document: buttonHarness.documentTarget,
+    button: buttonHarness.button,
+    manager: buttonHarness.manager,
+  });
+  buttonController.bind();
+  buttonHarness.documentTarget.dispatch('pointerdown', { target: buttonHarness.button });
+  buttonHarness.button.dispatch('click', { target: buttonHarness.button });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(buttonHarness.calls.start, 0);
+  assert.equal(buttonHarness.calls.toggle, 1);
+});
+
+test('BGM controller applies the newest route state and contains rejected audio actions', async () => {
+  const { createBgmController } = await import('../src/bgm-ui.js');
+  const harness = createBgmHarness();
+  let settleFilm;
+  const filmTransition = new Promise((resolve) => { settleFilm = resolve; });
+  harness.manager.enterFilm = () => { harness.calls.enter += 1; return filmTransition.then(() => { harness.state.enabled = true; }); };
+  harness.manager.leaveFilm = () => { harness.calls.leave += 1; harness.state.enabled = false; return true; };
+  const controller = createBgmController({ document: harness.documentTarget, button: harness.button, manager: harness.manager });
+
+  const staleFilm = controller.setRoute({ name: 'film' });
+  await controller.setRoute({ name: 'intro' });
+  assert.equal(harness.calls.enter, 1);
+  assert.equal(harness.calls.leave, 1);
+  assert.equal(harness.button.getAttribute('aria-pressed'), 'false');
+  settleFilm();
+  await staleFilm;
+  assert.equal(harness.button.getAttribute('aria-pressed'), 'false');
+
+  harness.manager.toggle = () => Promise.reject(new Error('audio unavailable'));
+  assert.equal(await controller.toggle(), false);
+  assert.equal(harness.button.getAttribute('aria-pressed'), 'true');
+});
+
+test('global music control sits at the lower inline start below modal chrome', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+
+  assert.match(css, /\.bgm-toggle\s*{[\s\S]*inset-inline-start:\s*max\(18px,\s*env\(safe-area-inset-left\)\)/);
+  assert.match(css, /\.bgm-toggle\s*{[\s\S]*inset-block-end:\s*max\(120px,\s*calc\(env\(safe-area-inset-bottom\)\s*\+\s*102px\)\)/);
+  assert.match(css, /\.bgm-toggle\s*{[\s\S]*z-index:\s*90/);
+  assert.match(css, /\.review-lightbox\s*{[\s\S]*z-index:\s*100/);
+  assert.match(css, /\.archive-lightbox\s*{[\s\S]*z-index:\s*110/);
 });
