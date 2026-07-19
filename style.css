@@ -2200,6 +2200,33 @@ button.archive-filter-chip {
 
 .archive-lightbox[hidden] { display: none; }
 
+.bgm-toggle {
+  position: fixed;
+  z-index: 120;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid rgba(238, 231, 220, 0.2);
+  border-radius: 999px;
+  background: rgba(7, 8, 9, 0.76);
+  color: rgba(238, 231, 220, 0.72);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.bgm-toggle[aria-pressed="false"] { color: rgba(238, 231, 220, 0.42); }
+.bgm-toggle:hover { border-color: rgba(238, 231, 220, 0.42); color: rgba(245, 237, 225, 0.96); }
+.bgm-toggle:focus-visible { outline: 2px solid #c8978d; outline-offset: 3px; }
+.bgm-toggle:disabled { cursor: not-allowed; opacity: 0.38; }
+
 .archive-lightbox img {
   display: block;
   max-width: 100%;

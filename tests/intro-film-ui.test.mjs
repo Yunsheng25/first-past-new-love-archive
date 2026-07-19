@@ -207,3 +207,27 @@ test('site shell is a module-driven, single-viewport application', async () => {
   });
   assert.equal(syntax.status, 0, syntax.stderr);
 });
+
+test('global BGM control persists outside routes and is wired to route audio state', async () => {
+  const [documentHtml, css, script] = await Promise.all([
+    readFile(new URL('index.html', projectRoot), 'utf8'),
+    readFile(new URL('style.css', projectRoot), 'utf8'),
+    readFile(new URL('script.js', projectRoot), 'utf8'),
+  ]);
+
+  assert.match(documentHtml, /<button[^>]*class="bgm-toggle"[^>]*data-bgm-toggle[^>]*aria-pressed="true"/);
+  assert.match(documentHtml, /<button[^>]*data-bgm-toggle[^>]*aria-label=/);
+  assert.match(documentHtml, /<main id="app"[\s\S]*<\/main>\s*<button[^>]*data-bgm-toggle/);
+  assert.match(script, /import\s*{\s*createAudioManager\s*}\s*from\s*['"]\.\/src\/audio-manager\.js['"]/);
+  assert.match(script, /createAudioManager\(/);
+  assert.match(script, /\[data-bgm-toggle\]/);
+  assert.match(script, /startFromGesture\(/);
+  assert.match(script, /enterFilm\(/);
+  assert.match(script, /leaveFilm\(/);
+  assert.match(script, /aria-pressed/);
+  assert.match(css, /\.bgm-toggle\s*{[\s\S]*position:\s*fixed/);
+  assert.match(css, /\.bgm-toggle\s*{[\s\S]*min-(?:width|height):\s*44px/);
+  assert.match(css, /\.bgm-toggle:focus-visible/);
+  assert.match(css, /\.bgm-toggle\s*{[\s\S]*env\(safe-area-inset-(?:right|bottom)\)/);
+  assert.match(css, /\.bgm-toggle:disabled/);
+});

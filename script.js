@@ -8,10 +8,55 @@ import { bindFilmMedia, bindIntroMedia, focusRenderedView } from './src/media-ui
 import { mountArchiveRoute } from './src/archive-ui.js';
 import { mountReviewRoute } from './src/review-reader.js';
 import { buildAfterView, buildFilmView, buildIntroView, buildPendingView } from './src/views.js';
+import { createAudioManager } from './src/audio-manager.js';
 
 const app = document.querySelector('#app');
+const bgmToggle = document.querySelector('[data-bgm-toggle]');
+const audioManager = createAudioManager();
 let ignoreNextFilmHashChange = false;
 let currentViewCleanup = () => {};
+let bgmStateVersion = 0;
+
+function syncBgmToggle() {
+  if (!bgmToggle) return;
+  const { enabled, unavailable } = audioManager.state();
+  bgmToggle.setAttribute('aria-pressed', String(enabled));
+  bgmToggle.disabled = unavailable;
+  bgmToggle.setAttribute('aria-label', unavailable
+    ? '背景音乐不可用'
+    : enabled ? '关闭背景音乐' : '开启背景音乐');
+}
+
+function runBgmAction(action, version) {
+  Promise.resolve().then(action).catch(() => false).finally(() => {
+    if (version === bgmStateVersion) syncBgmToggle();
+  });
+}
+
+function updateBgmForRoute(route) {
+  const version = ++bgmStateVersion;
+  syncBgmToggle();
+  runBgmAction(
+    () => (route.name === 'film' ? audioManager.enterFilm() : audioManager.leaveFilm()),
+    version,
+  );
+}
+
+function startBgmFromGesture(event) {
+  if (event.target.closest?.('[data-bgm-toggle]')) return;
+  document.removeEventListener('pointerdown', startBgmFromGesture, true);
+  document.removeEventListener('keydown', startBgmFromGesture, true);
+  const version = ++bgmStateVersion;
+  runBgmAction(() => audioManager.startFromGesture(), version);
+}
+
+document.addEventListener('pointerdown', startBgmFromGesture, { capture: true });
+document.addEventListener('keydown', startBgmFromGesture, { capture: true });
+
+bgmToggle?.addEventListener('click', () => {
+  const version = ++bgmStateVersion;
+  runBgmAction(() => audioManager.toggle(), version);
+});
 
 function currentRoute() {
   if (window.location.hash === '#about') return { name: 'about' };
@@ -21,6 +66,7 @@ function currentRoute() {
 function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
   currentViewCleanup();
   currentViewCleanup = () => {};
+  updateBgmForRoute(route);
 
   if (route.name === 'film') {
     clearStoredLastFrame();
