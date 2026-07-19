@@ -5,6 +5,7 @@ import {
   clearStoredLastFrame,
 } from './src/after-film.js';
 import { bindFilmMedia, bindIntroMedia, focusRenderedView } from './src/media-ui.js';
+import { mountArchiveRoute } from './src/archive-ui.js';
 import { mountReviewRoute } from './src/review-reader.js';
 import { buildAfterView, buildFilmView, buildIntroView, buildPendingView } from './src/views.js';
 
@@ -59,6 +60,15 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
       ? '复盘手记｜初恋 · 旧爱 · 新欢'
       : '阅读复盘｜初恋 · 旧爱 · 新欢';
     currentViewCleanup = mountReviewRoute(app, route);
+    focusRenderedView(app);
+    return;
+  }
+
+  if (route.name === 'archive-index' || route.name === 'archive-detail') {
+    document.title = route.name === 'archive-index'
+      ? '提示词和图片｜初恋 · 旧爱 · 新欢'
+      : '制作案例｜初恋 · 旧爱 · 新欢';
+    currentViewCleanup = mountArchiveRoute(app, route);
     focusRenderedView(app);
     return;
   }
