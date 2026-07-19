@@ -417,7 +417,7 @@ test('global music control sits at the lower inline start below modal chrome', a
   const css = await readFile(new URL('style.css', projectRoot), 'utf8');
 
   assert.match(css, /\.bgm-toggle\s*{[\s\S]*inset-inline-start:\s*max\(18px,\s*env\(safe-area-inset-left\)\)/);
-  assert.match(css, /\.bgm-toggle\s*{[\s\S]*inset-block-end:\s*max\(120px,\s*calc\(env\(safe-area-inset-bottom\)\s*\+\s*102px\)\)/);
+  assert.match(css, /\.bgm-toggle\s*{[\s\S]*inset-block-end:\s*calc\(env\(safe-area-inset-bottom,\s*0px\)\s*\+\s*120px\)/);
   assert.match(css, /\.bgm-toggle\s*{[\s\S]*z-index:\s*50/);
   assert.match(css, /\.review-chapter-drawer\s*{[\s\S]*z-index:\s*60/);
   assert.match(css, /\.review-lightbox\s*{[\s\S]*z-index:\s*100/);

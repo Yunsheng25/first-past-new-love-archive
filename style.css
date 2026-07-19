@@ -1460,7 +1460,7 @@ h5.review-heading { font-size: clamp(17px, 1.4vw, 20px); }
   }
 
   .review-return-after {
-    bottom: calc(env(safe-area-inset-bottom) + 68px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 68px);
     left: max(10px, env(safe-area-inset-left));
     min-height: 44px;
     padding: 8px 11px;
@@ -2370,7 +2370,7 @@ button.archive-filter-chip {
   position: fixed;
   z-index: 50;
   inset-inline-start: max(18px, env(safe-area-inset-left));
-  inset-block-end: max(120px, calc(env(safe-area-inset-bottom) + 102px));
+  inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 120px);
   display: inline-flex;
   min-width: 44px;
   min-height: 44px;
