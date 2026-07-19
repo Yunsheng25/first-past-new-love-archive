@@ -39,7 +39,7 @@ test('mobile review reader keeps its paper, drawer, media, and navigation inside
   const mobile = mediaBlock(css, '@media (max-width: 760px)');
 
   assert.match(mobile, /\.review-reader-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
-  assert.match(mobile, /\.review-paper\s*\{[^}]*margin:\s*10px 9px 12px/s);
+  assert.match(mobile, /\.review-paper\s*\{[^}]*margin:\s*10px 9px calc\(env\(safe-area-inset-bottom,\s*0px\)\s*\+\s*12px\)/s);
   assert.match(mobile, /\.review-paper-content\s*\{[^}]*width:\s*min\(100% - 30px,\s*680px\)/s);
   assert.match(mobile, /\.review-chapter-drawer\s*\{[^}]*z-index:\s*60[^}]*width:\s*min\(88vw,\s*360px\)[^}]*background:\s*#171411/s);
   assert.match(mobile, /\.review-media img,[\s\S]*?\.review-media video\s*\{[^}]*max-height:\s*56dvh/s);
@@ -84,20 +84,19 @@ test('390x844 review controls retain separate safe-area-relative vertical slots'
   const bgm = declarationBlock(css, '.bgm-toggle');
   const viewportHeight = 844;
   const navHeight = Number(nav.match(/min-height:\s*(\d+)px/)?.[1]);
-  const paperBottomMargin = 12;
+  const paperBottomOffset = 12;
   const returnHeight = Number(returnControl.match(/min-height:\s*(\d+)px/)?.[1]);
   const returnOffset = Number(returnControl.match(/bottom:\s*calc\(env\(safe-area-inset-bottom,\s*0px\)\s*\+\s*(\d+)px\)/)?.[1]);
   const bgmHeight = Number(bgm.match(/min-height:\s*(\d+)px/)?.[1]);
   const bgmOffset = Number(bgm.match(/inset-block-end:\s*calc\(env\(safe-area-inset-bottom,\s*0px\)\s*\+\s*(\d+)px\)/)?.[1]);
-  const navRange = [viewportHeight - paperBottomMargin - navHeight, viewportHeight - paperBottomMargin];
-
-  assert.deepEqual(navRange, [782, 832]);
   assert.equal(returnOffset, 68);
   assert.equal(bgmOffset, 120);
-  for (const [safeArea, expected] of [[0, [[732, 776], [680, 724]]], [20, [[712, 756], [660, 704]]], [34, [[698, 742], [646, 690]]], [48, [[684, 728], [632, 676]]]]) {
+  for (const [safeArea, expected] of [[0, [[782, 832], [732, 776], [680, 724]]], [20, [[762, 812], [712, 756], [660, 704]]], [34, [[748, 798], [698, 742], [646, 690]]], [48, [[734, 784], [684, 728], [632, 676]]]]) {
+    const navRange = [viewportHeight - safeArea - paperBottomOffset - navHeight, viewportHeight - safeArea - paperBottomOffset];
     const returnRange = [viewportHeight - safeArea - returnOffset - returnHeight, viewportHeight - safeArea - returnOffset];
     const bgmRange = [viewportHeight - safeArea - bgmOffset - bgmHeight, viewportHeight - safeArea - bgmOffset];
-    assert.deepEqual([returnRange, bgmRange], expected, `safe area ${safeArea}px`);
+    assert.deepEqual([navRange, returnRange, bgmRange], expected, `safe area ${safeArea}px`);
+    assert.ok(navRange[1] <= viewportHeight - safeArea - paperBottomOffset, `navigation must clear system UI at safe area ${safeArea}px`);
     assert.ok(returnRange[1] < navRange[0], `return control must clear navigation at safe area ${safeArea}px`);
     assert.ok(bgmRange[1] + 8 <= returnRange[0], `BGM must clear return control at safe area ${safeArea}px`);
   }

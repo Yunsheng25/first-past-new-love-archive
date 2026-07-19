@@ -1413,7 +1413,7 @@ h5.review-heading { font-size: clamp(17px, 1.4vw, 20px); }
   }
 
   .review-paper {
-    margin: 10px 9px 12px;
+    margin: 10px 9px calc(env(safe-area-inset-bottom, 0px) + 12px);
   }
 
   .review-paper-meta {
@@ -2531,7 +2531,7 @@ button.archive-filter-chip {
     max-width: 100%;
     min-width: 0;
     padding: 0;
-    margin: 10px auto 12px;
+    margin: 10px auto calc(env(safe-area-inset-bottom, 0px) + 12px);
   }
 
   .review-paper-content,
