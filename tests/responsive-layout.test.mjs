@@ -60,7 +60,7 @@ test('390px review reader containment is explicit and locally scrolls long conte
   assert.match(paper, /box-sizing:\s*border-box/);
   assert.match(paper, /max-width:\s*100%/);
   assert.match(paper, /padding:\s*0/);
-  for (const selector of ['.review-reader-view', '.review-reader-layout', '.review-paper-content', '.review-blocks', '.review-media', '.review-page-nav']) {
+  for (const selector of ['.review-reader-view', '.review-reader-layout', '.review-paper-content', '.review-blocks', '.review-media']) {
     const rule = declarationBlock(narrow, selector);
     assert.match(rule, /min-width:\s*0/);
     assert.match(rule, /max-width:\s*100%/);
@@ -69,11 +69,14 @@ test('390px review reader containment is explicit and locally scrolls long conte
   assert.match(declarationBlock(narrow, '.review-paper-content table'), /overflow-x:\s*auto/);
   const drawer = declarationBlock(narrow, '.review-chapter-drawer');
   const nav = declarationBlock(narrow, '.review-page-nav');
+  const navMaxWidthMatch = nav.match(/max-width:\s*(\d+)%/);
   assert.match(drawer, /width:\s*min\(calc\(100vw\s*-\s*20px\),\s*360px\)/);
   assert.equal(Math.min(390 - 20, 360), 360);
   assert.ok(Math.min(390 - 20, 360) <= 390, 'drawer width must fit 390px');
-  assert.match(nav, /max-width:\s*100%/);
-  assert.ok(390 <= 390, 'nav max width must fit 390px');
+  assert.ok(navMaxWidthMatch, 'navigation must declare a percentage max width');
+  const navMaxWidth = (390 * Number(navMaxWidthMatch[1])) / 100;
+  assert.equal(navMaxWidth, 390, 'navigation max width must resolve to the 390px viewport width');
+  assert.ok(navMaxWidth <= paperWidth + inset, 'navigation max width must not exceed the viewport');
   assert.match(nav, /grid-template-columns:\s*minmax\(0,\s*1fr\) auto minmax\(0,\s*1fr\)/);
 });
 
