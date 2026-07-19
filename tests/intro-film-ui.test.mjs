@@ -60,7 +60,7 @@ test('film view plays the full film at normal speed with sound-capable controls'
   assert.doesNotMatch(html, /\bmuted\b/);
   assert.doesNotMatch(html, /\bloop\b/);
   assert.doesNotMatch(html, /autoplay/);
-  assert.match(html, /href="#"[^>]*>[\s\S]*?返回片头<\/a>/);
+  assert.match(html, /href="#after"[^>]*class="film-exit"[^>]*data-exit-film[^>]*>[\s\S]*?退出影片/);
   assert.doesNotMatch(html, />复盘手记</);
   assert.doesNotMatch(html, />提示词和图片</);
 });
@@ -202,6 +202,7 @@ test('site shell is a module-driven, single-viewport application', async () => {
   assert.match(css, /max-height:\s*400px[\s\S]*\.hero-eyebrow[\s\S]*display:\s*none/);
   assert.match(script, /bindIntroMedia\(app/);
   assert.match(script, /bindFilmMedia\(app/);
+  assert.match(script, /bindFilmExit\(app/);
   assert.match(script, /focusRenderedView\(app/);
 
   const syntax = spawnSync(process.execPath, ['--check', fileURLToPath(new URL('script.js', projectRoot))], {
@@ -235,6 +236,17 @@ test('global BGM control persists outside routes and is wired to route audio sta
   assert.match(css, /\.bgm-toggle:focus-visible/);
   assert.match(css, /\.bgm-toggle\s*{[\s\S]*env\(safe-area-inset-(?:right|bottom)\)/);
   assert.match(css, /\.bgm-toggle:disabled/);
+});
+
+test('film exit stays visible above video and recovery layers with a mobile-safe touch target', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+
+  assert.match(css, /\.film-exit\s*{[\s\S]*position:\s*(?:fixed|absolute)/);
+  assert.match(css, /\.film-exit\s*{[\s\S]*inset-(?:inline-end|right):\s*max\(/);
+  assert.match(css, /\.film-exit\s*{[\s\S]*inset-(?:block-start|top):\s*max\(/);
+  assert.match(css, /\.film-exit\s*{[\s\S]*min-(?:width|height):\s*44px/);
+  assert.match(css, /\.film-exit\s*{[\s\S]*z-index:\s*[7-9]|\.film-exit\s*{[\s\S]*z-index:\s*[1-9]\d/);
+  assert.match(css, /@media\s*\(max-width:\s*760px\)[\s\S]*\.film-exit/);
 });
 
 function createEventTarget() {

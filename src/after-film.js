@@ -148,6 +148,60 @@ export function bindFilmCompletion(
   };
 }
 
+export function bindFilmExit(
+  root,
+  {
+    documentRef = globalThis.document,
+    navigate = (href) => { globalThis.location.hash = href; },
+  } = {},
+) {
+  const video = root?.querySelector?.('.film-video');
+  const exitControl = root?.querySelector?.('[data-exit-film]');
+  if (!video || !exitControl) return () => {};
+
+  let active = true;
+  let exited = false;
+  const exitFilm = () => {
+    if (!active || exited) return;
+    exited = true;
+    try {
+      video.pause?.();
+    } catch {
+      // Navigation should still release viewers when a media shim fails to pause.
+    }
+    try {
+      navigate('#after');
+    } catch {
+      // A navigation failure should not surface as an uncaught input-event error.
+    }
+  };
+  const handleClick = (event) => {
+    event?.preventDefault?.();
+    exitFilm();
+  };
+  const handleKeydown = (event) => {
+    if (event?.key === 'Escape') exitFilm();
+  };
+
+  exitControl.addEventListener?.('click', handleClick);
+  documentRef?.addEventListener?.('keydown', handleKeydown);
+
+  return () => {
+    if (!active) return;
+    active = false;
+    try {
+      exitControl.removeEventListener?.('click', handleClick);
+    } catch {
+      // The active guard keeps stale listeners inert in limited DOM shims.
+    }
+    try {
+      documentRef?.removeEventListener?.('keydown', handleKeydown);
+    } catch {
+      // The active guard keeps stale listeners inert in limited DOM shims.
+    }
+  };
+}
+
 function isStoredFrame(value) {
   return /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=_-]+$/i.test(value ?? '');
 }

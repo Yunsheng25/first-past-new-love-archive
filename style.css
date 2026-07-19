@@ -343,16 +343,22 @@ video:focus-visible {
   filter: brightness(0.52) saturate(0.72);
 }
 
-.film-back {
+.film-exit {
   position: absolute;
-  top: max(20px, env(safe-area-inset-top));
-  left: max(22px, env(safe-area-inset-left));
-  z-index: 2;
+  inset-block-start: max(14px, env(safe-area-inset-top));
+  inset-inline-end: max(14px, env(safe-area-inset-right));
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 10px 15px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.56);
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.52);
-  color: rgba(255, 255, 255, 0.88);
+  background: rgba(0, 0, 0, 0.78);
+  color: rgba(255, 255, 255, 0.96);
   font-size: 14px;
   letter-spacing: 0.12em;
   backdrop-filter: blur(8px);
@@ -361,7 +367,7 @@ video:focus-visible {
 .film-caption {
   position: absolute;
   right: max(20px, env(safe-area-inset-right));
-  top: max(20px, env(safe-area-inset-top));
+  bottom: max(20px, env(safe-area-inset-bottom));
   margin: 0;
   color: rgba(255, 255, 255, 0.48);
   font-size: 12px;
@@ -1141,6 +1147,13 @@ h5.review-heading { font-size: clamp(17px, 1.45vw, 22px); }
 }
 
 @media (max-width: 760px) {
+  .film-exit {
+    inset-block-start: max(10px, env(safe-area-inset-top));
+    inset-inline-end: max(10px, env(safe-area-inset-right));
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+
   .review-index-header,
   .review-reader-header {
     height: 60px;

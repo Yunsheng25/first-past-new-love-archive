@@ -70,7 +70,7 @@ export function buildFilmView() {
         <span data-film-media-message>影片加载失败</span>
         <button type="button" data-retry-film>重新播放</button>
       </div>
-      <a href="#" class="film-back"><span aria-hidden="true">←</span> 返回片头</a>
+      <a href="#after" class="film-exit" data-exit-film><span aria-hidden="true">×</span> 退出影片</a>
       <p class="film-caption">《初恋 · 旧爱 · 新欢》<span>A FILM ARCHIVE · 2026</span></p>
     </section>`;
 }

@@ -2,6 +2,7 @@ import { parseRoute } from './src/router.js';
 import {
   applyStoredLastFrame,
   bindFilmCompletion,
+  bindFilmExit,
   clearStoredLastFrame,
 } from './src/after-film.js';
 import { bindFilmMedia, bindIntroMedia, focusRenderedView } from './src/media-ui.js';
@@ -36,9 +37,14 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
 
     const film = app.querySelector('.film-video');
     film.muted = false;
-    currentViewCleanup = bindFilmCompletion(app, {
+    const completionCleanup = bindFilmCompletion(app, {
       isCurrent: () => window.location.hash === '#film' && app.querySelector('.film-video') === film,
     });
+    const exitCleanup = bindFilmExit(app);
+    currentViewCleanup = () => {
+      completionCleanup();
+      exitCleanup();
+    };
     bindFilmMedia(app, { playImmediately: playFilm });
     focusRenderedView(app, { preferFilm: playFilm });
     return;

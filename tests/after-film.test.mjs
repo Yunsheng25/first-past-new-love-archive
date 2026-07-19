@@ -8,6 +8,7 @@ import {
   LAST_FRAME_STORAGE_KEY,
   applyStoredLastFrame,
   bindFilmCompletion,
+  bindFilmExit,
   captureFilmFrame,
   clearStoredLastFrame,
 } from '../src/after-film.js';
@@ -38,6 +39,102 @@ function fakeVideo() {
     dispatch(type) { this.listeners.get(type)?.listener({ type }); },
   };
 }
+
+function fakeEventTarget() {
+  const listeners = new Map();
+  return {
+    addEventListener(type, listener) {
+      listeners.set(type, [...(listeners.get(type) ?? []), listener]);
+    },
+    removeEventListener(type, listener) {
+      listeners.set(type, (listeners.get(type) ?? []).filter((candidate) => candidate !== listener));
+    },
+    dispatch(type, event = {}) {
+      for (const listener of listeners.get(type) ?? []) listener({ type, ...event });
+    },
+    listenerCount(type) { return (listeners.get(type) ?? []).length; },
+  };
+}
+
+function createFilmExitHarness({ pauseThrows = false } = {}) {
+  const video = { ...fakeEventTarget(), pauseCalls: 0, pause() { this.pauseCalls += 1; if (pauseThrows) throw new Error('pause failed'); } };
+  const exit = { ...fakeEventTarget() };
+  const documentRef = fakeEventTarget();
+  const root = {
+    querySelector(selector) {
+      if (selector === '.film-video') return video;
+      if (selector === '[data-exit-film]') return exit;
+      return null;
+    },
+  };
+  const destinations = [];
+  return { video, exit, documentRef, root, destinations };
+}
+
+test('film exit click pauses immediately and navigates to the after screen once', () => {
+  const harness = createFilmExitHarness();
+  const cleanup = bindFilmExit(harness.root, {
+    documentRef: harness.documentRef,
+    navigate: (destination) => harness.destinations.push(destination),
+  });
+  let prevented = false;
+
+  harness.exit.dispatch('click', { preventDefault() { prevented = true; } });
+
+  assert.equal(prevented, true);
+  assert.equal(harness.video.pauseCalls, 1);
+  assert.deepEqual(harness.destinations, ['#after']);
+  cleanup();
+});
+
+test('film exit responds only to Escape and remains idempotent across repeated inputs', () => {
+  const harness = createFilmExitHarness();
+  bindFilmExit(harness.root, {
+    documentRef: harness.documentRef,
+    navigate: (destination) => harness.destinations.push(destination),
+  });
+
+  harness.documentRef.dispatch('keydown', { key: 'Enter' });
+  assert.equal(harness.video.pauseCalls, 0);
+  assert.deepEqual(harness.destinations, []);
+
+  harness.documentRef.dispatch('keydown', { key: 'Escape' });
+  harness.exit.dispatch('click', { preventDefault() {} });
+  harness.documentRef.dispatch('keydown', { key: 'Escape' });
+  assert.equal(harness.video.pauseCalls, 1);
+  assert.deepEqual(harness.destinations, ['#after']);
+});
+
+test('film exit cleanup removes exact listeners and makes queued events inert', () => {
+  const harness = createFilmExitHarness();
+  const cleanup = bindFilmExit(harness.root, {
+    documentRef: harness.documentRef,
+    navigate: (destination) => harness.destinations.push(destination),
+  });
+
+  assert.equal(harness.exit.listenerCount('click'), 1);
+  assert.equal(harness.documentRef.listenerCount('keydown'), 1);
+  cleanup();
+  cleanup();
+  harness.exit.dispatch('click', { preventDefault() {} });
+  harness.documentRef.dispatch('keydown', { key: 'Escape' });
+  assert.equal(harness.exit.listenerCount('click'), 0);
+  assert.equal(harness.documentRef.listenerCount('keydown'), 0);
+  assert.equal(harness.video.pauseCalls, 0);
+  assert.deepEqual(harness.destinations, []);
+});
+
+test('a pause failure does not prevent film exit navigation', () => {
+  const harness = createFilmExitHarness({ pauseThrows: true });
+  bindFilmExit(harness.root, {
+    documentRef: harness.documentRef,
+    navigate: (destination) => harness.destinations.push(destination),
+  });
+
+  assert.doesNotThrow(() => harness.exit.dispatch('click', { preventDefault() {} }));
+  assert.equal(harness.video.pauseCalls, 1);
+  assert.deepEqual(harness.destinations, ['#after']);
+});
 
 test('after view has exactly two equal primary choices with the required destinations', () => {
   const html = buildAfterView();
