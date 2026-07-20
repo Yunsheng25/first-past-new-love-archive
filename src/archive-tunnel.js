@@ -95,7 +95,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
     }
     function unload(card) { const texture = card.texture; card.texture = null; card.material.map = null; dispose(texture, registry.disposed); setColor(card.material, DARK_CARD); card.material.opacity = 1; card.material.needsUpdate = true; }
     function load(card) {
-      if (card.failed || card.loading || card.pending || registry.destroyed) return;
+      if (card.failed || card.texture || card.loading || card.pending || registry.destroyed) return;
       const generation = ++card.generation;
       const pending = {}; card.loading = true; card.pending = pending;
       const settle = () => {
@@ -133,6 +133,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
       const next = sizeOf(root); if (!next) return;
       camera.aspect = next.width / next.height; camera.updateProjectionMatrix();
       renderer.setPixelRatio(dpr()); renderer.setSize(next.width, next.height);
+      if (registry.ready) { try { if (!isMoving(state.snapshot())) renderOnly(); } catch (_error) { cleanup(); } }
     };
     function end(before, after) {
       if (after.mode !== "ended") endedAnnounced = false;
@@ -141,8 +142,9 @@ export function mountArchiveTunnel(root, data, options = {}) {
     function isMoving(snapshot) { return snapshot.mode === "cruising" || snapshot.mode === "rewinding"; }
     function renderOnly() { if (registry.destroyed) return false; try { renderer.render(registry.scene, camera); return true; } catch (_error) { cleanup(); return false; } }
     function stopFrame() { registry.frameToken += 1; if (registry.frame !== null) safe(() => cancelFrame(registry.frame)); registry.frame = null; }
-    function schedule() {
+    function schedule(restart = false) {
       if (registry.destroyed || registry.frame !== null || !isMoving(state.snapshot())) return false;
+      if (restart) previousTime = null;
       const token = ++registry.frameToken;
       registry.frame = requestFrame((timestamp) => { if (registry.destroyed || token !== registry.frameToken) return; frame(timestamp); });
       return true;
@@ -178,8 +180,8 @@ export function mountArchiveTunnel(root, data, options = {}) {
     resize(); update(); renderer.render(registry.scene, camera); registry.ready = true; schedule();
     return Object.freeze({
       pause: () => { if (registry.destroyed) return false; const changed = state.pause(); if (changed) stopFrame(); return changed; },
-      resume: () => { if (registry.destroyed) return false; const changed = state.resume(); if (changed) schedule(); return changed; },
-      startRewind: () => { if (registry.destroyed) return false; const changed = state.startRewind(); if (changed) { endedAnnounced = false; schedule(); } return changed; },
+      resume: () => { if (registry.destroyed) return false; const changed = state.resume(); if (changed) schedule(true); return changed; },
+      startRewind: () => { if (registry.destroyed) return false; const changed = state.startRewind(); if (changed) { endedAnnounced = false; schedule(true); } return changed; },
       snapshot: () => state.snapshot(), destroy: cleanup,
     });
   } catch (_error) { return initializationFailed(); }

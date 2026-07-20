@@ -698,3 +698,17 @@ test("unload and destroy clear material texture references and renderer uses wea
   const tailIndex = h.calls.loads.length - 1; const tailTexture = h.resolve(tailIndex); const mapped = h.resources.materials.find((material) => material.map === tailTexture); assert.ok(mapped); api.destroy(); assert.equal(mapped.map, null); assert.equal(tailTexture.disposed, 1);
   const source = fs.readFileSync(new URL("../src/archive-tunnel.js", import.meta.url), "utf8"); assert.match(source, /disposed:\s*new WeakSet\(\)/); assert.doesNotMatch(source, /disposed:\s*new Set\(\)/);
 });
+
+test("restarted cruise and rewind loops ignore idle wall time on their first frame", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); h.calls.frames.shift()(100); assert.equal(api.snapshot().progress, 0); assert.equal(api.pause(), true); assert.equal(api.resume(), true); h.calls.frames.at(-1)(10000); assert.equal(api.snapshot().progress, 0); h.calls.frames.at(-1)(10016); assert.equal(api.snapshot().progress, 137 * 16 / 90000); api.destroy();
+
+  const rewind = createLifecycleHarness(); const rewindApi = rewind.mount(); rewind.calls.frames.shift()(100); rewind.fire("wheel", { deltaY: 99999, preventDefault() {} }); assert.equal(rewindApi.snapshot().mode, "ended"); assert.equal(rewindApi.startRewind(), true); rewind.calls.frames.at(-1)(10000); assert.deepEqual(rewindApi.snapshot(), { progress: 137, mode: "rewinding" }); rewindApi.destroy();
+});
+
+test("idle resize repaints one static frame without creating a continuous RAF", () => {
+  const h = createLifecycleHarness(); const paused = createTunnelState({ maxProgress: 137, initialMode: "paused" }); const api = h.mount(archiveData, { stateFactory: () => paused }); assert.equal(h.calls.frames.length, 0); const renders = h.resources.renderCount; h.root.clientWidth = 640; h.root.clientHeight = 320; h.windowListeners.get("resize")(); assert.equal(h.resources.renderCount, renders + 1); assert.equal(h.calls.frames.length, 0); assert.equal(h.resources.camera.aspect, 2); api.destroy();
+});
+
+test("duplicate success after a loaded texture neither replaces it nor starts a fresh request", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); const pending = h.calls.loads[0]; const original = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; const duplicate = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; pending.success(original); assert.equal(h.calls.loads.length, 33); pending.success(duplicate); assert.equal(h.calls.loads.length, 33); assert.equal(h.resources.materials[0].map, original); assert.equal(duplicate.disposed, 1); api.destroy(); assert.equal(original.disposed, 1);
+});
