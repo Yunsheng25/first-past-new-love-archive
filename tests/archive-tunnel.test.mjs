@@ -609,6 +609,31 @@ test("zero-size raycast is inert and rewind rejects input mutations", () => {
   h.fire("wheel", { deltaY: 99999, preventDefault() {} }); assert.equal(api.snapshot().mode, "ended"); assert.equal(api.startRewind(), true); const progress = api.snapshot().progress; h.fire("wheel", { deltaY: -100, preventDefault() {} }); h.fire("pointerdown", { pointerId: 1, clientX: 0, clientY: 30 }); h.fire("pointermove", { pointerId: 1, clientX: 0, clientY: 0 }); assert.equal(api.snapshot().progress, progress); api.destroy();
 });
 
+test("wheel arrival onEnd may destroy without any post-callback scene work", () => {
+  const h = createLifecycleHarness();
+  let afterEndAccess = 0; let ended = false; let controller;
+  const state = {
+    progress: 136.9, mode: "paused",
+    snapshot() { if (ended) afterEndAccess += 1; return Object.freeze({ progress: this.progress, mode: this.mode }); },
+    tick() { return false; }, pause() { return false; }, resume() { return false; }, startRewind() { return false; },
+    nudge(value) { this.progress = Math.min(137, this.progress + value); if (this.progress === 137) this.mode = "ended"; return true; },
+  };
+  controller = h.mount(archiveData, { stateFactory: () => state, onEnd(snapshot) { assert.deepEqual(snapshot, { progress: 137, mode: "ended" }); ended = true; controller.destroy(); } });
+  const loads = h.calls.loads.length; const renders = h.resources.renderCount; const frames = h.calls.frames.length; const cameraZ = h.resources.camera.position.z;
+  h.fire("wheel", { deltaY: 100, preventDefault() {} });
+  assert.equal(afterEndAccess, 0); assert.equal(h.calls.loads.length, loads); assert.equal(h.resources.renderCount, renders); assert.equal(h.calls.frames.length, frames); assert.equal(h.resources.camera.position.z, cameraZ); assert.equal(h.root.children.length, 0); assert.equal(h.resources.renderer.disposed, 1); assert.equal(controller.destroy(), false);
+});
+
+test("pointercancel releases capture and makes the cancelled pointer immediately inert", () => {
+  const h = createLifecycleHarness({ faults: { hit: 1 } }); const api = h.mount();
+  h.fire("pointerdown", { pointerId: 8, clientX: 10, clientY: 40 }); assert.equal(h.calls.capture, 8);
+  h.fire("pointercancel", { pointerId: 8, clientX: 10, clientY: 40 }); assert.equal(h.calls.release, 8);
+  const progress = api.snapshot().progress; const captures = h.calls.capture; const selections = h.calls.select.length;
+  h.fire("pointermove", { pointerId: 8, clientX: 10, clientY: 0 }); h.fire("pointerup", { pointerId: 8, clientX: 10, clientY: 0 });
+  assert.equal(api.snapshot().progress, progress); assert.equal(h.calls.capture, captures); assert.equal(h.calls.select.length, selections);
+  h.fire("pointerdown", { pointerId: 9, clientX: 20, clientY: 20 }); assert.equal(h.calls.capture, 9); h.fire("pointerup", { pointerId: 9, clientX: 20, clientY: 20 }); assert.equal(h.calls.release, 9); api.destroy();
+});
+
 test("live resize updates valid dimensions and captured resize is inert after destroy", () => {
   const h = createLifecycleHarness(); const api = h.mount(); const resize = h.windowListeners.get("resize"); h.root.clientWidth = 600; h.root.clientHeight = 300; resize(); assert.equal(h.resources.camera.aspect, 2); assert.equal(h.resources.camera.projections, 2); assert.deepEqual(h.resources.renderer.size.slice(0, 2), [600, 300]);
   h.root.clientWidth = 0; const projections = h.resources.camera.projections; resize(); assert.equal(h.resources.camera.projections, projections); api.destroy(); resize(); assert.equal(h.resources.camera.projections, projections);
