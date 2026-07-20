@@ -39,6 +39,13 @@ export function createTunnelState({ maxProgress, initialProgress = 0, initialMod
 
   let rewindStart = 0;
   let rewindElapsed = 0;
+  let cruiseStartProgress = progress;
+  let cruiseElapsed = 0;
+
+  function beginCruiseSegment() {
+    cruiseStartProgress = progress;
+    cruiseElapsed = 0;
+  }
 
   function tick(deltaMs) {
     requireFiniteNonNegative(deltaMs, "deltaMs");
@@ -55,8 +62,17 @@ export function createTunnelState({ maxProgress, initialProgress = 0, initialMod
       return true;
     }
 
-    progress = clamp(progress + (maxProgress * deltaMs / TUNNEL_CRUISE_MS), maxProgress);
-    if (progress === maxProgress) mode = "ended";
+    const cruiseSpeed = maxProgress / TUNNEL_CRUISE_MS;
+    const durationToEnd = (maxProgress - cruiseStartProgress) / cruiseSpeed;
+    const nextElapsed = cruiseElapsed + deltaMs;
+    if (nextElapsed >= durationToEnd) {
+      cruiseElapsed = durationToEnd;
+      progress = maxProgress;
+      mode = "ended";
+      return true;
+    }
+    cruiseElapsed = nextElapsed;
+    progress = cruiseStartProgress + (cruiseSpeed * cruiseElapsed);
     return true;
   }
 
@@ -78,6 +94,7 @@ export function createTunnelState({ maxProgress, initialProgress = 0, initialMod
 
   function resume() {
     if (mode !== "paused" || progress === maxProgress) return false;
+    beginCruiseSegment();
     mode = "cruising";
     return true;
   }
