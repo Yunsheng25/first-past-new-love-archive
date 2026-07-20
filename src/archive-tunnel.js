@@ -35,8 +35,8 @@ export function mountArchiveTunnel(root, data, options = {}) {
   if (!renderer?.domElement) { safe(() => renderer?.dispose?.()); return fallback("renderer-failed"); }
 
   const registry = { renderer, canvas: renderer.domElement, scene: null, geometry: null, cards: [], listeners: [], frame: null, classAdded: false, appended: false, destroyed: false, disposed: new Set(), activePointer: null };
-  const cancelFrame = options.cancelFrame ?? windowRef.cancelAnimationFrame?.bind(windowRef);
-  const requestFrame = options.requestFrame ?? windowRef.requestAnimationFrame?.bind(windowRef);
+  let cancelFrame;
+  let requestFrame;
   const cleanup = () => {
     if (registry.destroyed) return false;
     registry.destroyed = true;
@@ -63,6 +63,8 @@ export function mountArchiveTunnel(root, data, options = {}) {
   let resize = () => {};
 
   try {
+    cancelFrame = options.cancelFrame ?? windowRef.cancelAnimationFrame?.bind(windowRef);
+    requestFrame = options.requestFrame ?? windowRef.requestAnimationFrame?.bind(windowRef);
     if (typeof requestFrame !== "function" || typeof cancelFrame !== "function") throw new Error("raf unavailable");
     registry.scene = new three.Scene();
     registry.scene.fog = new three.FogExp2(0x09070c, 0.032);
@@ -77,14 +79,17 @@ export function mountArchiveTunnel(root, data, options = {}) {
     let dragged = false;
     const radius = () => Number.isFinite(options.textureRadius) ? Math.max(0, Math.floor(options.textureRadius)) : (windowRef.matchMedia?.("(max-width: 760px)")?.matches ? 18 : 32);
     const dpr = () => Math.min(1.6, Math.max(1, Number(windowRef.devicePixelRatio) || 1));
-    registry.cards = occurrences.map((occurrence, index) => {
+    for (let index = 0; index < occurrences.length; index += 1) {
+      const occurrence = occurrences[index];
       const material = new three.MeshBasicMaterial({ color: DARK_CARD, transparent: true, opacity: 1, side: three.DoubleSide });
+      const card = { occurrence, mesh: null, material, texture: null, desired: false, failed: false, loading: false, generation: 0 };
+      registry.cards.push(card);
       const mesh = new three.Mesh(registry.geometry, material);
       const pose = tunnelPose(index);
       mesh.position.set(pose.x, pose.y, pose.z); mesh.rotation.z = pose.rotationZ;
       registry.scene.add(mesh);
-      return { occurrence, mesh, material, texture: null, desired: false, failed: false, loading: false, generation: 0 };
-    });
+      card.mesh = mesh;
+    }
     function unload(card) { dispose(card.texture, registry.disposed); card.texture = null; card.material.map = null; setColor(card.material, DARK_CARD); card.material.opacity = 1; card.material.needsUpdate = true; }
     function load(card) {
       if (card.failed || registry.destroyed) return;
@@ -132,11 +137,11 @@ export function mountArchiveTunnel(root, data, options = {}) {
       state.tick(delta); const after = state.snapshot(); end(before, after); if (registry.destroyed) return;
       update(); renderer.render(registry.scene, camera); schedule();
     }
-    function nudge(value) { if (!Number.isFinite(value) || registry.destroyed) return false; const before = state.snapshot(); const changed = state.nudge(value); end(before, state.snapshot()); if (changed) update(); return changed; }
-    function wheel(event) { if (!Number.isFinite(event.deltaY)) return; event.preventDefault?.(); nudge(event.deltaY * 0.012); }
+    function nudge(value) { if (!Number.isFinite(value) || registry.destroyed) return false; const before = state.snapshot(); const changed = state.nudge(value); end(before, state.snapshot()); if (registry.destroyed) return false; if (changed) update(); return changed; }
+    function wheel(event) { if (registry.destroyed || !Number.isFinite(event.deltaY)) return; event.preventDefault?.(); nudge(event.deltaY * 0.012); }
     function down(event) { if (registry.destroyed || !Number.isFinite(event.clientY)) return; registry.activePointer = event.pointerId; drag = { x: event.clientX, y: event.clientY }; dragged = false; safe(() => registry.canvas.setPointerCapture?.(event.pointerId)); }
-    function move(event) { if (event.pointerId !== registry.activePointer || !drag || !Number.isFinite(event.clientY)) return; const dx = event.clientX - drag.x; const dy = event.clientY - drag.y; if (Math.hypot(dx, dy) > 6) dragged = true; if (dy) { nudge(-dy * 0.05); drag = { x: event.clientX, y: event.clientY }; } }
-    function release(event) { if (event.pointerId !== registry.activePointer) return; safe(() => registry.canvas.releasePointerCapture?.(event.pointerId)); registry.activePointer = null; drag = null; }
+    function move(event) { if (registry.destroyed || event.pointerId !== registry.activePointer || !drag || !Number.isFinite(event.clientY)) return; const dx = event.clientX - drag.x; const dy = event.clientY - drag.y; if (Math.hypot(dx, dy) > 6) dragged = true; if (dy) { nudge(-dy * 0.05); drag = { x: event.clientX, y: event.clientY }; } }
+    function release(event) { if (registry.destroyed || event.pointerId !== registry.activePointer) return; safe(() => registry.canvas.releasePointerCapture?.(event.pointerId)); registry.activePointer = null; drag = null; }
     function click(event) {
       if (registry.destroyed || dragged || !three.Raycaster || !three.Vector2) return;
       const rect = registry.canvas.getBoundingClientRect?.() ?? root.getBoundingClientRect?.(); if (!rect?.width || !rect?.height) return;

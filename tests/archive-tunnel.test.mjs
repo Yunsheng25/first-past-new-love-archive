@@ -419,3 +419,40 @@ test("rolls back a partially initialized renderer and reports initialization fai
   assert.ok(resources.materials.every((material) => material.disposed === 1));
   assert.equal(tunnel.destroy(), false);
 });
+
+test("registers each material before mesh construction so a partial card build rolls back", () => {
+  const { three, resources } = createRendererFakes();
+  let meshes = 0;
+  three.Mesh = class ThrowingMesh extends three.Mesh { constructor(...args) { super(...args); if (++meshes === 4) throw new Error("fourth mesh"); } };
+  const root = createRoot();
+  const tunnel = mountArchiveTunnel(root, archiveData, { three, requestFrame: () => 1, cancelFrame() {}, windowRef: { WebGLRenderingContext: function WebGLRenderingContext() {}, matchMedia: () => ({ matches: false }), addEventListener() {}, removeEventListener() {} } });
+  assert.equal(tunnel.destroy(), false);
+  assert.equal(resources.materials.length, 4);
+  assert.ok(resources.materials.every((material) => material.disposed === 1));
+  assert.equal(resources.geometry.disposed, 1);
+});
+
+test("turns scheduler accessor and request failures into one clean fallback", () => {
+  const { three, resources } = createRendererFakes();
+  const root = createRoot();
+  const reasons = [];
+  const options = { three, cancelFrame() {}, windowRef: { WebGLRenderingContext: function WebGLRenderingContext() {}, matchMedia: () => ({ matches: false }), addEventListener() {}, removeEventListener() {} }, onFallback: (reason) => reasons.push(reason) };
+  Object.defineProperty(options, "requestFrame", { get() { throw new Error("getter"); } });
+  const tunnel = mountArchiveTunnel(root, archiveData, options);
+  assert.equal(tunnel.destroy(), false);
+  assert.deepEqual(reasons, ["initialization-failed"]);
+  assert.equal(resources.renderer.disposed, 1);
+  assert.equal(root.children.length, 0);
+});
+
+test("captured canvas handlers are inert after destroy", () => {
+  const { three } = createRendererFakes();
+  const root = createRoot(); const frames = [];
+  const tunnel = mountArchiveTunnel(root, archiveData, { three, requestFrame: (fn) => (frames.push(fn), frames.length), cancelFrame() {}, windowRef: { WebGLRenderingContext: function WebGLRenderingContext() {}, matchMedia: () => ({ matches: false }), addEventListener() {}, removeEventListener() {} } });
+  const wheel = root.children[0].listeners.get("wheel");
+  tunnel.destroy();
+  let prevented = 0;
+  wheel({ deltaY: 10, preventDefault() { prevented += 1; } });
+  assert.equal(prevented, 0);
+  assert.equal(tunnel.snapshot().progress, 0);
+});
