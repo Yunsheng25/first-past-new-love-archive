@@ -74,6 +74,10 @@ export function mountArchiveTunnel(root, data, options = {}) {
     const camera = new three.PerspectiveCamera(46, initial.width / initial.height, 0.1, 120);
     registry.geometry = new three.PlaneGeometry(1.82, 1.24);
     const state = (options.stateFactory ?? createTunnelState)({ maxProgress: occurrences.length - 1 });
+    if (Number.isFinite(options.initialProgress) && options.initialProgress > 0) {
+      state.nudge(options.initialProgress);
+      state.resume();
+    }
     const loader = new three.TextureLoader();
     let previousTime = null;
     let endedAnnounced = false;
@@ -126,7 +130,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
     }
     function update() {
       const snap = state.snapshot(); const z = 3 - snap.progress * TUNNEL_STEP;
-      camera.position.set(0, 0, z); camera.lookAt(0, 0, z - 1); windowTextures(snap.progress); return snap;
+      camera.position.set(0, 0, z); camera.lookAt(0, 0, z - 1); windowTextures(snap.progress); safe(() => options.onProgress?.(snap)); return snap;
     }
     resize = () => {
       if (registry.destroyed) return;

@@ -1,4 +1,9 @@
+import { mountArchiveTunnel } from './archive-tunnel.js';
+import { mountArchiveCaseModal } from './archive-case-modal.js';
+
 export const ARCHIVE_LAST_CASE_KEY = 'archive:lastCase';
+
+const archiveDataCache = new WeakMap();
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -96,7 +101,7 @@ export function buildArchiveIndex(data, state = {}, lastCase = null) {
     <a class="archive-return-after" href="#after" data-return-after>← 返回片后</a>
     <header class="archive-header">
       <a class="archive-wordmark" href="#after">初恋 · 旧爱 · 新欢</a>
-      <span>PROMPT & IMAGE ARCHIVE</span>
+      <span>PROMPT & IMAGE ARCHIVE</span><button type="button" data-archive-view="tunnel">隧道模式</button>
     </header>
     <main class="archive-index-main">
       <section class="archive-index-sidebar">
@@ -113,6 +118,21 @@ export function buildArchiveIndex(data, state = {}, lastCase = null) {
         <div class="archive-grid-scroll" tabindex="0"><div class="archive-grid">${resultMarkup}</div></div>
       </section>
     </main>
+  </section>`;
+}
+
+export function buildArchiveIndexShell(summary = {}) {
+  const total = Number(summary.imageOccurrences) || 138;
+  return `<section class="archive-tunnel-view app-view" aria-label="提示词和图片总览">
+    <header class="archive-tunnel-header">
+      <a class="archive-wordmark" href="#after">初恋 · 旧爱 · 新欢</a>
+      <div class="archive-tunnel-actions"><button type="button" data-archive-view="list">列表模式</button><button type="button" data-tunnel-cruise>暂停漫游</button></div>
+    </header>
+    <div class="archive-tunnel-stage" data-archive-tunnel aria-label="按制作顺序排列的图片隧道"></div>
+    <div class="archive-tunnel-count"><b data-tunnel-current>001</b> / ${String(total).padStart(3, '0')}</div>
+    <button type="button" class="archive-rewind" data-tunnel-rewind hidden>↶ 快速回溯</button>
+    <div data-archive-modal-host></div>
+    <a class="archive-return-after" href="#after" data-return-after>← 返回片后</a>
   </section>`;
 }
 
@@ -522,12 +542,24 @@ export function mountArchiveRoute(app, route, {
   documentRef = document,
   windowRef = window,
   navigatorRef = globalThis.navigator,
+  mountTunnel = mountArchiveTunnel,
+  mountCaseModal = mountArchiveCaseModal,
 } = {}) {
   let active = true;
   let controller = null;
   let interactionCleanup = () => {};
   let retryButton = null;
   let retryHandler = null;
+
+  const fetchArchive = async (request) => {
+    if (archiveDataCache.has(fetchImpl)) return archiveDataCache.get(fetchImpl);
+    const promise = Promise.resolve(fetchImpl('data/archive.json', { signal: request.signal })).then(async (response) => {
+      if (!response.ok) throw new Error(`Archive data request failed: ${response.status}`);
+      return response.json();
+    });
+    archiveDataCache.set(fetchImpl, promise);
+    try { return await promise; } catch (error) { archiveDataCache.delete(fetchImpl); throw error; }
+  };
 
   const clearRetry = () => {
     retryButton?.removeEventListener?.('click', retryHandler);
@@ -544,20 +576,81 @@ export function mountArchiveRoute(app, route, {
     const request = controller;
     app.innerHTML = loadingView();
     try {
-      const response = await fetchImpl('data/archive.json', { signal: request.signal });
-      if (!response.ok) throw new Error(`Archive data request failed: ${response.status}`);
-      const data = await response.json();
+      const data = await fetchArchive(request);
       if (!active || request.signal.aborted || request !== controller) return;
 
       if (route.name === 'archive-index') {
         const state = { query: '', types: [], stages: [] };
-        const renderIndex = () => {
+        let tunnel = null;
+        let modal = null;
+        let view = 'tunnel';
+        let savedProgress = 0;
+        const safeCall = (callback) => { try { return callback?.(); } catch { return undefined; } };
+        const renderList = () => {
           if (!active) return;
           interactionCleanup();
+          safeCall(() => modal?.destroy?.()); modal = null;
+          const snapshot = safeCall(() => tunnel?.snapshot?.());
+          if (Number.isFinite(snapshot?.progress)) savedProgress = snapshot.progress;
+          safeCall(() => tunnel?.destroy?.()); tunnel = null;
           app.innerHTML = buildArchiveIndex(data, state, readArchiveLastCase(storage, data));
-          interactionCleanup = bindArchiveIndexInteractions(app, data, state, renderIndex);
+          view = 'list';
+          const cleanupIndex = bindArchiveIndexInteractions(app, data, state, renderList);
+          const switchView = (event) => { if (event.target?.closest?.('[data-archive-view="tunnel"]')) renderTunnel(); };
+          app.addEventListener?.('click', switchView);
+          interactionCleanup = () => { cleanupIndex(); app.removeEventListener?.('click', switchView); };
         };
-        renderIndex();
+        const renderTunnel = () => {
+          if (!active) return;
+          interactionCleanup();
+          safeCall(() => modal?.destroy?.()); modal = null;
+          safeCall(() => tunnel?.destroy?.()); tunnel = null;
+          app.innerHTML = buildArchiveIndexShell(data.summary);
+          view = 'tunnel';
+          const stage = app.querySelector?.('[data-archive-tunnel]');
+          const rewind = app.querySelector?.('[data-tunnel-rewind]');
+          const cruise = app.querySelector?.('[data-tunnel-cruise]');
+          const current = app.querySelector?.('[data-tunnel-current]');
+          const modalHost = app.querySelector?.('[data-archive-modal-host]');
+          const mountedTunnel = mountTunnel(stage, data, {
+            windowRef,
+            initialProgress: savedProgress,
+            onProgress(snapshot) {
+              if (current) current.textContent = String(Math.round(snapshot.progress) + 1).padStart(3, '0');
+              if (cruise) cruise.textContent = snapshot.mode === 'cruising' ? '暂停漫游' : '继续漫游';
+              if (snapshot.mode !== 'ended' && rewind) rewind.hidden = true;
+            },
+            onSelect(occurrence, trigger) {
+              safeCall(() => tunnel?.pause?.());
+              modal = safeCall(() => mountCaseModal(modalHost, { data, occurrence, trigger, documentRef, navigatorRef,
+                onClose() { modal = null; safeCall(() => tunnel?.resume?.()); },
+              }));
+              if (!modal) safeCall(() => tunnel?.resume?.());
+            },
+            onEnd() { if (rewind) rewind.hidden = false; },
+            onFallback() { if (active && view === 'tunnel') renderList(); },
+          });
+          if (view === 'tunnel') tunnel = mountedTunnel;
+          else safeCall(() => mountedTunnel?.destroy?.());
+          const click = (event) => {
+            if (event.target?.closest?.('[data-archive-view="list"]')) { renderList(); return; }
+            if (event.target?.closest?.('[data-tunnel-cruise]')) {
+              const snapshot = safeCall(() => tunnel?.snapshot?.());
+              safeCall(() => snapshot?.mode === 'cruising' ? tunnel?.pause?.() : tunnel?.resume?.());
+              return;
+            }
+            if (event.target?.closest?.('[data-tunnel-rewind]')) {
+              if (safeCall(() => tunnel?.startRewind?.())) { if (rewind) rewind.hidden = true; }
+            }
+          };
+          app.addEventListener?.('click', click);
+          interactionCleanup = () => {
+            app.removeEventListener?.('click', click);
+            safeCall(() => modal?.destroy?.()); modal = null;
+            safeCall(() => tunnel?.destroy?.()); tunnel = null;
+          };
+        };
+        renderTunnel();
       } else {
         const resolved = resolveArchiveCase(data, route.id);
         app.innerHTML = buildArchiveDetail(data, route.id);

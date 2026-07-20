@@ -171,6 +171,7 @@ export function mountArchiveCaseModal(host, {
     return true;
   };
   const navigate = (delta) => {
+    if (!active) return false;
     const nextItem = caseNeighbor(data, item.id, delta);
     if (!nextItem) return false;
     // A completed navigation makes every pending copy result stale.

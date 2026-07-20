@@ -578,6 +578,24 @@ test("RAF delta, end announcement, rewind reannouncement, and destroy from onEnd
   controller = custom.mount(archiveData, { stateFactory: () => state, onEnd(s) { custom.calls.end.push(s); controller.destroy(); } }); custom.calls.frames.shift()(1); assert.equal(custom.calls.end.length, 1); assert.ok(Object.isFrozen(custom.calls.end[0])); assert.equal(custom.resources.renderCount, 1); assert.equal(custom.calls.frames.length, 0);
 });
 
+test("progress consumer receives the initial and advancing snapshots without owning lifecycle", () => {
+  const h = createLifecycleHarness();
+  const progress = [];
+  const api = h.mount(archiveData, { onProgress(snapshot) { progress.push(snapshot); } });
+  assert.deepEqual(progress[0], { progress: 0, mode: "cruising" });
+  h.calls.frames.shift()(100);
+  h.calls.frames.shift()(164);
+  assert.ok(progress.at(-1).progress > 0);
+  api.destroy();
+});
+
+test("a remounted tunnel can resume from a preserved authored progress", () => {
+  const h = createLifecycleHarness();
+  const api = h.mount(archiveData, { initialProgress: 41 });
+  assert.equal(api.snapshot().progress, 41);
+  api.destroy();
+});
+
 test("end is announced once per arrival and a rewind permits a second announcement", () => {
   const h = createLifecycleHarness();
   const state = { progress: 0, mode: "cruising", snapshot() { return Object.freeze({ progress: this.progress, mode: this.mode }); }, tick() { if (this.mode === "cruising") { this.progress = 137; this.mode = "ended"; } else if (this.mode === "rewinding") { this.progress = 0; this.mode = "paused"; } return true; }, pause() { this.mode = "paused"; return true; }, resume() { this.mode = "cruising"; return true; }, nudge() { return false; }, startRewind() { if (this.mode !== "ended") return false; this.mode = "rewinding"; return true; } };

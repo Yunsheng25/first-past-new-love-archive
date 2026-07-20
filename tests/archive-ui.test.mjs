@@ -7,6 +7,7 @@ import {
   ARCHIVE_LAST_CASE_KEY,
   bindArchiveDetailInteractions,
   bindArchiveIndexInteractions,
+  buildArchiveIndexShell,
   buildArchiveDetail,
   buildArchiveIndex,
   copyArchivePrompt,
@@ -21,6 +22,59 @@ import {
 const archive = JSON.parse(await readFile(new URL('../data/archive.json', import.meta.url), 'utf8'));
 const css = await readFile(new URL('../style.css', import.meta.url), 'utf8');
 const script = await readFile(new URL('../script.js', import.meta.url), 'utf8');
+
+test('archive overview shell defaults to the complete 138-occurrence tunnel', () => {
+  const html = buildArchiveIndexShell(archive.summary);
+  assert.match(html, /data-archive-tunnel/);
+  assert.match(html, /data-archive-view="list"/);
+  assert.match(html, /data-tunnel-cruise/);
+  assert.match(html, /data-tunnel-current>001</);
+  assert.match(html, /001[\s\S]*138/);
+  assert.match(html, /data-tunnel-rewind[^>]+hidden/);
+  assert.match(html, /data-archive-modal-host/);
+  assert.match(html, /href="#after"/);
+  assert.doesNotMatch(html, /预览末尾|preview end|demo/i);
+});
+
+test('tunnel selection pauses for a complete modal, resumes in place, and end rewinds', async () => {
+  const listeners = new Map();
+  const nodes = {
+    tunnel: { clientWidth: 800, clientHeight: 600 },
+    list: {}, cruise: { textContent: '' }, rewind: { hidden: true }, modal: {}, current: { textContent: '' },
+  };
+  const app = {
+    innerHTML: '', focus() {},
+    querySelector(selector) { return ({
+      '[data-archive-tunnel]': nodes.tunnel, '[data-archive-view="list"]': nodes.list,
+      '[data-tunnel-cruise]': nodes.cruise, '[data-tunnel-rewind]': nodes.rewind,
+      '[data-archive-modal-host]': nodes.modal, '[data-tunnel-current]': nodes.current,
+    })[selector] ?? null; },
+    addEventListener(type, handler) { listeners.set(type, handler); },
+    removeEventListener(type, handler) { if (listeners.get(type) === handler) listeners.delete(type); },
+  };
+  let tunnelOptions; let paused = 0; let resumed = 0; let rewound = 0; let destroyed = 0; let modalOptions;
+  const cleanup = mountArchiveRoute(app, { name: 'archive-index' }, {
+    fetchImpl: async () => ({ ok: true, json: async () => archive }), storage: null, documentRef: {}, windowRef: {},
+    mountTunnel(_root, _data, options) { tunnelOptions = options; return {
+      pause() { paused += 1; return true; }, resume() { resumed += 1; return true; },
+      startRewind() { rewound += 1; return true; }, snapshot: () => ({ progress: 41, mode: 'paused' }),
+      destroy() { destroyed += 1; },
+    }; },
+    mountCaseModal(_host, options) { modalOptions = options; return { destroy() {} }; },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  tunnelOptions.onSelect({ caseId: 'case-01', caseIndex: 0, imageIndex: 0, ...archive.cases[0].images[0] }, {});
+  assert.equal(paused, 1);
+  modalOptions.onClose();
+  assert.equal(resumed, 1);
+  tunnelOptions.onEnd();
+  assert.equal(nodes.rewind.hidden, false);
+  listeners.get('click')({ target: { closest: (selector) => selector === '[data-tunnel-rewind]' ? nodes.rewind : null } });
+  assert.equal(rewound, 1);
+  assert.equal(nodes.rewind.hidden, true);
+  cleanup();
+  assert.equal(destroyed, 1);
+});
 
 function mappingSignature(data) {
   const mapping = data.cases.map((item) => ({
@@ -185,6 +239,7 @@ test('index renders ordered lazy cards, controls, fixed returns and clean empty 
   assert.match(html, /72 个案例/);
   assert.match(html, /137 张图片/);
   assert.match(html, /data-archive-query/);
+  assert.match(html, /data-archive-view="tunnel"/);
   assert.match(html, /data-archive-type-filter="首尾帧"/);
   assert.match(html, /data-archive-type-all[^>]+aria-pressed="true"/);
   assert.equal((html.match(/data-archive-type-(?:all|filter=)/g) ?? []).length, 6);
@@ -585,8 +640,7 @@ test('mount has loading/error/retry and stale completion guard with route cleanu
     fetchImpl: async () => ({ ok: false, status: 500 }), storage: null,
     documentRef: {}, windowRef: {},
   });
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
   assert.match(errorApp.innerHTML, /data-archive-error/);
   assert.equal(typeof retryHandler, 'function');
 });

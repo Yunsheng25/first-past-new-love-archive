@@ -126,6 +126,7 @@ test('mounts, traps focus, navigates without closing, and closes idempotently', 
   assert.equal(closes, 1);
   controller.close();
   assert.equal(closes, 1);
+  assert.equal(controller.navigate(1), false);
   assert.equal(trigger.focused, 1);
   assert.equal(listeners.has('doc:keydown'), false);
 });
