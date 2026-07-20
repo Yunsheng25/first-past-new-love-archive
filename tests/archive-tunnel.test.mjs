@@ -355,7 +355,7 @@ function createRendererFakes() {
   class PlaneGeometry { constructor(...args) { this.args = args; resources.geometry = this; } dispose() { this.disposed = (this.disposed ?? 0) + 1; } }
   class MeshBasicMaterial { constructor(options) { Object.assign(this, options); resources.materials.push(this); } dispose() { this.disposed = (this.disposed ?? 0) + 1; } }
   class Mesh extends Object3D { constructor(geometry, material) { super(); this.geometry = geometry; this.material = material; } }
-  class WebGLRenderer { constructor() { this.domElement = { parentNode: null, style: {} }; resources.renderer = this; } setPixelRatio(value) { this.pixelRatio = value; } setSize(width, height) { this.size = [width, height]; } render(scene, camera) { resources.renders += 1; resources.camera = camera; resources.scene = scene; } dispose() { this.disposed = (this.disposed ?? 0) + 1; } }
+  class WebGLRenderer { constructor() { const listeners = new Map(); this.domElement = { parentNode: null, style: {}, listeners, addEventListener: (name, listener) => listeners.set(name, listener), removeEventListener: (name, listener) => { if (listeners.get(name) === listener) listeners.delete(name); } }; resources.renderer = this; } setPixelRatio(value) { this.pixelRatio = value; } setSize(width, height) { this.size = [width, height]; } render(scene, camera) { resources.renders += 1; resources.camera = camera; resources.scene = scene; } dispose() { this.disposed = (this.disposed ?? 0) + 1; } }
   class TextureLoader { load(src, done, _progress, fail) { const texture = { src, dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; resources.textures.push(texture); done(texture); return texture; } }
   return { resources, three: { Scene, PerspectiveCamera, PlaneGeometry, MeshBasicMaterial, Mesh, WebGLRenderer, TextureLoader, FogExp2: class { constructor(color, density) { Object.assign(this, { color, density }); } }, DoubleSide: "double", SRGBColorSpace: "srgb" } };
 }
@@ -385,10 +385,22 @@ test("mounts ordered cards, applies exact poses, camera progress, and releases e
   assert.deepEqual([last.x, last.y, last.z, last.rotation.z], [lastPose.x, lastPose.y, lastPose.z, lastPose.rotationZ]);
   assert.equal(tunnel.snapshot().progress, 0);
   frames.shift()(64);
+  assert.equal(tunnel.snapshot().progress, 0);
+  frames.shift()(128);
   assert.ok(tunnel.snapshot().progress > 0);
   assert.equal(resources.camera.z, 3 - tunnel.snapshot().progress * TUNNEL_STEP);
   tunnel.destroy();
   assert.equal(resources.geometry.disposed, 1);
   assert.equal(resources.renderer.disposed, 1);
   assert.ok(resources.materials.every((material) => material.disposed === 1));
+});
+
+test("keeps tunnel input listeners on its canvas rather than the mount root", () => {
+  const { three } = createRendererFakes();
+  const root = createRoot();
+  const frames = [];
+  const tunnel = mountArchiveTunnel(root, archiveData, { three, requestFrame: (callback) => (frames.push(callback), frames.length), cancelFrame() {}, windowRef: { devicePixelRatio: 1, WebGLRenderingContext: function WebGLRenderingContext() {}, matchMedia: () => ({ matches: false }), addEventListener() {}, removeEventListener() {} } });
+  assert.equal(root.listeners.size, 0);
+  assert.equal(root.children[0].listeners.size, 6);
+  tunnel.destroy();
 });

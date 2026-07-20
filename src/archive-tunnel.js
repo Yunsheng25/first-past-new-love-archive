@@ -26,6 +26,15 @@ function disposeOnce(value, disposed) {
   value.dispose?.();
 }
 
+function setMaterialColor(material, color) {
+  if (material.color?.set) material.color.set(color);
+  else material.color = color;
+}
+
+function safeCall(callback) {
+  try { callback?.(); } catch (_error) { /* Cleanup must continue after a hostile DOM or driver failure. */ }
+}
+
 /** Mounts an ordered, texture-windowed archive tunnel without touching global input. */
 export function mountArchiveTunnel(root, data, options = {}) {
   let fellBack = false;
@@ -63,7 +72,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
 
   let destroyed = false;
   let frame = null;
-  let lastFrameTime = 0;
+  let lastFrameTime = null;
   let endedAnnounced = false;
   let addedSurfaceClass = false;
   let activePointer = null;
@@ -101,7 +110,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
     camera.aspect = next.width / next.height;
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(pixelRatio());
-    renderer.setSize(next.width, next.height, false);
+    renderer.setSize(next.width, next.height);
   }
   resize();
   addedSurfaceClass = !root.classList?.contains?.(SURFACE_CLASS);
@@ -119,6 +128,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
     loadedTextures.delete(index);
     card.texture = null;
     card.material.map = null;
+    setMaterialColor(card.material, 0x1a1521);
     card.material.needsUpdate = true;
   }
   function load(index) {
@@ -136,6 +146,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
         cards[index].texture = texture;
         loadedTextures.set(index, texture);
         cards[index].material.map = texture;
+        setMaterialColor(cards[index].material, 0xffffff);
         cards[index].material.opacity = 1;
         cards[index].material.needsUpdate = true;
       }, undefined, () => {
@@ -167,7 +178,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
     if (after.mode !== "ended") endedAnnounced = false;
     if (before.mode !== "ended" && after.mode === "ended" && !endedAnnounced) {
       endedAnnounced = true;
-      options.onEnd?.();
+      options.onEnd?.(after);
     }
   }
   function queueFrame() { if (!destroyed && frame === null) frame = requestFrame(renderFrame); }
@@ -175,11 +186,13 @@ export function mountArchiveTunnel(root, data, options = {}) {
     frame = null;
     if (destroyed) return;
     const before = state.snapshot();
-    const delta = Math.min(64, Math.max(0, Number(timestamp) - lastFrameTime || 0));
-    lastFrameTime = Number(timestamp) || lastFrameTime;
+    const numericTime = Number(timestamp);
+    const delta = lastFrameTime === null || !Number.isFinite(numericTime) ? 0 : Math.min(64, Math.max(0, numericTime - lastFrameTime));
+    if (Number.isFinite(numericTime)) lastFrameTime = numericTime;
     state.tick(delta);
     const after = state.snapshot();
     announceEnd(before, after);
+    if (destroyed) return;
     updateCamera();
     renderer.render(scene, camera);
     queueFrame();
@@ -205,7 +218,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
     const dx = event.clientX - dragStart.x;
     const dy = event.clientY - dragStart.y;
     if (Math.hypot(dx, dy) > 6) dragged = true;
-    if (dy) { nudge(dy * 0.05); dragStart = { x: event.clientX, y: event.clientY }; }
+    if (dy) { nudge(-dy * 0.05); dragStart = { x: event.clientX, y: event.clientY }; }
   }
   function releasePointer(event) {
     if (event.pointerId !== activePointer) return;
@@ -228,7 +241,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
     options.onSelect?.(card.occurrence, card.mesh);
   }
   const listeners = [["wheel", onWheel, { passive: false }], ["pointerdown", onPointerDown], ["pointermove", onPointerMove], ["pointerup", releasePointer], ["pointercancel", releasePointer], ["click", onClick]];
-  for (const [name, listener, config] of listeners) root.addEventListener(name, listener, config);
+  for (const [name, listener, config] of listeners) renderer.domElement.addEventListener(name, listener, config);
   windowRef.addEventListener?.("resize", resize);
   updateCamera();
   renderer.render(scene, camera);
@@ -247,19 +260,19 @@ export function mountArchiveTunnel(root, data, options = {}) {
     if (destroyed) return false;
     destroyed = true;
     loadVersion += 1;
-    if (frame !== null) { cancelFrame(frame); frame = null; }
-    for (const [name, listener, config] of listeners) root.removeEventListener(name, listener, config);
-    windowRef.removeEventListener?.("resize", resize);
-    if (activePointer !== null) renderer.domElement.releasePointerCapture?.(activePointer);
+    if (frame !== null) { safeCall(() => cancelFrame(frame)); frame = null; }
+    for (const [name, listener, config] of listeners) safeCall(() => renderer.domElement.removeEventListener(name, listener, config));
+    safeCall(() => windowRef.removeEventListener?.("resize", resize));
+    if (activePointer !== null) safeCall(() => renderer.domElement.releasePointerCapture?.(activePointer));
     activePointer = null;
     dragStart = null;
-    for (const texture of loadedTextures.values()) disposeOnce(texture, disposed);
+    for (const texture of loadedTextures.values()) safeCall(() => disposeOnce(texture, disposed));
     loadedTextures.clear();
-    for (const card of cards) { scene.remove(card.mesh); disposeOnce(card.material, disposed); }
-    disposeOnce(geometry, disposed);
-    renderer.domElement.parentNode?.removeChild?.(renderer.domElement);
-    disposeOnce(renderer, disposed);
-    if (addedSurfaceClass) root.classList?.remove(SURFACE_CLASS);
+    for (const card of cards) { safeCall(() => scene.remove(card.mesh)); safeCall(() => disposeOnce(card.material, disposed)); }
+    safeCall(() => disposeOnce(geometry, disposed));
+    safeCall(() => renderer.domElement.parentNode?.removeChild?.(renderer.domElement));
+    safeCall(() => disposeOnce(renderer, disposed));
+    if (addedSurfaceClass) safeCall(() => root.classList?.remove(SURFACE_CLASS));
     return true;
   }
   return Object.freeze({ pause, resume, startRewind, snapshot, destroy });
