@@ -124,6 +124,14 @@ test("maps valid indexes to deterministic, bounded spiral tunnel poses", () => {
   assert.ok(far.z < near.z && near.z < start.z);
 });
 
+test("aligns tunnel cards to the spiral tangent with a quarter-turn offset", () => {
+  const tolerance = 1e-12;
+  assert.ok(Math.abs(tunnelPose(0).rotationZ - (Math.PI / 2)) < tolerance);
+  const index = 8;
+  const angle = (index * Math.PI * 2 / 8) + (Math.floor(index / 8) * 0.095);
+  assert.ok(Math.abs(tunnelPose(index).rotationZ - (angle + (Math.PI / 2))) < tolerance);
+});
+
 test("keeps the largest accepted tunnel pose finite", () => {
   const pose = tunnelPose(Number.MAX_SAFE_INTEGER);
   assert.ok(Number.isFinite(pose.x));

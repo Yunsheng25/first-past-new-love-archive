@@ -53,6 +53,6 @@ export function tunnelPose(index) {
     x: Math.cos(angle) * TUNNEL_RADIUS_X,
     y: Math.sin(angle) * TUNNEL_RADIUS_Y,
     z: index === 0 ? 0 : -index * TUNNEL_STEP,
-    rotationZ: angle + Math.PI,
+    rotationZ: angle + (Math.PI / 2),
   };
 }
