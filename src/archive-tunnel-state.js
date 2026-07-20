@@ -2,10 +2,18 @@ export const TUNNEL_CRUISE_MS = 90000;
 export const TUNNEL_REWIND_MS = 3200;
 
 const MODES = new Set(["cruising", "paused", "ended"]);
+// Absorbs insignificant binary rounding in nominal decimal frame partitions.
+const TIME_TOLERANCE_MS = 1e-6;
 
 function requireFiniteNonNegative(value, name) {
   if (!Number.isFinite(value) || value < 0) {
     throw new RangeError(`${name} must be a finite number greater than or equal to zero`);
+  }
+}
+
+function requireMaxProgress(value) {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError("maxProgress must be a non-negative safe integer occurrence span");
   }
 }
 
@@ -24,7 +32,7 @@ function easeInOutCubic(progress) {
  * Tick deltas are milliseconds; progress spans zero through maxProgress.
  */
 export function createTunnelState({ maxProgress, initialProgress = 0, initialMode } = {}) {
-  requireFiniteNonNegative(maxProgress, "maxProgress");
+  requireMaxProgress(maxProgress);
   requireFiniteNonNegative(initialProgress, "initialProgress");
   if (initialMode !== undefined && !MODES.has(initialMode)) {
     throw new RangeError("initialMode must be cruising, paused, or ended");
@@ -39,12 +47,31 @@ export function createTunnelState({ maxProgress, initialProgress = 0, initialMod
 
   let rewindStart = 0;
   let rewindElapsed = 0;
+  let rewindElapsedCompensation = 0;
   let cruiseStartProgress = progress;
   let cruiseElapsed = 0;
+  let cruiseElapsedCompensation = 0;
 
   function beginCruiseSegment() {
     cruiseStartProgress = progress;
     cruiseElapsed = 0;
+    cruiseElapsedCompensation = 0;
+  }
+
+  function addCruiseElapsed(deltaMs) {
+    const adjustedDelta = deltaMs - cruiseElapsedCompensation;
+    const sum = cruiseElapsed + adjustedDelta;
+    cruiseElapsedCompensation = (sum - cruiseElapsed) - adjustedDelta;
+    cruiseElapsed = sum;
+    return sum;
+  }
+
+  function addRewindElapsed(deltaMs) {
+    const adjustedDelta = deltaMs - rewindElapsedCompensation;
+    const sum = rewindElapsed + adjustedDelta;
+    rewindElapsedCompensation = (sum - rewindElapsed) - adjustedDelta;
+    rewindElapsed = sum;
+    return sum;
   }
 
   function tick(deltaMs) {
@@ -52,7 +79,11 @@ export function createTunnelState({ maxProgress, initialProgress = 0, initialMod
     if (deltaMs === 0 || mode === "paused" || mode === "ended") return false;
 
     if (mode === "rewinding") {
-      rewindElapsed = Math.min(TUNNEL_REWIND_MS, rewindElapsed + deltaMs);
+      const nextElapsed = addRewindElapsed(deltaMs);
+      if (nextElapsed >= TUNNEL_REWIND_MS - TIME_TOLERANCE_MS) {
+        rewindElapsed = TUNNEL_REWIND_MS;
+        rewindElapsedCompensation = 0;
+      }
       const fraction = rewindElapsed / TUNNEL_REWIND_MS;
       progress = rewindStart * (1 - easeInOutCubic(fraction));
       if (rewindElapsed === TUNNEL_REWIND_MS) {
@@ -65,14 +96,14 @@ export function createTunnelState({ maxProgress, initialProgress = 0, initialMod
 
     const cruiseSpeed = maxProgress / TUNNEL_CRUISE_MS;
     const durationToEnd = (maxProgress - cruiseStartProgress) / cruiseSpeed;
-    const nextElapsed = cruiseElapsed + deltaMs;
-    if (nextElapsed >= durationToEnd) {
+    const nextElapsed = addCruiseElapsed(deltaMs);
+    if (nextElapsed >= durationToEnd - TIME_TOLERANCE_MS) {
       cruiseElapsed = durationToEnd;
+      cruiseElapsedCompensation = 0;
       progress = maxProgress;
       mode = "ended";
       return true;
     }
-    cruiseElapsed = nextElapsed;
     progress = cruiseStartProgress + (cruiseSpeed * cruiseElapsed);
     return true;
   }
@@ -110,6 +141,7 @@ export function createTunnelState({ maxProgress, initialProgress = 0, initialMod
     if (mode !== "ended") return false;
     rewindStart = progress;
     rewindElapsed = 0;
+    rewindElapsedCompensation = 0;
     mode = "rewinding";
     return true;
   }

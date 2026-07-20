@@ -277,6 +277,26 @@ test("rebases cruise timing at the entrance after a completed rewind", () => {
   assert.deepEqual(state.snapshot(), { progress: 137, mode: "ended" });
 });
 
+test("settles nominal decimal timing without finishing materially early", () => {
+  const decimalCruise = createTunnelState({ maxProgress: 137 });
+  for (let index = 0; index < 450000; index += 1) decimalCruise.tick(0.2);
+  assert.deepEqual(decimalCruise.snapshot(), { progress: 137, mode: "ended" });
+
+  const thirdsCruise = createTunnelState({ maxProgress: 137 });
+  for (let index = 0; index < 270; index += 1) thirdsCruise.tick(1000 / 3);
+  assert.deepEqual(thirdsCruise.snapshot(), { progress: 137, mode: "ended" });
+
+  const justBeforeEnd = createTunnelState({ maxProgress: 137 });
+  justBeforeEnd.tick(TUNNEL_CRUISE_MS - 0.001);
+  assert.equal(justBeforeEnd.snapshot().mode, "cruising");
+
+  const decimalRewind = createTunnelState({ maxProgress: 137 });
+  decimalRewind.tick(TUNNEL_CRUISE_MS);
+  decimalRewind.startRewind();
+  for (let index = 0; index < 32000; index += 1) decimalRewind.tick(0.1);
+  assert.deepEqual(decimalRewind.snapshot(), { progress: 0, mode: "paused" });
+});
+
 test("manual controls clamp progress and preserve rewind as an uninterruptible transition", () => {
   const state = createTunnelState({ maxProgress: 10 });
   assert.equal(state.nudge(-100), true);
@@ -305,7 +325,7 @@ test("manual controls clamp progress and preserve rewind as an uninterruptible t
 });
 
 test("validates inputs, restores initial state, and returns immutable snapshots", () => {
-  for (const maxProgress of [-1, NaN, Infinity, "137"]) {
+  for (const maxProgress of [-1, Number.MIN_VALUE, 1e-320, 1.5, Number.MAX_SAFE_INTEGER + 1, NaN, Infinity, "137"]) {
     assert.throws(() => createTunnelState({ maxProgress }), RangeError);
   }
   const zero = createTunnelState({ maxProgress: 0 });
