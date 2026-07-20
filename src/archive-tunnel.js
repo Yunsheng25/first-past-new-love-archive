@@ -3,277 +3,154 @@ import { flattenArchiveOccurrences, tunnelPose, TUNNEL_STEP, TUNNEL_MAX_INDEX } 
 import { createTunnelState } from "./archive-tunnel-state.js";
 
 const SURFACE_CLASS = "archive-tunnel-surface";
-const DESKTOP_TEXTURE_RADIUS = 32;
-const MOBILE_TEXTURE_RADIUS = 18;
-const MAX_PIXEL_RATIO = 1.6;
+const DARK_CARD = 0x1a1521;
 
-function fallbackController(reason, callback) {
-  callback?.(reason);
-  const snapshot = Object.freeze({ progress: 0, mode: "paused" });
+function safe(callback) { try { return callback?.(); } catch (_error) { return undefined; } }
+function dispose(value, seen) { if (value && !seen.has(value)) { seen.add(value); safe(() => value.dispose?.()); } }
+function setColor(material, value) { if (material.color?.set) material.color.set(value); else material.color = value; }
+function sizeOf(root) { const width = Number(root?.clientWidth); const height = Number(root?.clientHeight); return width > 0 && height > 0 && Number.isFinite(width) && Number.isFinite(height) ? { width, height } : null; }
+function noop(reason, onFallback) {
+  safe(() => onFallback?.(reason));
+  const snap = Object.freeze({ progress: 0, mode: "paused" });
   const no = () => false;
-  return Object.freeze({ pause: no, resume: no, startRewind: no, snapshot: () => snapshot, destroy: no });
+  return Object.freeze({ pause: no, resume: no, startRewind: no, snapshot: () => snap, destroy: no });
 }
 
-function validSize(root) {
-  const width = Number(root?.clientWidth);
-  const height = Number(root?.clientHeight);
-  return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0 ? { width, height } : null;
-}
-
-function disposeOnce(value, disposed) {
-  if (!value || disposed.has(value)) return;
-  disposed.add(value);
-  value.dispose?.();
-}
-
-function setMaterialColor(material, color) {
-  if (material.color?.set) material.color.set(color);
-  else material.color = color;
-}
-
-function safeCall(callback) {
-  try { callback?.(); } catch (_error) { /* Cleanup must continue after a hostile DOM or driver failure. */ }
-}
-
-/** Mounts an ordered, texture-windowed archive tunnel without touching global input. */
 export function mountArchiveTunnel(root, data, options = {}) {
-  let fellBack = false;
-  const fail = (reason) => {
-    if (fellBack) return fallbackController(reason, null);
-    fellBack = true;
-    return fallbackController(reason, options.onFallback);
+  let fallbackCalled = false;
+  const fallback = (reason) => {
+    if (fallbackCalled) return noop(reason);
+    fallbackCalled = true;
+    return noop(reason, options.onFallback);
   };
-  if (!root || typeof root.append !== "function") return fail("Archive tunnel needs a mount root.");
+  if (!root || typeof root.append !== "function") return fallback("missing-root");
   const occurrences = flattenArchiveOccurrences(data);
-  if (!occurrences.length || occurrences.length > TUNNEL_MAX_INDEX + 1) return fail("Archive tunnel has no valid occurrences.");
+  if (!occurrences.length || occurrences.length > TUNNEL_MAX_INDEX + 1) return fallback("invalid-data");
   const windowRef = options.windowRef ?? (typeof window === "undefined" ? null : window);
-  if (typeof windowRef?.WebGLRenderingContext !== "function") return fail("WebGL is unavailable for the archive tunnel.");
-  const size = validSize(root);
-  if (!size) return fail("Archive tunnel root has no usable size.");
-
+  if (typeof windowRef?.WebGLRenderingContext !== "function") return fallback("webgl-unavailable");
+  if (!sizeOf(root)) return fallback("unusable-root");
   const three = options.three ?? THREE;
   let renderer;
-  try {
-    renderer = new three.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
-  } catch (_error) {
-    return fail("Archive tunnel renderer could not be created.");
-  }
-  if (!renderer?.domElement) {
-    renderer?.dispose?.();
-    return fail("Archive tunnel renderer could not be created.");
-  }
+  try { renderer = new three.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" }); } catch (_error) { return fallback("renderer-failed"); }
+  if (!renderer?.domElement) { safe(() => renderer?.dispose?.()); return fallback("renderer-failed"); }
 
-  const requestFrame = options.requestFrame ?? windowRef.requestAnimationFrame?.bind(windowRef);
+  const registry = { renderer, canvas: renderer.domElement, scene: null, geometry: null, cards: [], listeners: [], frame: null, classAdded: false, appended: false, destroyed: false, disposed: new Set(), activePointer: null };
   const cancelFrame = options.cancelFrame ?? windowRef.cancelAnimationFrame?.bind(windowRef);
-  if (typeof requestFrame !== "function" || typeof cancelFrame !== "function") {
-    renderer.dispose?.();
-    return fail("Animation frames are unavailable for the archive tunnel.");
-  }
-
-  let destroyed = false;
-  let frame = null;
-  let lastFrameTime = null;
-  let endedAnnounced = false;
-  let addedSurfaceClass = false;
-  let activePointer = null;
-  let dragStart = null;
-  let dragged = false;
-  let loadVersion = 0;
-  const disposed = new Set();
-  const desiredTextures = new Set();
-  const loadedTextures = new Map();
-  const loading = new Set();
-  const failed = new Set();
-  const state = (options.stateFactory ?? createTunnelState)({ maxProgress: occurrences.length - 1 });
-  const scene = new three.Scene();
-  scene.fog = new three.FogExp2(0x09070c, 0.032);
-  const camera = new three.PerspectiveCamera(46, size.width / size.height, 0.1, 120);
-  const geometry = new three.PlaneGeometry(1.82, 1.24);
-  const loader = new three.TextureLoader();
-  const cards = occurrences.map((occurrence, index) => {
-    const material = new three.MeshBasicMaterial({ color: 0x1a1521, transparent: true, opacity: 1, side: three.DoubleSide });
-    const mesh = new three.Mesh(geometry, material);
-    const pose = tunnelPose(index);
-    mesh.position.set(pose.x, pose.y, pose.z);
-    mesh.rotation.z = pose.rotationZ;
-    scene.add(mesh);
-    return { occurrence, mesh, material, texture: null };
-  });
-
-  function pixelRatio() {
-    return Math.min(MAX_PIXEL_RATIO, Math.max(1, Number(windowRef.devicePixelRatio) || 1));
-  }
-  function resize() {
-    if (destroyed) return;
-    const next = validSize(root);
-    if (!next) return;
-    camera.aspect = next.width / next.height;
-    camera.updateProjectionMatrix();
-    renderer.setPixelRatio(pixelRatio());
-    renderer.setSize(next.width, next.height);
-  }
-  resize();
-  addedSurfaceClass = !root.classList?.contains?.(SURFACE_CLASS);
-  if (addedSurfaceClass) root.classList?.add(SURFACE_CLASS);
-  root.append(renderer.domElement);
-
-  function textureRadius() {
-    if (Number.isFinite(options.textureRadius)) return Math.max(0, Math.floor(options.textureRadius));
-    return windowRef.matchMedia?.("(max-width: 760px)")?.matches ? MOBILE_TEXTURE_RADIUS : DESKTOP_TEXTURE_RADIUS;
-  }
-  function unload(index) {
-    const card = cards[index];
-    const texture = loadedTextures.get(index);
-    if (texture) disposeOnce(texture, disposed);
-    loadedTextures.delete(index);
-    card.texture = null;
-    card.material.map = null;
-    setMaterialColor(card.material, 0x1a1521);
-    card.material.needsUpdate = true;
-  }
-  function load(index) {
-    if (loading.has(index) || loadedTextures.has(index) || failed.has(index)) return;
-    loading.add(index);
-    const generation = loadVersion;
-    try {
-      loader.load(cards[index].occurrence.src, (texture) => {
-        loading.delete(index);
-        if (destroyed || generation !== loadVersion || !desiredTextures.has(index)) {
-          disposeOnce(texture, disposed);
-          return;
-        }
-        texture.colorSpace = three.SRGBColorSpace;
-        cards[index].texture = texture;
-        loadedTextures.set(index, texture);
-        cards[index].material.map = texture;
-        setMaterialColor(cards[index].material, 0xffffff);
-        cards[index].material.opacity = 1;
-        cards[index].material.needsUpdate = true;
-      }, undefined, () => {
-        loading.delete(index);
-        failed.add(index);
-      });
-    } catch (_error) {
-      loading.delete(index);
-      failed.add(index);
+  const requestFrame = options.requestFrame ?? windowRef.requestAnimationFrame?.bind(windowRef);
+  const cleanup = () => {
+    if (registry.destroyed) return false;
+    registry.destroyed = true;
+    if (registry.frame !== null) safe(() => cancelFrame?.(registry.frame));
+    registry.frame = null;
+    for (const item of registry.listeners) safe(() => item.target.removeEventListener(item.name, item.listener, item.config));
+    registry.listeners.length = 0;
+    safe(() => windowRef.removeEventListener?.("resize", resize));
+    if (registry.activePointer !== null) safe(() => registry.canvas.releasePointerCapture?.(registry.activePointer));
+    registry.activePointer = null;
+    for (const card of registry.cards) {
+      card.generation += 1; card.desired = false;
+      dispose(card.texture, registry.disposed); card.texture = null;
+      safe(() => registry.scene?.remove?.(card.mesh));
+      dispose(card.material, registry.disposed);
     }
-  }
-  function updateTextureWindow(progress) {
-    const center = Math.round(progress);
-    const radius = textureRadius();
-    const next = new Set();
-    for (let index = Math.max(0, center - radius); index <= Math.min(cards.length - 1, center + radius); index += 1) next.add(index);
-    for (const index of desiredTextures) if (!next.has(index)) { unload(index); failed.delete(index); }
-    desiredTextures.clear();
-    for (const index of next) { desiredTextures.add(index); load(index); }
-  }
-  function updateCamera() {
-    const { progress } = state.snapshot();
-    const z = 3 - (progress * TUNNEL_STEP);
-    camera.position.set(0, 0, z);
-    camera.lookAt(0, 0, z - 1);
-    updateTextureWindow(progress);
-  }
-  function announceEnd(before, after) {
-    if (after.mode !== "ended") endedAnnounced = false;
-    if (before.mode !== "ended" && after.mode === "ended" && !endedAnnounced) {
-      endedAnnounced = true;
-      options.onEnd?.(after);
-    }
-  }
-  function queueFrame() { if (!destroyed && frame === null) frame = requestFrame(renderFrame); }
-  function renderFrame(timestamp) {
-    frame = null;
-    if (destroyed) return;
-    const before = state.snapshot();
-    const numericTime = Number(timestamp);
-    const delta = lastFrameTime === null || !Number.isFinite(numericTime) ? 0 : Math.min(64, Math.max(0, numericTime - lastFrameTime));
-    if (Number.isFinite(numericTime)) lastFrameTime = numericTime;
-    state.tick(delta);
-    const after = state.snapshot();
-    announceEnd(before, after);
-    if (destroyed) return;
-    updateCamera();
-    renderer.render(scene, camera);
-    queueFrame();
-  }
-  function nudge(amount) {
-    if (destroyed || !Number.isFinite(amount)) return false;
-    const before = state.snapshot();
-    const changed = state.nudge(amount);
-    announceEnd(before, state.snapshot());
-    if (changed) updateCamera();
-    return changed;
-  }
-  function onWheel(event) { if (!Number.isFinite(event.deltaY)) return; event.preventDefault?.(); nudge(event.deltaY * 0.012); }
-  function onPointerDown(event) {
-    if (destroyed || !Number.isFinite(event.clientY)) return;
-    activePointer = event.pointerId;
-    dragStart = { x: event.clientX, y: event.clientY };
-    dragged = false;
-    renderer.domElement.setPointerCapture?.(event.pointerId);
-  }
-  function onPointerMove(event) {
-    if (destroyed || event.pointerId !== activePointer || !dragStart || !Number.isFinite(event.clientY)) return;
-    const dx = event.clientX - dragStart.x;
-    const dy = event.clientY - dragStart.y;
-    if (Math.hypot(dx, dy) > 6) dragged = true;
-    if (dy) { nudge(-dy * 0.05); dragStart = { x: event.clientX, y: event.clientY }; }
-  }
-  function releasePointer(event) {
-    if (event.pointerId !== activePointer) return;
-    renderer.domElement.releasePointerCapture?.(event.pointerId);
-    activePointer = null;
-    dragStart = null;
-  }
-  function onClick(event) {
-    if (destroyed || dragged || !three.Raycaster || !three.Vector2) return;
-    const rect = renderer.domElement.getBoundingClientRect?.() ?? root.getBoundingClientRect?.();
-    if (!rect?.width || !rect?.height) return;
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
-    const raycaster = new three.Raycaster();
-    raycaster.setFromCamera(new three.Vector2(x, y), camera);
-    const hit = raycaster.intersectObjects(cards.map((card) => card.mesh), false)?.[0]?.object;
-    const card = cards.find((candidate) => candidate.mesh === hit);
-    if (!card) return;
-    state.pause();
-    options.onSelect?.(card.occurrence, card.mesh);
-  }
-  const listeners = [["wheel", onWheel, { passive: false }], ["pointerdown", onPointerDown], ["pointermove", onPointerMove], ["pointerup", releasePointer], ["pointercancel", releasePointer], ["click", onClick]];
-  for (const [name, listener, config] of listeners) renderer.domElement.addEventListener(name, listener, config);
-  windowRef.addEventListener?.("resize", resize);
-  updateCamera();
-  renderer.render(scene, camera);
-  queueFrame();
-
-  function pause() { return destroyed ? false : state.pause(); }
-  function resume() { return destroyed ? false : state.resume(); }
-  function startRewind() {
-    if (destroyed) return false;
-    const changed = state.startRewind();
-    if (changed) endedAnnounced = false;
-    return changed;
-  }
-  function snapshot() { return state.snapshot(); }
-  function destroy() {
-    if (destroyed) return false;
-    destroyed = true;
-    loadVersion += 1;
-    if (frame !== null) { safeCall(() => cancelFrame(frame)); frame = null; }
-    for (const [name, listener, config] of listeners) safeCall(() => renderer.domElement.removeEventListener(name, listener, config));
-    safeCall(() => windowRef.removeEventListener?.("resize", resize));
-    if (activePointer !== null) safeCall(() => renderer.domElement.releasePointerCapture?.(activePointer));
-    activePointer = null;
-    dragStart = null;
-    for (const texture of loadedTextures.values()) safeCall(() => disposeOnce(texture, disposed));
-    loadedTextures.clear();
-    for (const card of cards) { safeCall(() => scene.remove(card.mesh)); safeCall(() => disposeOnce(card.material, disposed)); }
-    safeCall(() => disposeOnce(geometry, disposed));
-    safeCall(() => renderer.domElement.parentNode?.removeChild?.(renderer.domElement));
-    safeCall(() => disposeOnce(renderer, disposed));
-    if (addedSurfaceClass) safeCall(() => root.classList?.remove(SURFACE_CLASS));
+    dispose(registry.geometry, registry.disposed);
+    if (registry.appended) safe(() => registry.canvas.parentNode?.removeChild?.(registry.canvas));
+    if (registry.classAdded) safe(() => root.classList?.remove(SURFACE_CLASS));
+    dispose(registry.renderer, registry.disposed);
     return true;
-  }
-  return Object.freeze({ pause, resume, startRewind, snapshot, destroy });
+  };
+  function initializationFailed() { cleanup(); return fallback("initialization-failed"); }
+  let resize = () => {};
+
+  try {
+    if (typeof requestFrame !== "function" || typeof cancelFrame !== "function") throw new Error("raf unavailable");
+    registry.scene = new three.Scene();
+    registry.scene.fog = new three.FogExp2(0x09070c, 0.032);
+    const initial = sizeOf(root);
+    const camera = new three.PerspectiveCamera(46, initial.width / initial.height, 0.1, 120);
+    registry.geometry = new three.PlaneGeometry(1.82, 1.24);
+    const state = (options.stateFactory ?? createTunnelState)({ maxProgress: occurrences.length - 1 });
+    const loader = new three.TextureLoader();
+    let previousTime = null;
+    let endedAnnounced = false;
+    let drag = null;
+    let dragged = false;
+    const radius = () => Number.isFinite(options.textureRadius) ? Math.max(0, Math.floor(options.textureRadius)) : (windowRef.matchMedia?.("(max-width: 760px)")?.matches ? 18 : 32);
+    const dpr = () => Math.min(1.6, Math.max(1, Number(windowRef.devicePixelRatio) || 1));
+    registry.cards = occurrences.map((occurrence, index) => {
+      const material = new three.MeshBasicMaterial({ color: DARK_CARD, transparent: true, opacity: 1, side: three.DoubleSide });
+      const mesh = new three.Mesh(registry.geometry, material);
+      const pose = tunnelPose(index);
+      mesh.position.set(pose.x, pose.y, pose.z); mesh.rotation.z = pose.rotationZ;
+      registry.scene.add(mesh);
+      return { occurrence, mesh, material, texture: null, desired: false, failed: false, loading: false, generation: 0 };
+    });
+    function unload(card) { dispose(card.texture, registry.disposed); card.texture = null; card.material.map = null; setColor(card.material, DARK_CARD); card.material.opacity = 1; card.material.needsUpdate = true; }
+    function load(card) {
+      if (card.failed || registry.destroyed) return;
+      const generation = ++card.generation;
+      card.loading = true;
+      const success = (texture) => {
+        if (registry.destroyed || !card.desired || card.generation !== generation) { dispose(texture, registry.disposed); return; }
+        card.loading = false; card.texture = texture; texture.colorSpace = three.SRGBColorSpace;
+        card.material.map = texture; setColor(card.material, 0xffffff); card.material.opacity = 1; card.material.needsUpdate = true;
+      };
+      const failure = () => {
+        if (registry.destroyed || !card.desired || card.generation !== generation) return;
+        card.loading = false; card.failed = true;
+      };
+      try { loader.load(card.occurrence.src, success, undefined, failure); } catch (_error) { failure(); }
+    }
+    function windowTextures(progress) {
+      const center = Math.round(progress); const r = radius();
+      registry.cards.forEach((card, index) => {
+        const wanted = index >= Math.max(0, center - r) && index <= Math.min(registry.cards.length - 1, center + r);
+        if (!wanted && card.desired) { card.desired = false; card.generation += 1; card.failed = false; unload(card); }
+        if (wanted && !card.desired) { card.desired = true; card.failed = false; load(card); }
+      });
+    }
+    function update() {
+      const snap = state.snapshot(); const z = 3 - snap.progress * TUNNEL_STEP;
+      camera.position.set(0, 0, z); camera.lookAt(0, 0, z - 1); windowTextures(snap.progress); return snap;
+    }
+    resize = () => {
+      if (registry.destroyed) return;
+      const next = sizeOf(root); if (!next) return;
+      camera.aspect = next.width / next.height; camera.updateProjectionMatrix();
+      renderer.setPixelRatio(dpr()); renderer.setSize(next.width, next.height);
+    };
+    function end(before, after) {
+      if (after.mode !== "ended") endedAnnounced = false;
+      if (before.mode !== "ended" && after.mode === "ended" && !endedAnnounced) { endedAnnounced = true; options.onEnd?.(after); }
+    }
+    function schedule() { if (!registry.destroyed && registry.frame === null) registry.frame = requestFrame(frame); }
+    function frame(timestamp) {
+      registry.frame = null; if (registry.destroyed) return;
+      const before = state.snapshot(); const now = Number(timestamp);
+      const delta = previousTime === null || !Number.isFinite(now) ? 0 : Math.min(64, Math.max(0, now - previousTime));
+      if (Number.isFinite(now)) previousTime = now;
+      state.tick(delta); const after = state.snapshot(); end(before, after); if (registry.destroyed) return;
+      update(); renderer.render(registry.scene, camera); schedule();
+    }
+    function nudge(value) { if (!Number.isFinite(value) || registry.destroyed) return false; const before = state.snapshot(); const changed = state.nudge(value); end(before, state.snapshot()); if (changed) update(); return changed; }
+    function wheel(event) { if (!Number.isFinite(event.deltaY)) return; event.preventDefault?.(); nudge(event.deltaY * 0.012); }
+    function down(event) { if (registry.destroyed || !Number.isFinite(event.clientY)) return; registry.activePointer = event.pointerId; drag = { x: event.clientX, y: event.clientY }; dragged = false; safe(() => registry.canvas.setPointerCapture?.(event.pointerId)); }
+    function move(event) { if (event.pointerId !== registry.activePointer || !drag || !Number.isFinite(event.clientY)) return; const dx = event.clientX - drag.x; const dy = event.clientY - drag.y; if (Math.hypot(dx, dy) > 6) dragged = true; if (dy) { nudge(-dy * 0.05); drag = { x: event.clientX, y: event.clientY }; } }
+    function release(event) { if (event.pointerId !== registry.activePointer) return; safe(() => registry.canvas.releasePointerCapture?.(event.pointerId)); registry.activePointer = null; drag = null; }
+    function click(event) {
+      if (registry.destroyed || dragged || !three.Raycaster || !three.Vector2) return;
+      const rect = registry.canvas.getBoundingClientRect?.() ?? root.getBoundingClientRect?.(); if (!rect?.width || !rect?.height) return;
+      const ray = new three.Raycaster(); ray.setFromCamera(new three.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1), camera);
+      const object = ray.intersectObjects(registry.cards.map((card) => card.mesh), false)?.[0]?.object;
+      const card = registry.cards.find((item) => item.mesh === object); if (!card) return;
+      state.pause(); options.onSelect?.(card.occurrence, card.mesh);
+    }
+    const listeners = [["wheel", wheel, { passive: false }], ["pointerdown", down], ["pointermove", move], ["pointerup", release], ["pointercancel", release], ["click", click]];
+    for (const [name, listener, config] of listeners) { const item = { target: registry.canvas, name, listener, config }; registry.listeners.push(item); registry.canvas.addEventListener(name, listener, config); }
+    windowRef.addEventListener?.("resize", resize);
+    const already = root.classList?.contains?.(SURFACE_CLASS); if (!already) { root.classList?.add(SURFACE_CLASS); registry.classAdded = true; }
+    registry.appended = true; root.append(registry.canvas);
+    resize(); update(); renderer.render(registry.scene, camera); schedule();
+    return Object.freeze({ pause: () => registry.destroyed ? false : state.pause(), resume: () => registry.destroyed ? false : state.resume(), startRewind: () => { if (registry.destroyed) return false; const changed = state.startRewind(); if (changed) endedAnnounced = false; return changed; }, snapshot: () => state.snapshot(), destroy: cleanup });
+  } catch (_error) { return initializationFailed(); }
 }

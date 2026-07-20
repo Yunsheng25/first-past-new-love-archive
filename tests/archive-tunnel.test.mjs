@@ -404,3 +404,18 @@ test("keeps tunnel input listeners on its canvas rather than the mount root", ()
   assert.equal(root.children[0].listeners.size, 6);
   tunnel.destroy();
 });
+
+test("rolls back a partially initialized renderer and reports initialization failure once", () => {
+  const { three, resources } = createRendererFakes();
+  const root = createRoot();
+  root.append = () => { throw new Error("append failed"); };
+  const reasons = [];
+  const tunnel = mountArchiveTunnel(root, archiveData, { three, onFallback: (reason) => reasons.push(reason), requestFrame: () => 1, cancelFrame() {}, windowRef: { devicePixelRatio: 1, WebGLRenderingContext: function WebGLRenderingContext() {}, matchMedia: () => ({ matches: false }), addEventListener() {}, removeEventListener() {} } });
+  assert.deepEqual(reasons, ["initialization-failed"]);
+  assert.equal(root.children.length, 0);
+  assert.equal(root.listeners.size, 0);
+  assert.equal(resources.renderer.disposed, 1);
+  assert.equal(resources.geometry.disposed, 1);
+  assert.ok(resources.materials.every((material) => material.disposed === 1));
+  assert.equal(tunnel.destroy(), false);
+});
