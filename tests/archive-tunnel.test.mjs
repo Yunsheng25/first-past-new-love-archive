@@ -581,7 +581,7 @@ test("RAF delta, end announcement, rewind reannouncement, and destroy from onEnd
 test("end is announced once per arrival and a rewind permits a second announcement", () => {
   const h = createLifecycleHarness();
   const state = { progress: 0, mode: "cruising", snapshot() { return Object.freeze({ progress: this.progress, mode: this.mode }); }, tick() { if (this.mode === "cruising") { this.progress = 137; this.mode = "ended"; } else if (this.mode === "rewinding") { this.progress = 0; this.mode = "paused"; } return true; }, pause() { this.mode = "paused"; return true; }, resume() { this.mode = "cruising"; return true; }, nudge() { return false; }, startRewind() { if (this.mode !== "ended") return false; this.mode = "rewinding"; return true; } };
-  const api = h.mount(archiveData, { stateFactory: () => state }); h.calls.frames.shift()(0); assert.equal(h.calls.end.length, 1); h.calls.frames.shift()(16); assert.equal(h.calls.end.length, 1); assert.equal(api.startRewind(), true); h.calls.frames.shift()(32); assert.equal(api.resume(), true); h.calls.frames.shift()(48); assert.equal(h.calls.end.length, 2); api.destroy();
+  const api = h.mount(archiveData, { stateFactory: () => state }); h.calls.frames.shift()(0); assert.equal(h.calls.end.length, 1); assert.equal(h.calls.frames.length, 0); assert.equal(api.startRewind(), true); h.calls.frames.shift()(32); assert.equal(api.resume(), true); h.calls.frames.shift()(48); assert.equal(h.calls.end.length, 2); api.destroy();
 });
 
 test("runtime render failure is contained and rolls down the mounted renderer", () => {
@@ -650,4 +650,51 @@ test("ordinary destroy removes the exact canvas and window listener set", () => 
 
 test("renderer source keeps a soft fog surface and contains no striped or rotating decorative motifs", () => {
   const source = fs.readFileSync(new URL("../src/archive-tunnel.js", import.meta.url), "utf8"); assert.match(source, /FogExp2/); assert.match(source, /archive-tunnel-surface/); assert.doesNotMatch(source, /repeating-conic-gradient|rotating\s+beam|spin\s*background|LineGeometry|RayGeometry/i);
+});
+
+test("deferred texture loads stay bounded to one in-flight request per card under 1000 window flips", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); const firstSrc = h.calls.loads[0].src;
+  for (let index = 0; index < 1000; index += 1) {
+    h.fire("wheel", { deltaY: 99999, preventDefault() {} });
+    h.fire("wheel", { deltaY: -99999, preventDefault() {} });
+  }
+  assert.equal(h.calls.loads.length, 66); assert.equal(h.calls.loads.filter((load) => load.src === firstSrc).length, 1);
+  const stale = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; h.calls.loads[0].success(stale);
+  assert.equal(stale.disposed, 1); assert.equal(h.calls.loads.filter((load) => load.src === firstSrc).length, 2); assert.equal(h.calls.loads.length, 67); api.destroy();
+});
+
+test("paused and ended tunnels do not maintain an idle RAF loop, while resume and rewind schedule once", () => {
+  const h = createLifecycleHarness(); const pausedState = createTunnelState({ maxProgress: 137, initialMode: "paused" }); const api = h.mount(archiveData, { stateFactory: () => pausedState });
+  assert.equal(h.calls.frames.length, 0); const initialRenders = h.resources.renderCount;
+  h.fire("wheel", { deltaY: 10, preventDefault() {} }); assert.equal(h.resources.renderCount, initialRenders + 1); assert.equal(h.calls.frames.length, 0);
+  assert.equal(api.resume(), true); assert.equal(h.calls.frames.length, 1); assert.equal(api.resume(), false); assert.equal(h.calls.frames.length, 1);
+  assert.equal(api.pause(), true); assert.deepEqual(h.calls.cancelled, [101]); assert.equal(api.pause(), false);
+  api.destroy();
+
+  const ended = createLifecycleHarness(); const endedState = createTunnelState({ maxProgress: 137, initialProgress: 137 }); const endedApi = ended.mount(archiveData, { stateFactory: () => endedState }); assert.equal(ended.calls.frames.length, 0); assert.equal(endedApi.startRewind(), true); assert.equal(ended.calls.frames.length, 1); assert.equal(endedApi.startRewind(), false); assert.equal(ended.calls.frames.length, 1); endedApi.destroy();
+});
+
+test("a frame that arrives at ended renders once and schedules no further RAF", () => {
+  const h = createLifecycleHarness(); const state = { mode: "cruising", snapshot() { return Object.freeze({ progress: this.mode === "ended" ? 137 : 136, mode: this.mode }); }, tick() { this.mode = "ended"; return true; }, pause() { return false; }, resume() { return false; }, nudge() { return false; }, startRewind() { return false; } };
+  const api = h.mount(archiveData, { stateFactory: () => state }); assert.equal(h.calls.frames.length, 1); const queued = h.calls.frames.shift(); const renders = h.resources.renderCount; queued(10); assert.equal(h.resources.renderCount, renders + 1); assert.equal(h.calls.frames.length, 0); api.destroy();
+});
+
+test("texture completion while paused paints one static frame without starting RAF", () => {
+  const h = createLifecycleHarness(); const paused = createTunnelState({ maxProgress: 137, initialMode: "paused" }); const api = h.mount(archiveData, { stateFactory: () => paused }); const renders = h.resources.renderCount; assert.equal(h.calls.frames.length, 0); h.resolve(0); assert.equal(h.resources.renderCount, renders + 1); assert.equal(h.calls.frames.length, 0); api.destroy();
+});
+
+test("throwing consumer callbacks are isolated from RAF, wheel, and selection", () => {
+  for (const viaWheel of [false, true]) {
+    const h = createLifecycleHarness({ faults: { hit: 1 } }); const state = { progress: viaWheel ? 136.9 : 136, mode: viaWheel ? "paused" : "cruising", snapshot() { return Object.freeze({ progress: this.progress, mode: this.mode }); }, tick() { this.progress = 137; this.mode = "ended"; return true; }, nudge() { this.progress = 137; this.mode = "ended"; return true; }, pause() { this.mode = "paused"; return true; }, resume() { return false; }, startRewind() { return false; } };
+    const api = h.mount(archiveData, { stateFactory: () => state, onEnd() { throw Error("consumer end"); }, onSelect() { throw Error("consumer select"); } });
+    if (viaWheel) assert.doesNotThrow(() => h.fire("wheel", { deltaY: 100, preventDefault() {} })); else assert.doesNotThrow(() => h.calls.frames.shift()(10));
+    assert.equal(api.snapshot().mode, "ended"); assert.equal(h.root.children.length, 1); assert.equal(h.resources.renderer.disposed, undefined);
+    assert.doesNotThrow(() => h.fire("click", { clientX: 10, clientY: 10 })); assert.equal(api.snapshot().mode, "paused"); assert.equal(h.root.children.length, 1); api.destroy();
+  }
+});
+
+test("unload and destroy clear material texture references and renderer uses weak disposal tracking", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); const texture = h.resolve(0); assert.equal(h.resources.materials[0].map, texture); h.fire("wheel", { deltaY: 99999, preventDefault() {} }); assert.equal(h.resources.materials[0].map, null); assert.equal(texture.disposed, 1);
+  const tailIndex = h.calls.loads.length - 1; const tailTexture = h.resolve(tailIndex); const mapped = h.resources.materials.find((material) => material.map === tailTexture); assert.ok(mapped); api.destroy(); assert.equal(mapped.map, null); assert.equal(tailTexture.disposed, 1);
+  const source = fs.readFileSync(new URL("../src/archive-tunnel.js", import.meta.url), "utf8"); assert.match(source, /disposed:\s*new WeakSet\(\)/); assert.doesNotMatch(source, /disposed:\s*new Set\(\)/);
 });

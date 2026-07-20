@@ -6,7 +6,7 @@ const SURFACE_CLASS = "archive-tunnel-surface";
 const DARK_CARD = 0x1a1521;
 
 function safe(callback) { try { return callback?.(); } catch (_error) { return undefined; } }
-function dispose(value, seen) { if (value && !seen.has(value)) { seen.add(value); safe(() => value.dispose?.()); } }
+function dispose(value, seen) { if (value && (typeof value === "object" || typeof value === "function") && !seen.has(value)) { seen.add(value); safe(() => value.dispose?.()); } }
 function setColor(material, value) { if (material.color?.set) material.color.set(value); else material.color = value; }
 function sizeOf(root) { const width = Number(root?.clientWidth); const height = Number(root?.clientHeight); return width > 0 && height > 0 && Number.isFinite(width) && Number.isFinite(height) ? { width, height } : null; }
 function noop(reason, onFallback) {
@@ -34,12 +34,13 @@ export function mountArchiveTunnel(root, data, options = {}) {
   try { renderer = new three.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" }); } catch (_error) { return fallback("renderer-failed"); }
   if (!renderer?.domElement) { safe(() => renderer?.dispose?.()); return fallback("renderer-failed"); }
 
-  const registry = { renderer, canvas: renderer.domElement, scene: null, geometry: null, cards: [], listeners: [], frame: null, classAdded: false, appended: false, destroyed: false, disposed: new Set(), activePointer: null };
+  const registry = { renderer, canvas: renderer.domElement, scene: null, geometry: null, cards: [], listeners: [], frame: null, frameToken: 0, classAdded: false, appended: false, ready: false, destroyed: false, disposed: new WeakSet(), activePointer: null };
   let cancelFrame;
   let requestFrame;
   const cleanup = () => {
     if (registry.destroyed) return false;
     registry.destroyed = true;
+    registry.frameToken += 1;
     if (registry.frame !== null) safe(() => cancelFrame?.(registry.frame));
     registry.frame = null;
     for (const item of registry.listeners) safe(() => item.target.removeEventListener(item.name, item.listener, item.config));
@@ -48,8 +49,9 @@ export function mountArchiveTunnel(root, data, options = {}) {
     if (registry.activePointer !== null) safe(() => registry.canvas.releasePointerCapture?.(registry.activePointer));
     registry.activePointer = null;
     for (const card of registry.cards) {
-      card.generation += 1; card.desired = false;
-      dispose(card.texture, registry.disposed); card.texture = null;
+      card.generation += 1; card.desired = false; card.loading = false; card.pending = null;
+      const texture = card.texture; card.texture = null; card.material.map = null;
+      dispose(texture, registry.disposed);
       safe(() => registry.scene?.remove?.(card.mesh));
       dispose(card.material, registry.disposed);
     }
@@ -82,7 +84,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
     for (let index = 0; index < occurrences.length; index += 1) {
       const occurrence = occurrences[index];
       const material = new three.MeshBasicMaterial({ color: DARK_CARD, transparent: true, opacity: 1, side: three.DoubleSide });
-      const card = { occurrence, mesh: null, material, texture: null, desired: false, failed: false, loading: false, generation: 0 };
+      const card = { occurrence, mesh: null, material, texture: null, desired: false, failed: false, loading: false, pending: null, generation: 0 };
       registry.cards.push(card);
       const mesh = new three.Mesh(registry.geometry, material);
       const pose = tunnelPose(index);
@@ -91,19 +93,26 @@ export function mountArchiveTunnel(root, data, options = {}) {
       registry.scene.add(mesh);
       card.mesh = mesh;
     }
-    function unload(card) { dispose(card.texture, registry.disposed); card.texture = null; card.material.map = null; setColor(card.material, DARK_CARD); card.material.opacity = 1; card.material.needsUpdate = true; }
+    function unload(card) { const texture = card.texture; card.texture = null; card.material.map = null; dispose(texture, registry.disposed); setColor(card.material, DARK_CARD); card.material.opacity = 1; card.material.needsUpdate = true; }
     function load(card) {
-      if (card.failed || registry.destroyed) return;
+      if (card.failed || card.loading || card.pending || registry.destroyed) return;
       const generation = ++card.generation;
-      card.loading = true;
+      const pending = {}; card.loading = true; card.pending = pending;
+      const settle = () => {
+        if (card.pending !== pending) return false;
+        card.pending = null; card.loading = false;
+        return true;
+      };
       const success = (texture) => {
-        if (registry.destroyed || !card.desired || card.generation !== generation || !card.loading) { dispose(texture, registry.disposed); return; }
-        card.loading = false; card.texture = texture; texture.colorSpace = three.SRGBColorSpace;
+        if (!settle() || registry.destroyed || !card.desired || card.generation !== generation) { dispose(texture, registry.disposed); if (!registry.destroyed && card.desired && !card.pending) load(card); return; }
+        card.texture = texture; texture.colorSpace = three.SRGBColorSpace;
         card.material.map = texture; setColor(card.material, 0xffffff); card.material.opacity = 1; card.material.needsUpdate = true;
+        if (registry.ready && !isMoving(state.snapshot())) renderOnly();
       };
       const failure = () => {
-        if (registry.destroyed || !card.desired || card.generation !== generation) return;
-        card.loading = false; card.failed = true;
+        if (!settle() || registry.destroyed) return;
+        if (!card.desired || card.generation !== generation) { if (card.desired) load(card); return; }
+        card.failed = true;
       };
       try { loader.load(card.occurrence.src, success, undefined, failure); } catch (_error) { failure(); }
     }
@@ -127,9 +136,17 @@ export function mountArchiveTunnel(root, data, options = {}) {
     };
     function end(before, after) {
       if (after.mode !== "ended") endedAnnounced = false;
-      if (before.mode !== "ended" && after.mode === "ended" && !endedAnnounced) { endedAnnounced = true; options.onEnd?.(after); }
+      if (before.mode !== "ended" && after.mode === "ended" && !endedAnnounced) { endedAnnounced = true; safe(() => options.onEnd?.(after)); }
     }
-    function schedule() { if (!registry.destroyed && registry.frame === null) registry.frame = requestFrame(frame); }
+    function isMoving(snapshot) { return snapshot.mode === "cruising" || snapshot.mode === "rewinding"; }
+    function renderOnly() { if (registry.destroyed) return false; try { renderer.render(registry.scene, camera); return true; } catch (_error) { cleanup(); return false; } }
+    function stopFrame() { registry.frameToken += 1; if (registry.frame !== null) safe(() => cancelFrame(registry.frame)); registry.frame = null; }
+    function schedule() {
+      if (registry.destroyed || registry.frame !== null || !isMoving(state.snapshot())) return false;
+      const token = ++registry.frameToken;
+      registry.frame = requestFrame((timestamp) => { if (registry.destroyed || token !== registry.frameToken) return; frame(timestamp); });
+      return true;
+    }
     function frame(timestamp) {
       registry.frame = null; if (registry.destroyed) return;
       try {
@@ -137,10 +154,10 @@ export function mountArchiveTunnel(root, data, options = {}) {
         const delta = previousTime === null || !Number.isFinite(now) ? 0 : Math.min(64, Math.max(0, now - previousTime));
         if (Number.isFinite(now)) previousTime = now;
         state.tick(delta); const after = state.snapshot(); end(before, after); if (registry.destroyed) return;
-        update(); renderer.render(registry.scene, camera); schedule();
+        update(); if (!renderOnly()) return; if (isMoving(after)) schedule();
       } catch (_error) { cleanup(); }
     }
-    function nudge(value) { if (!Number.isFinite(value) || registry.destroyed) return false; const before = state.snapshot(); const changed = state.nudge(value); end(before, state.snapshot()); if (registry.destroyed) return false; if (changed) update(); return changed; }
+    function nudge(value) { if (!Number.isFinite(value) || registry.destroyed) return false; const before = state.snapshot(); const changed = state.nudge(value); const after = state.snapshot(); end(before, after); if (registry.destroyed) return false; if (!isMoving(after)) stopFrame(); if (changed) { update(); renderOnly(); } else if (isMoving(after)) schedule(); return changed; }
     function wheel(event) { if (registry.destroyed || !Number.isFinite(event.deltaY)) return; event.preventDefault?.(); nudge(event.deltaY * 0.012); }
     function down(event) { if (registry.destroyed || !Number.isFinite(event.clientY)) return; registry.activePointer = event.pointerId; drag = { x: event.clientX, y: event.clientY }; dragged = false; safe(() => registry.canvas.setPointerCapture?.(event.pointerId)); }
     function move(event) { if (registry.destroyed || event.pointerId !== registry.activePointer || !drag || !Number.isFinite(event.clientY)) return; const dx = event.clientX - drag.x; const dy = event.clientY - drag.y; if (Math.hypot(dx, dy) > 6) dragged = true; if (dy) { nudge(-dy * 0.05); drag = { x: event.clientX, y: event.clientY }; } }
@@ -151,14 +168,19 @@ export function mountArchiveTunnel(root, data, options = {}) {
       const ray = new three.Raycaster(); ray.setFromCamera(new three.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1), camera);
       const object = ray.intersectObjects(registry.cards.map((card) => card.mesh), false)?.[0]?.object;
       const card = registry.cards.find((item) => item.mesh === object); if (!card) return;
-      state.pause(); options.onSelect?.(card.occurrence, card.mesh);
+      state.pause(); stopFrame(); safe(() => options.onSelect?.(card.occurrence, card.mesh));
     }
     const listeners = [["wheel", wheel, { passive: false }], ["pointerdown", down], ["pointermove", move], ["pointerup", release], ["pointercancel", release], ["click", click]];
     for (const [name, listener, config] of listeners) { const item = { target: registry.canvas, name, listener, config }; registry.listeners.push(item); registry.canvas.addEventListener(name, listener, config); }
     windowRef.addEventListener?.("resize", resize);
     const already = root.classList?.contains?.(SURFACE_CLASS); if (!already) { root.classList?.add(SURFACE_CLASS); registry.classAdded = true; }
     registry.appended = true; root.append(registry.canvas);
-    resize(); update(); renderer.render(registry.scene, camera); schedule();
-    return Object.freeze({ pause: () => registry.destroyed ? false : state.pause(), resume: () => registry.destroyed ? false : state.resume(), startRewind: () => { if (registry.destroyed) return false; const changed = state.startRewind(); if (changed) endedAnnounced = false; return changed; }, snapshot: () => state.snapshot(), destroy: cleanup });
+    resize(); update(); renderer.render(registry.scene, camera); registry.ready = true; schedule();
+    return Object.freeze({
+      pause: () => { if (registry.destroyed) return false; const changed = state.pause(); if (changed) stopFrame(); return changed; },
+      resume: () => { if (registry.destroyed) return false; const changed = state.resume(); if (changed) schedule(); return changed; },
+      startRewind: () => { if (registry.destroyed) return false; const changed = state.startRewind(); if (changed) { endedAnnounced = false; schedule(); } return changed; },
+      snapshot: () => state.snapshot(), destroy: cleanup,
+    });
   } catch (_error) { return initializationFailed(); }
 }
