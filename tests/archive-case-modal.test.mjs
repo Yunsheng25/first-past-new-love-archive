@@ -21,6 +21,8 @@ const occurrenceFor = (caseItem, imageIndex = 0) => ({
 test('resolves only an exact authored occurrence and navigates authored case order', () => {
   const target = archive.cases[20];
   assert.equal(resolveCaseFromOccurrence(archive, occurrenceFor(target, 1)), target);
+  assert.equal(resolveCaseFromOccurrence(archive, { ...occurrenceFor(target), imageIndex: '1' }), null);
+  assert.equal(resolveCaseFromOccurrence(archive, { ...occurrenceFor(target), imageIndex: 99 }), null);
   assert.equal(resolveCaseFromOccurrence(archive, { ...occurrenceFor(target), src: 'wrong' }), null);
   assert.equal(resolveCaseFromOccurrence(archive, { caseId: 'case-99' }), null);
   assert.equal(caseNeighbor(archive, 'case-01', -1), null);
@@ -43,12 +45,17 @@ test('renders exact actual gallery groups and complete selected case information
       .map((match) => [match[1], match[2]]);
     assert.match(html, /data-case-gallery="two"/);
     assert.deepEqual(roles, item.images.map((image) => [image.role, image.src]), item.id);
-    assert.match(html, new RegExp(item.prompt.slice(0, 24)));
+    assert.ok(html.includes(item.prompt), `${item.id} keeps its complete prompt`);
   }
 
   const one = archive.cases.find((item) => item.images.length === 1);
   const nine = archive.cases.find((item) => item.images.length === 9);
-  assert.equal((buildArchiveCaseModal(one, occurrenceFor(one)).match(/data-case-image-role=/g) ?? []).length, 1);
+  const oneHtml = buildArchiveCaseModal(one, occurrenceFor(one));
+  assert.match(oneHtml, /data-case-gallery="one"/);
+  assert.match(oneHtml, /role="dialog" aria-modal="true" aria-labelledby=/);
+  assert.match(oneHtml, /data-case-modal-backdrop/);
+  assert.match(oneHtml, /<p class="archive-case-prompt"/);
+  assert.equal((oneHtml.match(/data-case-image-role=/g) ?? []).length, 1);
   const nineHtml = buildArchiveCaseModal(nine, occurrenceFor(nine));
   assert.match(nineHtml, /data-case-gallery="many"/);
   assert.equal((nineHtml.match(/data-case-image-role=/g) ?? []).length, 9);
@@ -112,12 +119,23 @@ test('mounts, traps focus, navigates without closing, and closes idempotently', 
   listeners.get('host:click')({ target: nodes.get('[data-case-modal-next]'), preventDefault() {} });
   assert.match(host.innerHTML, /case-02/);
   assert.equal(closes, 0);
-  listeners.get('host:click')({ target: host });
+  listeners.get('host:click')({ target: fakeElement('card') });
+  assert.equal(closes, 0);
+  const backdrop = fakeElement('[data-case-modal-backdrop]');
+  listeners.get('host:click')({ target: backdrop });
   assert.equal(closes, 1);
   controller.close();
   assert.equal(closes, 1);
   assert.equal(trigger.focused, 1);
   assert.equal(listeners.has('doc:keydown'), false);
+});
+
+test('Escape closes safely even when consumer cleanup and trigger focus throw', () => {
+  const { host, listeners, documentRef } = modalHarness();
+  const trigger = { isConnected: true, focus() { throw new Error('detached'); } };
+  const controller = mountArchiveCaseModal(host, { data: archive, occurrence: occurrenceFor(archive.cases[0]), trigger, documentRef, onClose() { throw new Error('consumer'); } });
+  assert.doesNotThrow(() => listeners.get('doc:keydown')({ key: 'Escape', preventDefault() {} }));
+  assert.equal(controller.close(), false);
 });
 
 test('mount handles invalid selection and contained clipboard completion after close', async () => {
@@ -133,4 +151,53 @@ test('mount handles invalid selection and contained clipboard completion after c
   settle();
   await click;
   assert.equal(nodes.get('[data-case-modal-copy-status]').textContent, '');
+});
+
+test('a clipboard rejection that arrives after close never begins textarea fallback', async () => {
+  const { host, nodes, listeners, documentRef } = modalHarness();
+  let rejectClipboard;
+  const pending = new Promise((_, reject) => { rejectClipboard = reject; });
+  let created = 0;
+  let appended = 0;
+  let selected = 0;
+  let executed = 0;
+  let removed = 0;
+  Object.assign(documentRef, {
+    createElement() { created += 1; return { style: {}, select() { selected += 1; }, remove() { removed += 1; } }; },
+    body: { append() { appended += 1; } },
+    execCommand() { executed += 1; return true; },
+  });
+  const controller = mountArchiveCaseModal(host, { data: archive, occurrence: occurrenceFor(archive.cases[1]), documentRef, navigatorRef: { clipboard: { writeText: () => pending } } });
+  listeners.get('host:click')({ target: nodes.get('[data-case-modal-copy]'), preventDefault() {} });
+  controller.close();
+  rejectClipboard(new Error('denied'));
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual({ created, appended, selected, executed, removed }, { created: 0, appended: 0, selected: 0, executed: 0, removed: 0 });
+});
+
+test('textarea fallback restores focus and selection after success, failure, and exception', async () => {
+  for (const outcome of [true, false, 'throw']) {
+    const { host, nodes, listeners, documentRef } = modalHarness();
+    const original = fakeElement('original');
+    original.isConnected = true;
+    const ranges = [{ cloneRange() { return { restored: 1 }; } }];
+    const restored = [];
+    const selection = { rangeCount: 1, getRangeAt() { return ranges[0]; }, removeAllRanges() { restored.length = 0; }, addRange(range) { restored.push(range); } };
+    let removed = 0;
+    Object.assign(documentRef, {
+      activeElement: original,
+      getSelection() { return selection; },
+      createElement() { return { style: {}, setAttribute() {}, select() { documentRef.activeElement = this; }, remove() { removed += 1; } }; },
+      body: { append() {} },
+      execCommand() { if (outcome === 'throw') throw new Error('blocked'); return outcome; },
+    });
+    mountArchiveCaseModal(host, { data: archive, occurrence: occurrenceFor(archive.cases[1]), documentRef, navigatorRef: {} });
+    listeners.get('host:click')({ target: nodes.get('[data-case-modal-copy]'), preventDefault() {} });
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(removed, 1, String(outcome));
+    assert.equal(original.focused, 1, String(outcome));
+    assert.deepEqual(restored, [{ restored: 1 }], String(outcome));
+  }
 });

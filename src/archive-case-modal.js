@@ -14,6 +14,7 @@ function caseList(data) {
 /** Finds a case only when the occurrence identifies one of its exact images. */
 export function resolveCaseFromOccurrence(data, occurrence) {
   if (!occurrence || typeof occurrence !== 'object') return null;
+  if (!Number.isInteger(occurrence.imageIndex)) return null;
   const item = caseList(data).find((candidate) => candidate?.id === occurrence.caseId);
   if (!item || !Array.isArray(item.images)) return null;
   const image = item.images[occurrence.imageIndex];
@@ -61,7 +62,7 @@ export function buildArchiveCaseModal(caseItem, occurrence = null, { totalCases 
       <header><p data-case-modal-index>${escapeHtml(position)}${total ? ` / ${escapeHtml(total)}` : ''}</p><h2 id="${headingId}">${escapeHtml(caseItem.title)}</h2><button type="button" data-case-modal-close aria-label="关闭案例">×</button></header>
       <div class="archive-case-modal-controls"><button type="button" data-case-modal-previous${position === 1 ? ' disabled aria-disabled="true"' : ''}>上一案例</button><button type="button" data-case-modal-next${total && position === total ? ' disabled aria-disabled="true"' : ''}>下一案例</button><button type="button" data-case-modal-copy${String(caseItem.prompt ?? '') ? '' : ' disabled'}>复制提示词</button><span data-case-modal-copy-status aria-live="polite"></span></div>
       <div class="archive-case-gallery archive-case-gallery-${layout}" data-case-gallery="${layout}" data-case-gallery-layout="${layout}">${imageMarkup}</div>
-      <article class="archive-case-prompt" data-case-modal-prompt>${promptMarkup(caseItem.prompt)}</article>
+      <p class="archive-case-prompt" data-case-modal-prompt>${promptMarkup(caseItem.prompt)}</p>
     </section>
   </div>`;
 }
@@ -75,7 +76,7 @@ function focusables(card) {
     .filter((element) => !element.disabled && !element.hidden);
 }
 
-async function copyText(text, navigatorRef, documentRef) {
+async function copyText(text, navigatorRef, documentRef, isCurrent = () => true) {
   if (!text) return false;
   try {
     if (typeof navigatorRef?.clipboard?.writeText === 'function') {
@@ -83,17 +84,40 @@ async function copyText(text, navigatorRef, documentRef) {
       return true;
     }
   } catch { /* Fall through to the browser compatibility path. */ }
+  if (!isCurrent()) return false;
   let textarea = null;
+  let originalActive = null;
+  let selection = null;
+  const ranges = [];
   try {
     if (typeof documentRef?.createElement !== 'function' || typeof documentRef?.execCommand !== 'function') return false;
+    try { originalActive = documentRef.activeElement ?? null; } catch { /* unavailable */ }
+    try {
+      selection = documentRef.getSelection?.() ?? null;
+      for (let index = 0; index < (Number(selection?.rangeCount) || 0); index += 1) {
+        const range = selection.getRangeAt(index);
+        ranges.push(range?.cloneRange?.() ?? range);
+      }
+    } catch { selection = null; ranges.length = 0; }
+    if (!isCurrent()) return false;
     textarea = documentRef.createElement('textarea');
     textarea.value = text;
     textarea.setAttribute?.('readonly', '');
     Object.assign(textarea.style ?? {}, { position: 'fixed', opacity: '0', pointerEvents: 'none' });
+    if (!isCurrent()) return false;
     documentRef.body?.append?.(textarea);
+    if (!isCurrent()) return false;
     textarea.select?.();
+    if (!isCurrent()) return false;
     return documentRef.execCommand('copy') === true;
-  } catch { return false; } finally { try { textarea?.remove?.(); } catch { /* inert cleanup */ } }
+  } catch { return false; } finally {
+    try { textarea?.remove?.(); } catch { /* inert cleanup */ }
+    if (selection) {
+      try { selection.removeAllRanges?.(); } catch { /* ignored */ }
+      for (const range of ranges) try { selection.addRange?.(range); } catch { /* ignored */ }
+    }
+    try { if (originalActive?.isConnected !== false) originalActive?.focus?.({ preventScroll: true }); } catch { /* ignored */ }
+  }
 }
 
 /** Mounts an in-place complete-case dialog. The returned controller can close it safely. */
@@ -168,7 +192,7 @@ export function mountArchiveCaseModal(host, {
       if (!prompt) return;
       const token = ++version;
       const status = host.querySelector?.('[data-case-modal-copy-status]');
-      Promise.resolve(copyText(prompt, navigatorRef, documentRef)).then((copied) => {
+      Promise.resolve(copyText(prompt, navigatorRef, documentRef, () => active && token === version)).then((copied) => {
         if (!active || token !== version) return;
         if (status) status.textContent = copied ? '已复制' : '复制失败';
       }).catch(() => { if (active && token === version && status) status.textContent = '复制失败'; });
