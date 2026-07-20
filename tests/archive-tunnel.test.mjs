@@ -13,6 +13,11 @@ import {
   groupCaseImages,
   tunnelPose,
 } from "../src/archive-tunnel-data.js";
+import {
+  TUNNEL_CRUISE_MS,
+  TUNNEL_REWIND_MS,
+  createTunnelState,
+} from "../src/archive-tunnel-state.js";
 
 const flatSignature = (items) => items.map(({ order, caseId, role, src }) => [order, caseId, role, src]);
 
@@ -155,4 +160,83 @@ test("rejects indexes outside the supported archive tunnel domain", () => {
   for (const index of [-1, 1.5, NaN, Infinity, 138, Number.MAX_SAFE_INTEGER, Number.MAX_VALUE, "1", null]) {
     assert.throws(() => tunnelPose(index), RangeError);
   }
+});
+
+test("cruises to the exact end over 90 seconds independently of tick partitioning", () => {
+  assert.equal(TUNNEL_CRUISE_MS, 90000);
+  const oneTick = createTunnelState({ maxProgress: 137 });
+  assert.equal(oneTick.tick(90000), true);
+  assert.deepEqual(oneTick.snapshot(), { progress: 137, mode: "ended" });
+
+  const partitioned = createTunnelState({ maxProgress: 137 });
+  for (const delta of [17, 186, 4321, 25000, 17, 60459]) partitioned.tick(delta);
+  assert.deepEqual(partitioned.snapshot(), oneTick.snapshot());
+  assert.equal(partitioned.tick(1), false);
+});
+
+test("rewinds from the end with a symmetric cubic ease and stops exactly at the entrance", () => {
+  assert.equal(TUNNEL_REWIND_MS, 3200);
+  const state = createTunnelState({ maxProgress: 137 });
+  state.tick(TUNNEL_CRUISE_MS);
+  assert.equal(state.startRewind(), true);
+  assert.deepEqual(state.snapshot(), { progress: 137, mode: "rewinding" });
+  state.tick(TUNNEL_REWIND_MS / 2);
+  assert.deepEqual(state.snapshot(), { progress: 68.5, mode: "rewinding" });
+  state.tick(TUNNEL_REWIND_MS / 2);
+  assert.deepEqual(state.snapshot(), { progress: 0, mode: "paused" });
+
+  const largeTick = createTunnelState({ maxProgress: 137 });
+  largeTick.tick(TUNNEL_CRUISE_MS);
+  largeTick.startRewind();
+  largeTick.tick(TUNNEL_REWIND_MS * 2);
+  assert.deepEqual(largeTick.snapshot(), { progress: 0, mode: "paused" });
+});
+
+test("manual controls clamp progress and preserve rewind as an uninterruptible transition", () => {
+  const state = createTunnelState({ maxProgress: 10 });
+  assert.equal(state.nudge(-100), true);
+  assert.deepEqual(state.snapshot(), { progress: 0, mode: "paused" });
+  assert.equal(state.resume(), true);
+  assert.equal(state.nudge(100), true);
+  assert.deepEqual(state.snapshot(), { progress: 10, mode: "ended" });
+  assert.equal(state.nudge(-3), true);
+  assert.deepEqual(state.snapshot(), { progress: 7, mode: "paused" });
+  assert.equal(state.resume(), true);
+  assert.deepEqual(state.snapshot(), { progress: 7, mode: "cruising" });
+  assert.equal(state.pause(), true);
+  assert.equal(state.pause(), false);
+  assert.equal(state.nudge(-100), true);
+  assert.deepEqual(state.snapshot(), { progress: 0, mode: "paused" });
+  assert.equal(state.resume(), true);
+  state.nudge(10);
+  assert.equal(state.resume(), false);
+  assert.equal(state.startRewind(), true);
+  assert.equal(state.startRewind(), false);
+  assert.equal(state.nudge(-1), false);
+  assert.equal(state.resume(), false);
+  assert.equal(state.pause(), false);
+  state.tick(1600);
+  assert.deepEqual(state.snapshot(), { progress: 5, mode: "rewinding" });
+});
+
+test("validates inputs, restores initial state, and returns immutable snapshots", () => {
+  for (const maxProgress of [-1, NaN, Infinity, "137"]) {
+    assert.throws(() => createTunnelState({ maxProgress }), RangeError);
+  }
+  const zero = createTunnelState({ maxProgress: 0 });
+  assert.deepEqual(zero.snapshot(), { progress: 0, mode: "ended" });
+  const restored = createTunnelState({ maxProgress: 10, initialProgress: 100 });
+  assert.deepEqual(restored.snapshot(), { progress: 10, mode: "ended" });
+  const pausedEnd = createTunnelState({ maxProgress: 10, initialProgress: 10, initialMode: "paused" });
+  assert.deepEqual(pausedEnd.snapshot(), { progress: 10, mode: "paused" });
+  assert.throws(() => createTunnelState({ maxProgress: 10, initialMode: "invalid" }), RangeError);
+  assert.throws(() => restored.tick(-1), RangeError);
+  assert.throws(() => restored.tick(NaN), RangeError);
+  assert.throws(() => restored.tick(Infinity), RangeError);
+  assert.equal(restored.tick(0), false);
+  assert.throws(() => restored.nudge(NaN), RangeError);
+  const snapshot = restored.snapshot();
+  assert.ok(Object.isFrozen(snapshot));
+  assert.throws(() => { snapshot.progress = 1; }, TypeError);
+  assert.equal(restored.snapshot().progress, 10);
 });
