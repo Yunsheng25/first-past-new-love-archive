@@ -456,3 +456,173 @@ test("captured canvas handlers are inert after destroy", () => {
   assert.equal(prevented, 0);
   assert.equal(tunnel.snapshot().progress, 0);
 });
+
+function createLifecycleHarness({ mobile = false, width = 800, height = 500, faults = {} } = {}) {
+  const calls = { fallback: [], frames: [], cancelled: [], loads: [], end: [], select: [], removed: [], windowAdded: [], windowRemoved: [] };
+  const resources = { materials: [], textures: [], meshes: [], renderCount: 0 };
+  const canvasListeners = new Map();
+  const classes = new Set(faults.preexistingClass ? ["archive-tunnel-surface"] : []);
+  let appendCount = 0;
+  const root = {
+    clientWidth: width, clientHeight: height, children: [],
+    classList: { contains: (n) => classes.has(n), add(n) { classes.add(n); }, remove(n) { calls.removed.push(`class:${n}`); classes.delete(n); if (faults.classRemove) throw Error("class remove"); } },
+    append(node) { appendCount += 1; if (faults.appendBefore) throw Error("append"); node.parentNode = this; this.children.push(node); if (faults.appendAfter) throw Error("append after"); },
+    removeChild(node) { calls.removed.push("canvas"); this.children = this.children.filter((v) => v !== node); node.parentNode = null; if (faults.canvasRemove) throw Error("remove"); },
+    getBoundingClientRect() { return { left: 0, top: 0, width: this.clientWidth, height: this.clientHeight }; },
+  };
+  const canvas = {
+    parentNode: null, style: {},
+    addEventListener(name, fn, config) { if (faults.listenerAt === canvasListeners.size + 1) throw Error("listener"); canvasListeners.set(name, { fn, config }); },
+    removeEventListener(name, fn) { calls.removed.push(`listener:${name}`); if (faults.listenerRemove) throw Error("listener remove"); if (canvasListeners.get(name)?.fn === fn) canvasListeners.delete(name); },
+    getBoundingClientRect() { return root.getBoundingClientRect(); },
+    setPointerCapture(id) { calls.capture = id; if (faults.capture) throw Error("capture"); },
+    releasePointerCapture(id) { calls.release = id; if (faults.release) throw Error("release"); },
+  };
+  class Object3D { constructor() { this.children = []; this.position = { set: (x, y, z) => Object.assign(this.position, { x, y, z }) }; this.rotation = { z: 0 }; this.userData = {}; } add(v) { this.children.push(v); } remove(v) { calls.removed.push("mesh"); this.children = this.children.filter((x) => x !== v); } }
+  class Scene extends Object3D { constructor() { super(); resources.scene = this; } }
+  class PerspectiveCamera extends Object3D { constructor(fov, aspect, near, far) { super(); Object.assign(this, { fov, aspect, near, far }); resources.camera = this; } lookAt(...args) { this.look = args; } updateProjectionMatrix() { this.projections = (this.projections ?? 0) + 1; } }
+  class PlaneGeometry { constructor(...args) { this.args = args; resources.geometry = this; } dispose() { this.disposed = (this.disposed ?? 0) + 1; if (faults.geometryDispose) throw Error("geometry dispose"); } }
+  class MeshBasicMaterial { constructor(options) { if (faults.materialAt === resources.materials.length + 1) throw Error("material"); Object.assign(this, options); this.color = { value: options.color, set(value) { this.value = value; } }; resources.materials.push(this); } dispose() { this.disposed = (this.disposed ?? 0) + 1; if (faults.materialDispose) throw Error("material dispose"); } }
+  class Mesh extends Object3D { constructor(geometry, material) { super(); if (faults.meshAt === resources.meshes.length + 1) throw Error("mesh"); this.geometry = geometry; this.material = material; resources.meshes.push(this); } }
+  class WebGLRenderer { constructor(options) { if (faults.rendererCtor) throw Error("renderer"); this.options = options; this.domElement = canvas; resources.renderer = this; } setPixelRatio(v) { this.pixelRatio = v; if (faults.pixelRatio) throw Error("pixel"); } setSize(w, h, css) { this.size = [w, h, css]; if (faults.setSize) throw Error("size"); } render(scene, camera) { resources.renderCount += 1; if (faults.renderAt === resources.renderCount) throw Error("render"); this.lastRender = [scene, camera]; } dispose() { this.disposed = (this.disposed ?? 0) + 1; if (faults.rendererDispose) throw Error("renderer dispose"); } }
+  class TextureLoader { load(src, success, _progress, failure) { const pending = { src, success, failure }; calls.loads.push(pending); return pending; } }
+  class FogExp2 { constructor(color, density) { Object.assign(this, { color, density }); } }
+  class Vector2 { constructor(x, y) { Object.assign(this, { x, y }); } }
+  class Raycaster { setFromCamera(vector, camera) { this.vector = vector; this.camera = camera; } intersectObjects() { return faults.hit ? [{ object: resources.meshes[faults.hit - 1] }] : []; } }
+  const three = { Scene, PerspectiveCamera, PlaneGeometry, MeshBasicMaterial, Mesh, WebGLRenderer, TextureLoader, FogExp2, Vector2, Raycaster, DoubleSide: "double", SRGBColorSpace: "srgb" };
+  const windowListeners = new Map();
+  const windowRef = {
+    devicePixelRatio: faults.dpr ?? 2, WebGLRenderingContext: faults.noWebGL ? undefined : function WebGLRenderingContext() {},
+    matchMedia: () => ({ matches: mobile }),
+    addEventListener(name, fn) { calls.windowAdded.push(name); windowListeners.set(name, fn); if (faults.windowListener) throw Error("window listener"); },
+    removeEventListener(name, fn) { calls.windowRemoved.push(name); if (faults.windowRemove) throw Error("window remove"); if (windowListeners.get(name) === fn) windowListeners.delete(name); },
+  };
+  let frameId = 100;
+  const options = {
+    three, windowRef,
+    requestFrame(fn) { if (faults.requestFrame) throw Error("raf"); calls.frames.push(fn); frameId += 1; return frameId; },
+    cancelFrame(id) { calls.cancelled.push(id); }, onFallback: (r) => calls.fallback.push(r), onEnd: (s) => calls.end.push(s), onSelect: (...a) => calls.select.push(a),
+  };
+  const mount = (data = archiveData, extra = {}) => mountArchiveTunnel(root, data, { ...options, ...extra });
+  const fire = (name, event = {}) => canvasListeners.get(name)?.fn(event);
+  const resolve = (index, texture = { id: index, dispose() { this.disposed = (this.disposed ?? 0) + 1; if (faults.textureDispose) throw Error("texture dispose"); } }) => (calls.loads[index].success(texture), texture);
+  return { root, canvas, classes, calls, resources, three, windowRef, windowListeners, options, mount, fire, resolve, get appendCount() { return appendCount; } };
+}
+
+const expectedControllerKeys = ["destroy", "pause", "resume", "snapshot", "startRewind"];
+function assertNoopController(controller) {
+  assert.ok(Object.isFrozen(controller));
+  assert.deepEqual(Object.keys(controller).sort(), expectedControllerKeys);
+  assert.equal(controller.pause(), false); assert.equal(controller.resume(), false); assert.equal(controller.startRewind(), false); assert.equal(controller.destroy(), false);
+  assert.deepEqual(controller.snapshot(), { progress: 0, mode: "paused" }); assert.ok(Object.isFrozen(controller.snapshot()));
+}
+
+test("renderer fallback paths are atomic, frozen, and report their exact reason once", () => {
+  const cases = [
+    ["missing-root", (h) => mountArchiveTunnel(null, archiveData, h.options)],
+    ["invalid-data", (h) => h.mount(null)], ["invalid-data", (h) => h.mount({ cases: [] })],
+    ["unusable-root", (h) => { h.root.clientWidth = 0; return h.mount(); }],
+    ["webgl-unavailable", (h) => { h.windowRef.WebGLRenderingContext = undefined; return h.mount(); }],
+    ["renderer-failed", (h) => h.mount(archiveData, { three: { ...h.three, WebGLRenderer: class { constructor() { throw Error("no"); } } } })],
+  ];
+  for (const [reason, invoke] of cases) { const h = createLifecycleHarness(); const api = invoke(h); assert.deepEqual(h.calls.fallback, [reason]); assertNoopController(api); assert.equal(h.root.children.length, 0); assert.equal(h.classes.size, 0); }
+});
+
+test("successful controller delegates, is frozen, and destroy is idempotent", () => {
+  const h = createLifecycleHarness(); const api = h.mount();
+  assert.ok(Object.isFrozen(api)); assert.deepEqual(Object.keys(api).sort(), expectedControllerKeys);
+  assert.equal(api.pause(), true); assert.equal(api.pause(), false); assert.equal(api.resume(), true); assert.equal(api.startRewind(), false);
+  assert.equal(api.destroy(), true); assert.equal(api.destroy(), false);
+});
+
+test("transactional initialization rolls back every acquired resource for construction and setup faults", () => {
+  for (const faults of [{ materialAt: 4 }, { meshAt: 4 }, { appendBefore: true }, { appendAfter: true }, { listenerAt: 4 }, { windowListener: true }, { setSize: true }, { pixelRatio: true }, { requestFrame: true }, { renderAt: 1 }]) {
+    const h = createLifecycleHarness({ faults }); const api = h.mount(); assertNoopController(api); assert.deepEqual(h.calls.fallback, ["initialization-failed"]); assert.equal(h.root.children.length, 0, JSON.stringify(faults));
+    assert.equal(h.classes.has("archive-tunnel-surface"), false); assert.equal(h.resources.renderer.disposed, 1);
+    if (h.resources.geometry) assert.equal(h.resources.geometry.disposed, 1);
+    assert.ok(h.resources.materials.every((m) => m.disposed === 1));
+  }
+});
+
+test("scene creates all 138 exact authored cards and camera/renderer contract", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); const flat = flattenArchiveOccurrences(archiveData);
+  assert.equal(h.resources.meshes.length, 138); assert.equal(h.resources.materials.length, 138); assert.equal(new Set(h.resources.meshes.map((m) => m.geometry)).size, 1); assert.deepEqual(h.resources.geometry.args, [1.82, 1.24]);
+  h.resources.meshes.forEach((mesh, index) => { const pose = tunnelPose(index); assert.deepEqual([mesh.position.x, mesh.position.y, mesh.position.z, mesh.rotation.z], [pose.x, pose.y, pose.z, pose.rotationZ]); assert.deepEqual(mesh.userData, { occurrence: flat[index] }); });
+  assert.ok(h.resources.materials.every((m) => m.opacity === 1 && m.side === "double" && m.color.value === 0x1a1521));
+  assert.deepEqual([h.resources.scene.fog.color, h.resources.scene.fog.density], [0x09070c, 0.032]);
+  assert.deepEqual([h.resources.camera.fov, h.resources.camera.aspect, h.resources.camera.near, h.resources.camera.far], [46, 1.6, 0.1, 120]); assert.deepEqual(h.resources.camera.look, [0, 0, 2]);
+  assert.deepEqual(h.resources.renderer.options, { alpha: true, antialias: true, powerPreference: "high-performance" }); assert.equal(h.resources.renderer.pixelRatio, 1.6); assert.deepEqual(h.resources.renderer.size.slice(0, 2), [800, 500]); api.destroy();
+});
+
+test("desktop and mobile texture windows load exact counts and lifecycle semantics", () => {
+  for (const [mobile, initial, interior] of [[false, 33, 65], [true, 19, 37]]) {
+    const h = createLifecycleHarness({ mobile }); const api = h.mount(); assert.equal(h.calls.loads.length, initial); assert.deepEqual(h.calls.loads.map((load) => load.src), flattenArchiveOccurrences(archiveData).slice(0, initial).map((item) => item.src));
+    api.pause(); api.snapshot(); h.fire("wheel", { deltaY: 68 / .012, preventDefault() {} }); assert.equal(h.calls.loads.length, initial + interior); const start = 68 - (mobile ? 18 : 32); assert.deepEqual(h.calls.loads.slice(initial).map((load) => load.src), flattenArchiveOccurrences(archiveData).slice(start, start + interior).map((item) => item.src)); api.destroy();
+  }
+});
+
+test("texture success, failure retry, stale callbacks, and unique disposal are safe", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); const texture = h.resolve(0);
+  assert.equal(texture.colorSpace, "srgb"); assert.equal(h.resources.materials[0].map, texture); assert.equal(h.resources.materials[0].color.value, 0xffffff); assert.equal(h.resources.materials[0].opacity, 1);
+  const failedSrc = h.calls.loads[1].src; h.calls.loads[1].failure(); const count = h.calls.loads.length; h.calls.frames.shift()(0); assert.equal(h.calls.loads.length, count);
+  h.fire("wheel", { deltaY: 10000, preventDefault() {} }); assert.equal(texture.disposed, 1);
+  const stalePending = h.calls.loads[2]; const stale = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; stalePending.success(stale); assert.equal(stale.disposed, 1); assert.notEqual(h.resources.materials[2].map, stale); stalePending.failure();
+  h.fire("wheel", { deltaY: -10000, preventDefault() {} }); assert.ok(h.calls.loads.length > count); assert.equal(h.calls.loads.filter((load) => load.src === failedSrc).length, 2); api.destroy();
+  const late = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; h.calls.loads.at(-1).success(late); h.calls.loads.at(-1).failure(); assert.equal(late.disposed, 1);
+});
+
+test("RAF delta, end announcement, rewind reannouncement, and destroy from onEnd are exact", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); const first = h.calls.frames.shift(); first(100); assert.equal(api.snapshot().progress, 0); const second = h.calls.frames.shift(); second(1000); assert.equal(api.snapshot().progress, 137 * 64 / 90000); assert.equal(h.resources.camera.position.z, 3 - api.snapshot().progress * TUNNEL_STEP); assert.equal(h.resources.renderCount, 3); assert.equal(h.calls.frames.length, 1); api.destroy(); assert.deepEqual(h.calls.cancelled, [103]);
+
+  const custom = createLifecycleHarness(); let controller; const state = { mode: "cruising", snapshot() { return Object.freeze({ progress: this.mode === "ended" ? 137 : 0, mode: this.mode }); }, tick() { this.mode = "ended"; return true; }, pause() { return false; }, resume() { return false; }, nudge() { return false; }, startRewind() { this.mode = "rewinding"; return true; } };
+  controller = custom.mount(archiveData, { stateFactory: () => state, onEnd(s) { custom.calls.end.push(s); controller.destroy(); } }); custom.calls.frames.shift()(1); assert.equal(custom.calls.end.length, 1); assert.ok(Object.isFrozen(custom.calls.end[0])); assert.equal(custom.resources.renderCount, 1); assert.equal(custom.calls.frames.length, 0);
+});
+
+test("end is announced once per arrival and a rewind permits a second announcement", () => {
+  const h = createLifecycleHarness();
+  const state = { progress: 0, mode: "cruising", snapshot() { return Object.freeze({ progress: this.progress, mode: this.mode }); }, tick() { if (this.mode === "cruising") { this.progress = 137; this.mode = "ended"; } else if (this.mode === "rewinding") { this.progress = 0; this.mode = "paused"; } return true; }, pause() { this.mode = "paused"; return true; }, resume() { this.mode = "cruising"; return true; }, nudge() { return false; }, startRewind() { if (this.mode !== "ended") return false; this.mode = "rewinding"; return true; } };
+  const api = h.mount(archiveData, { stateFactory: () => state }); h.calls.frames.shift()(0); assert.equal(h.calls.end.length, 1); h.calls.frames.shift()(16); assert.equal(h.calls.end.length, 1); assert.equal(api.startRewind(), true); h.calls.frames.shift()(32); assert.equal(api.resume(), true); h.calls.frames.shift()(48); assert.equal(h.calls.end.length, 2); api.destroy();
+});
+
+test("runtime render failure is contained and rolls down the mounted renderer", () => {
+  const h = createLifecycleHarness({ faults: { renderAt: 2 } }); const api = h.mount(); const queued = h.calls.frames.shift(); assert.doesNotThrow(() => queued(16)); assert.equal(h.resources.renderer.disposed, 1); assert.equal(h.root.children.length, 0); assert.equal(h.calls.frames.length, 0); assert.equal(api.destroy(), false);
+});
+
+test("destroyed queued frame and late loads are inert and shared texture objects dispose once", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); const queued = h.calls.frames[0]; const pending0 = h.calls.loads[0]; const pending1 = h.calls.loads[1]; const shared = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; pending0.success(shared); pending1.success(shared); const renders = h.resources.renderCount; api.destroy(); assert.equal(shared.disposed, 1); queued(999); assert.equal(h.resources.renderCount, renders); const late = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; pending0.success(late); pending0.success(late); assert.equal(late.disposed, 1);
+});
+
+test("duplicate successful loader callback cannot replace or leak the first assigned texture", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); const pending = h.calls.loads[0]; const first = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; const duplicate = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; pending.success(first); pending.success(duplicate); assert.equal(h.resources.materials[0].map, first); assert.equal(duplicate.disposed, 1); api.destroy(); assert.equal(first.disposed, 1); assert.equal(duplicate.disposed, 1);
+});
+
+test("wheel, pointer drag/cancel, selection, and destroyed captured inputs obey state", () => {
+  const h = createLifecycleHarness({ faults: { hit: 4 } }); const api = h.mount(); const initial = api.snapshot().progress; let prevented = 0;
+  h.fire("wheel", { deltaY: 10, preventDefault() { prevented += 1; } }); assert.equal(prevented, 1); assert.ok(api.snapshot().progress > initial); h.fire("wheel", { deltaY: NaN, preventDefault() { prevented += 1; } }); assert.equal(prevented, 1);
+  h.fire("pointerdown", { pointerId: 7, clientX: 10, clientY: 50 }); h.fire("pointermove", { pointerId: 7, clientX: 10, clientY: 20 }); assert.equal(h.calls.capture, 7); const afterUp = api.snapshot().progress; assert.ok(afterUp > initial); h.fire("pointerup", { pointerId: 7 }); assert.equal(h.calls.release, 7); h.fire("click", { clientX: 1, clientY: 1 }); assert.equal(h.calls.select.length, 0);
+  h.fire("pointerdown", { pointerId: 8, clientX: 5, clientY: 5 }); h.fire("pointermove", { pointerId: 8, clientX: 7, clientY: 7 }); h.fire("pointercancel", { pointerId: 8 }); h.fire("pointerdown", { pointerId: 9, clientX: 5, clientY: 5 }); h.fire("pointerup", { pointerId: 9 }); h.fire("click", { clientX: 20, clientY: 20 }); assert.equal(h.calls.select.length, 1); assert.deepEqual(h.calls.select[0][0], flattenArchiveOccurrences(archiveData)[3]); assert.equal(h.calls.select[0][1], h.resources.meshes[3]); assert.equal(api.snapshot().mode, "paused");
+  const wheel = h.canvas.listeners?.get?.("wheel")?.fn ?? h.fire.bind(null, "wheel"); api.destroy(); wheel({ deltaY: 10, preventDefault() { prevented += 1; } }); assert.equal(prevented, 1);
+});
+
+test("zero-size raycast is inert and rewind rejects input mutations", () => {
+  const h = createLifecycleHarness({ faults: { hit: 1 } }); const api = h.mount(); h.root.clientWidth = 0; h.fire("click", { clientX: 0, clientY: 0 }); assert.equal(h.calls.select.length, 0); h.root.clientWidth = 800;
+  h.fire("wheel", { deltaY: 99999, preventDefault() {} }); assert.equal(api.snapshot().mode, "ended"); assert.equal(api.startRewind(), true); const progress = api.snapshot().progress; h.fire("wheel", { deltaY: -100, preventDefault() {} }); h.fire("pointerdown", { pointerId: 1, clientX: 0, clientY: 30 }); h.fire("pointermove", { pointerId: 1, clientX: 0, clientY: 0 }); assert.equal(api.snapshot().progress, progress); api.destroy();
+});
+
+test("live resize updates valid dimensions and captured resize is inert after destroy", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); const resize = h.windowListeners.get("resize"); h.root.clientWidth = 600; h.root.clientHeight = 300; resize(); assert.equal(h.resources.camera.aspect, 2); assert.equal(h.resources.camera.projections, 2); assert.deepEqual(h.resources.renderer.size.slice(0, 2), [600, 300]);
+  h.root.clientWidth = 0; const projections = h.resources.camera.projections; resize(); assert.equal(h.resources.camera.projections, projections); api.destroy(); resize(); assert.equal(h.resources.camera.projections, projections);
+});
+
+test("destroy exhaustively attempts cleanup despite throwing destructors and preserves pre-existing class", () => {
+  const h = createLifecycleHarness({ faults: { textureDispose: true, materialDispose: true, geometryDispose: true, rendererDispose: true, listenerRemove: true, windowRemove: true, release: true, canvasRemove: true, classRemove: true } }); const api = h.mount(); h.resolve(0); h.fire("pointerdown", { pointerId: 3, clientX: 0, clientY: 0 }); assert.equal(api.destroy(), true); assert.equal(api.destroy(), false); assert.equal(h.calls.removed.filter((x) => x === "mesh").length, 138); assert.equal(h.resources.geometry.disposed, 1); assert.equal(h.resources.renderer.disposed, 1); assert.ok(h.resources.materials.every((m) => m.disposed === 1)); assert.ok(h.calls.cancelled.length === 1); assert.ok(h.calls.windowRemoved.includes("resize"));
+  const pre = createLifecycleHarness({ faults: { preexistingClass: true } }); const preApi = pre.mount(); preApi.destroy(); assert.ok(pre.classes.has("archive-tunnel-surface"));
+});
+
+test("ordinary destroy removes the exact canvas and window listener set", () => {
+  const h = createLifecycleHarness(); const api = h.mount(); api.destroy(); assert.deepEqual(h.calls.removed.filter((x) => x.startsWith("listener:")).sort(), ["listener:click", "listener:pointercancel", "listener:pointerdown", "listener:pointermove", "listener:pointerup", "listener:wheel"]); assert.deepEqual(h.calls.windowRemoved, ["resize"]); assert.equal(h.root.children.length, 0); assert.equal(h.classes.has("archive-tunnel-surface"), false);
+});
+
+test("renderer source keeps a soft fog surface and contains no striped or rotating decorative motifs", () => {
+  const source = fs.readFileSync(new URL("../src/archive-tunnel.js", import.meta.url), "utf8"); assert.match(source, /FogExp2/); assert.match(source, /archive-tunnel-surface/); assert.doesNotMatch(source, /repeating-conic-gradient|rotating\s+beam|spin\s*background|LineGeometry|RayGeometry/i);
+});

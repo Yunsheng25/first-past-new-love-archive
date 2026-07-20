@@ -87,6 +87,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
       const mesh = new three.Mesh(registry.geometry, material);
       const pose = tunnelPose(index);
       mesh.position.set(pose.x, pose.y, pose.z); mesh.rotation.z = pose.rotationZ;
+      mesh.userData = { occurrence };
       registry.scene.add(mesh);
       card.mesh = mesh;
     }
@@ -96,7 +97,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
       const generation = ++card.generation;
       card.loading = true;
       const success = (texture) => {
-        if (registry.destroyed || !card.desired || card.generation !== generation) { dispose(texture, registry.disposed); return; }
+        if (registry.destroyed || !card.desired || card.generation !== generation || !card.loading) { dispose(texture, registry.disposed); return; }
         card.loading = false; card.texture = texture; texture.colorSpace = three.SRGBColorSpace;
         card.material.map = texture; setColor(card.material, 0xffffff); card.material.opacity = 1; card.material.needsUpdate = true;
       };
@@ -131,11 +132,13 @@ export function mountArchiveTunnel(root, data, options = {}) {
     function schedule() { if (!registry.destroyed && registry.frame === null) registry.frame = requestFrame(frame); }
     function frame(timestamp) {
       registry.frame = null; if (registry.destroyed) return;
-      const before = state.snapshot(); const now = Number(timestamp);
-      const delta = previousTime === null || !Number.isFinite(now) ? 0 : Math.min(64, Math.max(0, now - previousTime));
-      if (Number.isFinite(now)) previousTime = now;
-      state.tick(delta); const after = state.snapshot(); end(before, after); if (registry.destroyed) return;
-      update(); renderer.render(registry.scene, camera); schedule();
+      try {
+        const before = state.snapshot(); const now = Number(timestamp);
+        const delta = previousTime === null || !Number.isFinite(now) ? 0 : Math.min(64, Math.max(0, now - previousTime));
+        if (Number.isFinite(now)) previousTime = now;
+        state.tick(delta); const after = state.snapshot(); end(before, after); if (registry.destroyed) return;
+        update(); renderer.render(registry.scene, camera); schedule();
+      } catch (_error) { cleanup(); }
     }
     function nudge(value) { if (!Number.isFinite(value) || registry.destroyed) return false; const before = state.snapshot(); const changed = state.nudge(value); end(before, state.snapshot()); if (registry.destroyed) return false; if (changed) update(); return changed; }
     function wheel(event) { if (registry.destroyed || !Number.isFinite(event.deltaY)) return; event.preventDefault?.(); nudge(event.deltaY * 0.012); }
