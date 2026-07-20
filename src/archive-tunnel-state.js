@@ -89,12 +89,12 @@ export function createTunnelState({ maxProgress, initialProgress = 0, initialMod
     }
     progress = next;
     mode = progress === maxProgress ? "ended" : "paused";
+    if (mode === "paused") beginCruiseSegment();
     return true;
   }
 
   function resume() {
     if (mode !== "paused" || progress === maxProgress) return false;
-    beginCruiseSegment();
     mode = "cruising";
     return true;
   }

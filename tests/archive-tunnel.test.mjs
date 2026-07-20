@@ -213,6 +213,38 @@ test("derives each cruise segment from elapsed time without partition drift", ()
   assert.deepEqual(resumed.snapshot(), { progress: 100, mode: "ended" });
 });
 
+test("preserves cruise elapsed time across pauses and only rebases after a manual nudge", () => {
+  const oneTick = createTunnelState({ maxProgress: 137 });
+  oneTick.tick(TUNNEL_CRUISE_MS);
+
+  const reproduced = createTunnelState({ maxProgress: 137 });
+  reproduced.tick(2);
+  reproduced.pause();
+  assert.equal(reproduced.tick(5000), false);
+  reproduced.resume();
+  reproduced.tick(89998);
+  assert.deepEqual(reproduced.snapshot(), oneTick.snapshot());
+
+  const partitions = Array.from({ length: 99 }, (_, index) => index + 1).concat(85050);
+  const pausedBetweenTicks = createTunnelState({ maxProgress: 137 });
+  for (let index = 0; index < partitions.length; index += 1) {
+    pausedBetweenTicks.tick(partitions[index]);
+    if (index < partitions.length - 1) {
+      assert.equal(pausedBetweenTicks.pause(), true);
+      assert.equal(pausedBetweenTicks.tick(1234), false);
+      assert.equal(pausedBetweenTicks.resume(), true);
+    }
+  }
+  assert.deepEqual(pausedBetweenTicks.snapshot(), oneTick.snapshot());
+
+  const manuallyRebased = createTunnelState({ maxProgress: 100 });
+  manuallyRebased.tick(9000);
+  manuallyRebased.nudge(40);
+  manuallyRebased.resume();
+  manuallyRebased.tick(45000);
+  assert.deepEqual(manuallyRebased.snapshot(), { progress: 100, mode: "ended" });
+});
+
 test("rewinds from the end with a symmetric cubic ease and stops exactly at the entrance", () => {
   assert.equal(TUNNEL_REWIND_MS, 3200);
   const state = createTunnelState({ maxProgress: 137 });
