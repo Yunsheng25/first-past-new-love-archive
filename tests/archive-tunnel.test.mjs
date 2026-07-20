@@ -263,6 +263,20 @@ test("rewinds from the end with a symmetric cubic ease and stops exactly at the 
   assert.deepEqual(largeTick.snapshot(), { progress: 0, mode: "paused" });
 });
 
+test("rebases cruise timing at the entrance after a completed rewind", () => {
+  const state = createTunnelState({ maxProgress: 137 });
+  state.tick(TUNNEL_CRUISE_MS);
+  state.startRewind();
+  state.tick(TUNNEL_REWIND_MS * 2);
+  assert.deepEqual(state.snapshot(), { progress: 0, mode: "paused" });
+
+  assert.equal(state.resume(), true);
+  state.tick(1);
+  assert.deepEqual(state.snapshot(), { progress: 137 / TUNNEL_CRUISE_MS, mode: "cruising" });
+  state.tick(TUNNEL_CRUISE_MS - 1);
+  assert.deepEqual(state.snapshot(), { progress: 137, mode: "ended" });
+});
+
 test("manual controls clamp progress and preserve rewind as an uninterruptible transition", () => {
   const state = createTunnelState({ maxProgress: 10 });
   assert.equal(state.nudge(-100), true);

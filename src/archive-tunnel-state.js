@@ -57,6 +57,7 @@ export function createTunnelState({ maxProgress, initialProgress = 0, initialMod
       progress = rewindStart * (1 - easeInOutCubic(fraction));
       if (rewindElapsed === TUNNEL_REWIND_MS) {
         progress = 0;
+        beginCruiseSegment();
         mode = "paused";
       }
       return true;
