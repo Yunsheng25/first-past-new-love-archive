@@ -553,7 +553,7 @@ export function mountArchiveRoute(app, route, {
 
   const fetchArchive = async (request) => {
     if (archiveDataCache.has(fetchImpl)) return archiveDataCache.get(fetchImpl);
-    const promise = Promise.resolve(fetchImpl('data/archive.json', { signal: request.signal })).then(async (response) => {
+    const promise = Promise.resolve(fetchImpl('data/archive.json')).then(async (response) => {
       if (!response.ok) throw new Error(`Archive data request failed: ${response.status}`);
       return response.json();
     });
@@ -612,13 +612,17 @@ export function mountArchiveRoute(app, route, {
           const cruise = app.querySelector?.('[data-tunnel-cruise]');
           const current = app.querySelector?.('[data-tunnel-current]');
           const modalHost = app.querySelector?.('[data-archive-modal-host]');
+          let rewindActive = false;
           const mountedTunnel = mountTunnel(stage, data, {
             windowRef,
             initialProgress: savedProgress,
             onProgress(snapshot) {
               if (current) current.textContent = String(Math.round(snapshot.progress) + 1).padStart(3, '0');
               if (cruise) cruise.textContent = snapshot.mode === 'cruising' ? '暂停漫游' : '继续漫游';
-              if (snapshot.mode !== 'ended' && rewind) rewind.hidden = true;
+              if (rewindActive && snapshot.mode === 'paused' && snapshot.progress <= 0.001) {
+                rewindActive = false;
+                if (rewind) { rewind.hidden = true; rewind.disabled = false; rewind.textContent = '↶ 快速回溯'; }
+              }
             },
             onSelect(occurrence, trigger) {
               safeCall(() => tunnel?.pause?.());
@@ -627,7 +631,7 @@ export function mountArchiveRoute(app, route, {
               }));
               if (!modal) safeCall(() => tunnel?.resume?.());
             },
-            onEnd() { if (rewind) rewind.hidden = false; },
+            onEnd() { if (rewind) { rewind.hidden = false; rewind.disabled = false; rewind.textContent = '↶ 快速回溯'; } },
             onFallback() { if (active && view === 'tunnel') renderList(); },
           });
           if (view === 'tunnel') tunnel = mountedTunnel;
@@ -640,7 +644,13 @@ export function mountArchiveRoute(app, route, {
               return;
             }
             if (event.target?.closest?.('[data-tunnel-rewind]')) {
-              if (safeCall(() => tunnel?.startRewind?.())) { if (rewind) rewind.hidden = true; }
+              if (safeCall(() => tunnel?.startRewind?.())) {
+                rewindActive = true;
+                if (rewind) { rewind.hidden = false; rewind.disabled = true; rewind.textContent = '正在回溯…'; }
+              } else if (rewind) {
+                rewind.hidden = false;
+                rewind.disabled = false;
+              }
             }
           };
           app.addEventListener?.('click', click);
@@ -666,7 +676,7 @@ export function mountArchiveRoute(app, route, {
       }
       app.focus?.({ preventScroll: true });
     } catch (error) {
-      if (!active || error?.name === 'AbortError' || request.signal.aborted || request !== controller) return;
+      if (!active || request.signal.aborted || request !== controller) return;
       app.innerHTML = errorView();
       retryButton = app.querySelector?.('[data-retry-archive]');
       retryHandler = () => load();

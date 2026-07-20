@@ -71,9 +71,43 @@ test('tunnel selection pauses for a complete modal, resumes in place, and end re
   assert.equal(nodes.rewind.hidden, false);
   listeners.get('click')({ target: { closest: (selector) => selector === '[data-tunnel-rewind]' ? nodes.rewind : null } });
   assert.equal(rewound, 1);
+  assert.equal(nodes.rewind.hidden, false);
+  assert.equal(nodes.rewind.disabled, true);
+  tunnelOptions.onProgress({ progress: 0, mode: 'paused' });
   assert.equal(nodes.rewind.hidden, true);
+  assert.equal(nodes.rewind.disabled, false);
   cleanup();
   assert.equal(destroyed, 1);
+});
+
+test('a pending shared archive load survives its first mount cleanup and renders the immediate remount once', async () => {
+  let resolveResponse;
+  let fetches = 0;
+  let sharedSignal;
+  const pending = new Promise((resolve) => { resolveResponse = resolve; });
+  const fetchImpl = (_url, options = {}) => { fetches += 1; sharedSignal = options.signal; return pending; };
+  const makeApp = () => ({ innerHTML: '', focus() {}, querySelector() { return null; }, addEventListener() {}, removeEventListener() {} });
+  const first = makeApp();
+  const cleanup = mountArchiveRoute(first, { name: 'archive-detail', id: 'case-01' }, { fetchImpl, storage: null, documentRef: {}, windowRef: {}, navigatorRef: {} });
+  cleanup();
+  assert.equal(sharedSignal, undefined);
+  const second = makeApp();
+  mountArchiveRoute(second, { name: 'archive-detail', id: 'case-01' }, { fetchImpl, storage: null, documentRef: {}, windowRef: {}, navigatorRef: {} });
+  resolveResponse({ ok: true, json: async () => archive });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(fetches, 1);
+  assert.match(second.innerHTML, /data-archive-case="case-01"/);
+});
+
+test('an AbortError from the shared loader is a visible retryable failure while the mount is active', async () => {
+  const retry = { addEventListener() {}, removeEventListener() {} };
+  const app = { innerHTML: '', focus() {}, querySelector: (selector) => selector === '[data-retry-archive]' ? retry : null };
+  mountArchiveRoute(app, { name: 'archive-index' }, {
+    fetchImpl: async () => { const error = new Error('network aborted upstream'); error.name = 'AbortError'; throw error; },
+    storage: null, documentRef: {}, windowRef: {}, navigatorRef: {},
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.match(app.innerHTML, /data-archive-error/);
 });
 
 function mappingSignature(data) {
