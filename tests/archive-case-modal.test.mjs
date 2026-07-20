@@ -176,6 +176,30 @@ test('a clipboard rejection that arrives after close never begins textarea fallb
   assert.deepEqual({ created, appended, selected, executed, removed }, { created: 0, appended: 0, selected: 0, executed: 0, removed: 0 });
 });
 
+test('navigation invalidates an older pending copy before its rejected fallback can mutate the new case', async () => {
+  const { host, nodes, listeners, documentRef } = modalHarness();
+  let rejectClipboard;
+  const pending = new Promise((_, reject) => { rejectClipboard = reject; });
+  let created = 0;
+  let appended = 0;
+  let selected = 0;
+  let executed = 0;
+  let removed = 0;
+  Object.assign(documentRef, {
+    createElement() { created += 1; return { style: {}, select() { selected += 1; }, remove() { removed += 1; } }; },
+    body: { append() { appended += 1; } }, execCommand() { executed += 1; return true; },
+  });
+  const controller = mountArchiveCaseModal(host, { data: archive, occurrence: occurrenceFor(archive.cases[1]), documentRef, navigatorRef: { clipboard: { writeText: () => pending } } });
+  listeners.get('host:click')({ target: nodes.get('[data-case-modal-copy]'), preventDefault() {} });
+  controller.navigate(1);
+  rejectClipboard(new Error('denied'));
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual({ created, appended, selected, executed, removed }, { created: 0, appended: 0, selected: 0, executed: 0, removed: 0 });
+  assert.equal(nodes.get('[data-case-modal-copy-status]').textContent, '');
+  assert.equal(controller.caseItem.id, 'case-03');
+});
+
 test('textarea fallback restores focus and selection after success, failure, and exception', async () => {
   for (const outcome of [true, false, 'throw']) {
     const { host, nodes, listeners, documentRef } = modalHarness();

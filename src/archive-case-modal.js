@@ -173,6 +173,8 @@ export function mountArchiveCaseModal(host, {
   const navigate = (delta) => {
     const nextItem = caseNeighbor(data, item.id, delta);
     if (!nextItem) return false;
+    // A completed navigation makes every pending copy result stale.
+    version += 1;
     item = nextItem;
     selectedOccurrence = { caseId: item.id, caseIndex: caseList(data).indexOf(item), imageIndex: 0, src: item.images?.[0]?.src, role: item.images?.[0]?.role };
     render();
