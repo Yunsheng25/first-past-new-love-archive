@@ -7,6 +7,7 @@ import archiveData from "../data/archive.json" with { type: "json" };
 import {
   TUNNEL_RADIUS_X,
   TUNNEL_RADIUS_Y,
+  TUNNEL_MAX_INDEX,
   TUNNEL_STEP,
   flattenArchiveOccurrences,
   groupCaseImages,
@@ -103,16 +104,17 @@ test("empty and malformed archive input produces immutable empty results", () =>
   }
 });
 
-test("maps valid indexes to deterministic, bounded spiral tunnel poses", () => {
+test("maps the full supported tunnel domain to deterministic, bounded spiral poses", () => {
   assert.ok(TUNNEL_STEP > 0);
   assert.ok(TUNNEL_RADIUS_X > 0);
   assert.ok(TUNNEL_RADIUS_Y > 0);
-  const start = tunnelPose(0);
-  const near = tunnelPose(8);
-  const far = tunnelPose(137);
+  assert.equal(TUNNEL_MAX_INDEX, 137);
+  const poses = Array.from({ length: TUNNEL_MAX_INDEX + 1 }, (_, index) => tunnelPose(index));
+  const [start, , , , , , , , near] = poses;
+  const far = poses.at(-1);
 
   assert.deepEqual(tunnelPose(8), near);
-  for (const pose of [start, near, far]) {
+  for (const pose of poses) {
     assert.deepEqual(Object.keys(pose), ["x", "y", "z", "rotationZ"]);
     assert.ok(Object.values(pose).every(Number.isFinite));
     assert.ok(Math.abs(pose.x) <= TUNNEL_RADIUS_X);
@@ -122,27 +124,35 @@ test("maps valid indexes to deterministic, bounded spiral tunnel poses", () => {
   assert.equal(near.z, -8 * TUNNEL_STEP);
   assert.equal(far.z, -137 * TUNNEL_STEP);
   assert.ok(far.z < near.z && near.z < start.z);
+  for (let index = 1; index < poses.length; index += 1) {
+    assert.ok(Math.abs((poses[index].z - poses[index - 1].z) + TUNNEL_STEP) < 1e-12);
+    assert.ok(poses[index].z < poses[index - 1].z);
+  }
 });
 
-test("aligns tunnel cards to the spiral tangent with a quarter-turn offset", () => {
+test("aligns the Three plane local x-axis to the true ellipse tangent", () => {
   const tolerance = 1e-12;
   assert.ok(Math.abs(tunnelPose(0).rotationZ - (Math.PI / 2)) < tolerance);
-  const index = 8;
-  const angle = (index * Math.PI * 2 / 8) + (Math.floor(index / 8) * 0.095);
-  assert.ok(Math.abs(tunnelPose(index).rotationZ - (angle + (Math.PI / 2))) < tolerance);
+  for (const index of [1, 3, 8, 17]) {
+    const pose = tunnelPose(index);
+    const ellipseNormal = { x: pose.x / (TUNNEL_RADIUS_X ** 2), y: pose.y / (TUNNEL_RADIUS_Y ** 2) };
+    const cardLongAxis = { x: Math.cos(pose.rotationZ), y: Math.sin(pose.rotationZ) };
+    const dotProduct = (ellipseNormal.x * cardLongAxis.x) + (ellipseNormal.y * cardLongAxis.y);
+    assert.ok(Math.abs(dotProduct) < tolerance, `index ${index} must be tangent to the ellipse`);
+  }
 });
 
-test("keeps the largest accepted tunnel pose finite", () => {
-  const pose = tunnelPose(Number.MAX_SAFE_INTEGER);
+test("keeps the final supported tunnel pose finite", () => {
+  const pose = tunnelPose(TUNNEL_MAX_INDEX);
   assert.ok(Number.isFinite(pose.x));
   assert.ok(Number.isFinite(pose.y));
   assert.ok(Number.isFinite(pose.z));
   assert.ok(Number.isFinite(pose.rotationZ));
-  assert.deepEqual(tunnelPose(Number.MAX_SAFE_INTEGER), pose);
+  assert.deepEqual(tunnelPose(TUNNEL_MAX_INDEX), pose);
 });
 
-test("rejects unsafe and otherwise invalid tunnel pose indexes", () => {
-  for (const index of [-1, 1.5, NaN, Infinity, Number.MAX_VALUE, "1", null]) {
+test("rejects indexes outside the supported archive tunnel domain", () => {
+  for (const index of [-1, 1.5, NaN, Infinity, 138, Number.MAX_SAFE_INTEGER, Number.MAX_VALUE, "1", null]) {
     assert.throws(() => tunnelPose(index), RangeError);
   }
 });

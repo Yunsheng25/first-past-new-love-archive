@@ -1,6 +1,7 @@
 export const TUNNEL_STEP = 0.52;
 export const TUNNEL_RADIUS_X = 4.25;
 export const TUNNEL_RADIUS_Y = 2.82;
+export const TUNNEL_MAX_INDEX = 137;
 
 const EMPTY_GROUP = Object.freeze([]);
 const CARDS_PER_TURN = 8;
@@ -42,17 +43,21 @@ export function groupCaseImages(data, caseId) {
 }
 
 /**
- * Places cards on a dense, steadily receding spiral around the viewing axis.
+ * Places cards on a dense, steadily receding elliptical spiral. rotationZ turns
+ * a Three.js plane's local x-axis along the ellipse tangent at each card.
  */
 export function tunnelPose(index) {
-  if (!Number.isSafeInteger(index) || index < 0) {
-    throw new RangeError("Tunnel pose index must be a non-negative safe integer");
+  if (!Number.isInteger(index) || index < 0 || index > TUNNEL_MAX_INDEX) {
+    throw new RangeError(`Tunnel pose index must be an integer from 0 to ${TUNNEL_MAX_INDEX}`);
   }
   const angle = (index * Math.PI * 2 / CARDS_PER_TURN) + (Math.floor(index / CARDS_PER_TURN) * RING_PHASE_DRIFT);
   return {
     x: Math.cos(angle) * TUNNEL_RADIUS_X,
     y: Math.sin(angle) * TUNNEL_RADIUS_Y,
     z: index === 0 ? 0 : -index * TUNNEL_STEP,
-    rotationZ: angle + (Math.PI / 2),
+    rotationZ: Math.atan2(
+      TUNNEL_RADIUS_Y * Math.cos(angle),
+      -TUNNEL_RADIUS_X * Math.sin(angle),
+    ),
   };
 }
