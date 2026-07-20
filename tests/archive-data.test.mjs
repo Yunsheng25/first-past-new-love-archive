@@ -464,3 +464,34 @@ test("every generated real asset is byte-identical to its independently resolved
     assert.equal(sha256(localPath), sha256(candidates[0]), `SHA-256 mismatch for ${ref}`);
   }
 });
+
+test("archive JSON preserves the exact authored case/image occurrence signature", () => {
+  const archive = JSON.parse(fs.readFileSync("data/archive.json", "utf8"));
+  const occurrences = archive.cases.flatMap((item) => item.images.map((image, imageIndex) => [
+    imageIndex,
+    item.id,
+    image.role,
+    image.src,
+  ]));
+  const signature = occurrences.map(([, caseId, role, src], index) => [index + 1, caseId, role, src]);
+  const histogram = archive.cases.reduce((counts, item) => {
+    counts[item.images.length] = (counts[item.images.length] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  assert.equal(archive.cases.length, 72);
+  assert.equal(signature.length, 138);
+  assert.equal(new Set(signature.map(([, , , src]) => src)).size, 137);
+  assert.deepEqual(histogram, { 1: 13, 2: 58, 9: 1 });
+  assert.equal(
+    crypto.createHash("sha256").update(JSON.stringify(signature)).digest("hex"),
+    "196ef58e605fa5de25c68cbf6e4bf285d924dde18d8d515f93f1032948e14bd8",
+  );
+  for (const item of archive.cases.filter((candidate) => candidate.images.length === 2)) {
+    assert.deepEqual(
+      item.images.map((image) => [image.role, image.src]),
+      occurrences.filter(([, caseId]) => caseId === item.id).map(([, , role, src]) => [role, src]),
+      item.id,
+    );
+  }
+});
