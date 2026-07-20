@@ -18,6 +18,7 @@ import {
   TUNNEL_REWIND_MS,
   createTunnelState,
 } from "../src/archive-tunnel-state.js";
+import { mountArchiveTunnel } from "../src/archive-tunnel.js";
 
 const flatSignature = (items) => items.map(({ order, caseId, role, src }) => [order, caseId, role, src]);
 
@@ -344,4 +345,50 @@ test("validates inputs, restores initial state, and returns immutable snapshots"
   assert.ok(Object.isFrozen(snapshot));
   assert.throws(() => { snapshot.progress = 1; }, TypeError);
   assert.equal(restored.snapshot().progress, 10);
+});
+
+function createRendererFakes() {
+  const resources = { renders: 0, textures: [], materials: [], geometry: null, renderer: null };
+  class Object3D { constructor() { this.children = []; this.position = { set: (x, y, z) => { this.x = x; this.y = y; this.z = z; } }; this.rotation = { z: 0 }; } add(value) { this.children.push(value); } remove(value) { this.children = this.children.filter((item) => item !== value); } }
+  class Scene extends Object3D { constructor() { super(); resources.scene = this; } }
+  class PerspectiveCamera extends Object3D { constructor(fov, aspect, near, far) { super(); Object.assign(this, { fov, aspect, near, far }); } lookAt() {} updateProjectionMatrix() { this.updated = true; } }
+  class PlaneGeometry { constructor(...args) { this.args = args; resources.geometry = this; } dispose() { this.disposed = (this.disposed ?? 0) + 1; } }
+  class MeshBasicMaterial { constructor(options) { Object.assign(this, options); resources.materials.push(this); } dispose() { this.disposed = (this.disposed ?? 0) + 1; } }
+  class Mesh extends Object3D { constructor(geometry, material) { super(); this.geometry = geometry; this.material = material; } }
+  class WebGLRenderer { constructor() { this.domElement = { parentNode: null, style: {} }; resources.renderer = this; } setPixelRatio(value) { this.pixelRatio = value; } setSize(width, height) { this.size = [width, height]; } render(scene, camera) { resources.renders += 1; resources.camera = camera; resources.scene = scene; } dispose() { this.disposed = (this.disposed ?? 0) + 1; } }
+  class TextureLoader { load(src, done, _progress, fail) { const texture = { src, dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; resources.textures.push(texture); done(texture); return texture; } }
+  return { resources, three: { Scene, PerspectiveCamera, PlaneGeometry, MeshBasicMaterial, Mesh, WebGLRenderer, TextureLoader, FogExp2: class { constructor(color, density) { Object.assign(this, { color, density }); } }, DoubleSide: "double", SRGBColorSpace: "srgb" } };
+}
+
+function createRoot() {
+  const listeners = new Map();
+  const classes = new Set();
+  return { clientWidth: 800, clientHeight: 500, children: [], classList: { add: (name) => classes.add(name), remove: (name) => classes.delete(name), contains: (name) => classes.has(name) }, append(value) { value.parentNode = this; this.children.push(value); }, removeChild(value) { this.children = this.children.filter((item) => item !== value); value.parentNode = null; }, addEventListener(name, listener) { listeners.set(name, listener); }, removeEventListener(name, listener) { if (listeners.get(name) === listener) listeners.delete(name); }, getBoundingClientRect() { return { left: 0, top: 0, width: this.clientWidth, height: this.clientHeight }; }, setPointerCapture() {}, releasePointerCapture() {}, listeners };
+}
+
+test("mounts ordered cards, applies exact poses, camera progress, and releases every owned resource", () => {
+  const { three, resources } = createRendererFakes();
+  const root = createRoot();
+  const frames = [];
+  const tunnel = mountArchiveTunnel(root, archiveData, { three, requestFrame: (callback) => (frames.push(callback), frames.length), cancelFrame: () => {}, windowRef: { devicePixelRatio: 2, WebGLRenderingContext: function WebGLRenderingContext() {}, matchMedia: () => ({ matches: false }), addEventListener() {}, removeEventListener() {} } });
+  assert.equal(root.children.length, 1);
+  assert.equal(resources.renderer.size[0], 800);
+  assert.equal(resources.renderer.pixelRatio, 1.6);
+  assert.equal(resources.materials.length, 138);
+  assert.deepEqual(resources.geometry.args, [1.82, 1.24]);
+  assert.equal(resources.scene.children.length, 138);
+  const firstPose = tunnelPose(0);
+  const lastPose = tunnelPose(137);
+  const first = resources.scene.children[0];
+  const last = resources.scene.children.at(-1);
+  assert.deepEqual([first.x, first.y, first.z, first.rotation.z], [firstPose.x, firstPose.y, firstPose.z, firstPose.rotationZ]);
+  assert.deepEqual([last.x, last.y, last.z, last.rotation.z], [lastPose.x, lastPose.y, lastPose.z, lastPose.rotationZ]);
+  assert.equal(tunnel.snapshot().progress, 0);
+  frames.shift()(64);
+  assert.ok(tunnel.snapshot().progress > 0);
+  assert.equal(resources.camera.z, 3 - tunnel.snapshot().progress * TUNNEL_STEP);
+  tunnel.destroy();
+  assert.equal(resources.geometry.disposed, 1);
+  assert.equal(resources.renderer.disposed, 1);
+  assert.ok(resources.materials.every((material) => material.disposed === 1));
 });
