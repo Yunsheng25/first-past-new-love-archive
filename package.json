@@ -8,7 +8,7 @@
     "vendor:three": "node scripts/vendor-three.mjs",
     "preview": "python -m http.server 8080"
   },
-  "dependencies": {
+  "devDependencies": {
     "three": "0.160.1"
   }
 }

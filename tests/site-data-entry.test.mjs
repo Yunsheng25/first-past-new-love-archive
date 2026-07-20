@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -97,25 +98,38 @@ test("offline archive tunnel pins and vendors the Three.js r160 module with MIT 
   const vendorPath = path.join(projectRoot, "vendor", "three.module.min.js");
   const vendorScriptPath = path.join(projectRoot, "scripts", "vendor-three.mjs");
   const noticesPath = path.join(projectRoot, "THIRD_PARTY_NOTICES.md");
+  const gitignorePath = path.join(projectRoot, ".gitignore");
 
   const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
   const lockfile = JSON.parse(fs.readFileSync(lockPath, "utf8"));
   const vendor = fs.readFileSync(vendorPath, "utf8");
   const vendorScript = fs.readFileSync(vendorScriptPath, "utf8");
   const notices = fs.readFileSync(noticesPath, "utf8");
+  const gitignore = fs.readFileSync(gitignorePath, "utf8");
 
-  assert.equal(packageJson.dependencies.three, "0.160.1");
+  assert.equal(packageJson.devDependencies.three, "0.160.1");
+  assert.ok(!packageJson.dependencies?.three, "Three.js is a build-time vendoring dependency only");
   assert.equal(packageJson.scripts["vendor:three"], "node scripts/vendor-three.mjs");
+  assert.equal(lockfile.packages[""].devDependencies.three, "0.160.1");
   assert.equal(lockfile.packages["node_modules/three"].version, "0.160.1");
-  assert.match(lockfile.packages["node_modules/three"].integrity, /^sha512-/);
+  assert.equal(lockfile.packages["node_modules/three"].resolved, "https://registry.npmjs.org/three/-/three-0.160.1.tgz");
+  assert.equal(lockfile.packages["node_modules/three"].integrity, "sha512-Bgl2wPJypDOZ1stAxwfWAcJ0WQf7QzlptsxkjYiURPz+n5k4RBDLsq+6f9Y75TYxn6aHLcWz+JNmwTOXWrQTBQ==");
+  assert.equal(lockfile.packages["node_modules/three"].dev, true);
+  assert.match(gitignore, /(?:^|\n)node_modules\/(?:\n|$)/);
   assert.match(vendorScript, /import\.meta\.url/);
   assert.match(vendorScript, /"node_modules", "three", "build", "three\.module\.min\.js"/);
+  assert.match(vendorScript, /"node_modules", "three", "package\.json"/);
+  assert.match(vendorScript, /0\.160\.1/);
+  assert.match(vendorScript, /createHash\("sha256"\)/);
+  assert.match(vendorScript, /3e690ac7d180b0aadf0891bea39eec643e29e2d3e75c99b18689518665f69ba6/);
+  assert.ok(vendorScript.indexOf("copyFileSync") > vendorScript.indexOf("createHash"), "copy must happen only after validation");
   assert.match(vendorScript, /"vendor"[\s\S]*"three\.module\.min\.js"/);
   const three = await import(pathToFileURL(vendorPath).href);
   assert.equal(three.REVISION, "160");
   assert.match(vendor, /export\s*\{/);
   assert.ok(Object.keys(three).length > 0, "the vendored build must expose ESM exports");
-  assert.ok(Buffer.byteLength(vendor) > 100_000, "the vendored ESM build must be nonempty");
+  assert.equal(Buffer.byteLength(vendor), 670_681);
+  assert.equal(crypto.createHash("sha256").update(vendor).digest("hex"), "3e690ac7d180b0aadf0891bea39eec643e29e2d3e75c99b18689518665f69ba6");
   assert.match(notices, /Three\.js[\s\S]*0\.160\.1/);
   assert.match(notices, /The MIT License[\s\S]*Copyright © 2010-2023 three\.js authors[\s\S]*Permission is hereby granted, free of charge/);
   assert.match(notices, /FranzLy\/TimeChannel/);
