@@ -113,6 +113,7 @@ test("maps valid indexes to deterministic, bounded spiral tunnel poses", () => {
 
   assert.deepEqual(tunnelPose(8), near);
   for (const pose of [start, near, far]) {
+    assert.deepEqual(Object.keys(pose), ["x", "y", "z", "rotationZ"]);
     assert.ok(Object.values(pose).every(Number.isFinite));
     assert.ok(Math.abs(pose.x) <= TUNNEL_RADIUS_X);
     assert.ok(Math.abs(pose.y) <= TUNNEL_RADIUS_Y);
@@ -123,8 +124,17 @@ test("maps valid indexes to deterministic, bounded spiral tunnel poses", () => {
   assert.ok(far.z < near.z && near.z < start.z);
 });
 
-test("rejects invalid tunnel pose indexes", () => {
-  for (const index of [-1, 1.5, NaN, Infinity, "1", null]) {
+test("keeps the largest accepted tunnel pose finite", () => {
+  const pose = tunnelPose(Number.MAX_SAFE_INTEGER);
+  assert.ok(Number.isFinite(pose.x));
+  assert.ok(Number.isFinite(pose.y));
+  assert.ok(Number.isFinite(pose.z));
+  assert.ok(Number.isFinite(pose.rotationZ));
+  assert.deepEqual(tunnelPose(Number.MAX_SAFE_INTEGER), pose);
+});
+
+test("rejects unsafe and otherwise invalid tunnel pose indexes", () => {
+  for (const index of [-1, 1.5, NaN, Infinity, Number.MAX_VALUE, "1", null]) {
     assert.throws(() => tunnelPose(index), RangeError);
   }
 });

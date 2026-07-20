@@ -45,14 +45,14 @@ export function groupCaseImages(data, caseId) {
  * Places cards on a dense, steadily receding spiral around the viewing axis.
  */
 export function tunnelPose(index) {
-  if (!Number.isInteger(index) || index < 0) {
-    throw new RangeError("Tunnel pose index must be a non-negative integer");
+  if (!Number.isSafeInteger(index) || index < 0) {
+    throw new RangeError("Tunnel pose index must be a non-negative safe integer");
   }
   const angle = (index * Math.PI * 2 / CARDS_PER_TURN) + (Math.floor(index / CARDS_PER_TURN) * RING_PHASE_DRIFT);
   return {
     x: Math.cos(angle) * TUNNEL_RADIUS_X,
     y: Math.sin(angle) * TUNNEL_RADIUS_Y,
     z: index === 0 ? 0 : -index * TUNNEL_STEP,
-    rotationY: angle + Math.PI,
+    rotationZ: angle + Math.PI,
   };
 }
