@@ -2630,8 +2630,7 @@ button.archive-filter-chip {
 .archive-case-modal-controls { display: flex; flex-wrap: wrap; gap: 9px; margin: 18px 0; }
 .archive-case-gallery { display: grid; gap: 14px; }
 .archive-case-gallery[data-case-gallery="one"] { grid-template-columns: minmax(0, 1fr); }
-.archive-case-gallery[data-case-gallery="two"],
-.case-gallery[data-layout="two"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; }
+.archive-case-modal .archive-case-gallery[data-case-gallery="two"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; }
 .archive-case-gallery[data-case-gallery="many"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .archive-case-image { margin: 0; }
 .archive-case-image img { display: block; width: 100%; height: auto; opacity: 1; filter: none; border-radius: 10px; }

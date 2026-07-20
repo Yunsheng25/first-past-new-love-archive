@@ -110,6 +110,56 @@ test('an AbortError from the shared loader is a visible retryable failure while 
   assert.match(app.innerHTML, /data-archive-error/);
 });
 
+test('switching tunnel to list and back remounts at the live pre-destroy progress', async () => {
+  const listeners = new Map();
+  const add = (type, handler) => listeners.set(type, [...(listeners.get(type) ?? []), handler]);
+  const remove = (type, handler) => listeners.set(type, (listeners.get(type) ?? []).filter((item) => item !== handler));
+  const stage = { clientWidth: 800, clientHeight: 600 };
+  const app = {
+    innerHTML: '', focus() {}, addEventListener: add, removeEventListener: remove,
+    querySelector(selector) { return selector === '[data-archive-tunnel]' && this.innerHTML.includes('archive-tunnel-view') ? stage : null; },
+  };
+  const mountOptions = [];
+  let destroys = 0;
+  const cleanup = mountArchiveRoute(app, { name: 'archive-index' }, {
+    fetchImpl: async () => ({ ok: true, json: async () => archive }), storage: null, documentRef: {}, windowRef: {}, navigatorRef: {},
+    mountTunnel(_root, _data, options) {
+      mountOptions.push(options);
+      return { snapshot: () => ({ progress: 41.25, mode: 'paused' }), destroy() { destroys += 1; }, pause() {}, resume() {}, startRewind() {} };
+    },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  for (const handler of [...(listeners.get('click') ?? [])]) handler({ target: { closest: (selector) => selector === '[data-archive-view="list"]' ? {} : null } });
+  assert.match(app.innerHTML, /archive-index-view/);
+  for (const handler of [...(listeners.get('click') ?? [])]) handler({ target: { closest: (selector) => selector === '[data-archive-view="tunnel"]' ? {} : null } });
+  assert.equal(mountOptions.length, 2);
+  assert.equal(mountOptions[1].initialProgress, 41.25);
+  cleanup();
+  assert.equal(destroys, 2);
+});
+
+test('a synchronous tunnel fallback leaves only the live list interactions and route cleanup removes them', async () => {
+  const listeners = new Map();
+  const app = {
+    innerHTML: '', focus() {}, querySelector() { return null; },
+    addEventListener(type, handler) { listeners.set(type, [...(listeners.get(type) ?? []), handler]); },
+    removeEventListener(type, handler) { listeners.set(type, (listeners.get(type) ?? []).filter((item) => item !== handler)); },
+  };
+  let controllerDestroys = 0;
+  const cleanup = mountArchiveRoute(app, { name: 'archive-index' }, {
+    fetchImpl: async () => ({ ok: true, json: async () => archive }), storage: null, documentRef: {}, windowRef: {}, navigatorRef: {},
+    mountTunnel(_root, _data, options) { options.onFallback('webgl-unavailable'); return { destroy() { controllerDestroys += 1; } }; },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.match(app.innerHTML, /archive-index-view/);
+  assert.equal((listeners.get('input') ?? []).length, 1);
+  assert.equal((listeners.get('change') ?? []).length, 1);
+  assert.equal((listeners.get('click') ?? []).length, 2);
+  assert.equal(controllerDestroys, 1);
+  cleanup();
+  for (const handlers of listeners.values()) assert.equal(handlers.length, 0);
+});
+
 function mappingSignature(data) {
   const mapping = data.cases.map((item) => ({
     id: item.id,

@@ -588,10 +588,10 @@ export function mountArchiveRoute(app, route, {
         const safeCall = (callback) => { try { return callback?.(); } catch { return undefined; } };
         const renderList = () => {
           if (!active) return;
-          interactionCleanup();
-          safeCall(() => modal?.destroy?.()); modal = null;
           const snapshot = safeCall(() => tunnel?.snapshot?.());
           if (Number.isFinite(snapshot?.progress)) savedProgress = snapshot.progress;
+          interactionCleanup();
+          safeCall(() => modal?.destroy?.()); modal = null;
           safeCall(() => tunnel?.destroy?.()); tunnel = null;
           app.innerHTML = buildArchiveIndex(data, state, readArchiveLastCase(storage, data));
           view = 'list';
@@ -634,8 +634,11 @@ export function mountArchiveRoute(app, route, {
             onEnd() { if (rewind) { rewind.hidden = false; rewind.disabled = false; rewind.textContent = '↶ 快速回溯'; } },
             onFallback() { if (active && view === 'tunnel') renderList(); },
           });
-          if (view === 'tunnel') tunnel = mountedTunnel;
-          else safeCall(() => mountedTunnel?.destroy?.());
+          if (view !== 'tunnel' || app.querySelector?.('[data-archive-tunnel]') !== stage) {
+            safeCall(() => mountedTunnel?.destroy?.());
+            return;
+          }
+          tunnel = mountedTunnel;
           const click = (event) => {
             if (event.target?.closest?.('[data-archive-view="list"]')) { renderList(); return; }
             if (event.target?.closest?.('[data-tunnel-cruise]')) {
