@@ -712,3 +712,19 @@ test("idle resize repaints one static frame without creating a continuous RAF", 
 test("duplicate success after a loaded texture neither replaces it nor starts a fresh request", () => {
   const h = createLifecycleHarness(); const api = h.mount(); const pending = h.calls.loads[0]; const original = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; const duplicate = { dispose() { this.disposed = (this.disposed ?? 0) + 1; } }; pending.success(original); assert.equal(h.calls.loads.length, 33); pending.success(duplicate); assert.equal(h.calls.loads.length, 33); assert.equal(h.resources.materials[0].map, original); assert.equal(duplicate.disposed, 1); api.destroy(); assert.equal(original.disposed, 1);
 });
+
+test("selection is ignored throughout rewind without stopping its active RAF", () => {
+  const h = createLifecycleHarness({ faults: { hit: 1 } }); const api = h.mount(); h.fire("wheel", { deltaY: 99999, preventDefault() {} }); assert.equal(api.snapshot().mode, "ended"); assert.equal(api.startRewind(), true); const cancelled = h.calls.cancelled.length;
+  h.fire("click", { clientX: 10, clientY: 10 }); assert.equal(api.snapshot().mode, "rewinding"); assert.equal(h.calls.select.length, 0); assert.equal(h.calls.cancelled.length, cancelled);
+  let timestamp = 0; h.calls.frames.at(-1)(timestamp); for (let index = 0; index < 50; index += 1) { timestamp += 64; h.calls.frames.at(-1)(timestamp); }
+  assert.deepEqual(api.snapshot(), { progress: 0, mode: "paused" }); assert.equal(h.calls.select.length, 0); api.destroy();
+});
+
+test("drag threshold is cumulative vertically and horizontally while small movement remains selectable", () => {
+  for (const axis of ["vertical", "horizontal"]) {
+    const h = createLifecycleHarness({ faults: { hit: 1 } }); const paused = createTunnelState({ maxProgress: 137, initialMode: "paused" }); const api = h.mount(archiveData, { stateFactory: () => paused }); h.fire("pointerdown", { pointerId: 1, clientX: 0, clientY: 100 });
+    for (let step = 1; step <= 10; step += 1) h.fire("pointermove", { pointerId: 1, clientX: axis === "horizontal" ? step : 0, clientY: axis === "vertical" ? 100 - step : 100 });
+    h.fire("pointerup", { pointerId: 1, clientX: axis === "horizontal" ? 10 : 0, clientY: axis === "vertical" ? 90 : 100 }); h.fire("click", { clientX: 10, clientY: 10 }); assert.equal(h.calls.select.length, 0, axis); if (axis === "vertical") assert.ok(api.snapshot().progress > 0); api.destroy();
+  }
+  const small = createLifecycleHarness({ faults: { hit: 1 } }); const api = small.mount(archiveData, { stateFactory: () => createTunnelState({ maxProgress: 137, initialMode: "paused" }) }); small.fire("pointerdown", { pointerId: 2, clientX: 0, clientY: 100 }); small.fire("pointermove", { pointerId: 2, clientX: 3, clientY: 96 }); small.fire("pointerup", { pointerId: 2, clientX: 3, clientY: 96 }); small.fire("click", { clientX: 3, clientY: 96 }); assert.equal(small.calls.select.length, 1); api.destroy();
+});

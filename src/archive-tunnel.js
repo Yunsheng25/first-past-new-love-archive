@@ -161,11 +161,12 @@ export function mountArchiveTunnel(root, data, options = {}) {
     }
     function nudge(value) { if (!Number.isFinite(value) || registry.destroyed) return false; const before = state.snapshot(); const changed = state.nudge(value); const after = state.snapshot(); end(before, after); if (registry.destroyed) return false; if (!isMoving(after)) stopFrame(); if (changed) { update(); renderOnly(); } else if (isMoving(after)) schedule(); return changed; }
     function wheel(event) { if (registry.destroyed || !Number.isFinite(event.deltaY)) return; event.preventDefault?.(); nudge(event.deltaY * 0.012); }
-    function down(event) { if (registry.destroyed || !Number.isFinite(event.clientY)) return; registry.activePointer = event.pointerId; drag = { x: event.clientX, y: event.clientY }; dragged = false; safe(() => registry.canvas.setPointerCapture?.(event.pointerId)); }
-    function move(event) { if (registry.destroyed || event.pointerId !== registry.activePointer || !drag || !Number.isFinite(event.clientY)) return; const dx = event.clientX - drag.x; const dy = event.clientY - drag.y; if (Math.hypot(dx, dy) > 6) dragged = true; if (dy) { nudge(-dy * 0.05); drag = { x: event.clientX, y: event.clientY }; } }
+    function down(event) { if (registry.destroyed || !Number.isFinite(event.clientY)) return; registry.activePointer = event.pointerId; drag = { id: event.pointerId, startX: event.clientX, startY: event.clientY, lastY: event.clientY, dragged: false }; dragged = false; safe(() => registry.canvas.setPointerCapture?.(event.pointerId)); }
+    function move(event) { if (registry.destroyed || event.pointerId !== registry.activePointer || !drag || !Number.isFinite(event.clientY)) return; const dx = event.clientX - drag.startX; const dy = event.clientY - drag.startY; if (Math.hypot(dx, dy) > 6) drag.dragged = true; dragged = drag.dragged; const stepY = event.clientY - drag.lastY; if (stepY) { nudge(-stepY * 0.05); drag.lastY = event.clientY; } }
     function release(event) { if (registry.destroyed || event.pointerId !== registry.activePointer) return; safe(() => registry.canvas.releasePointerCapture?.(event.pointerId)); registry.activePointer = null; drag = null; }
     function click(event) {
       if (registry.destroyed || dragged || !three.Raycaster || !three.Vector2) return;
+      try { if (state.snapshot().mode === "rewinding") return; } catch (_error) { return; }
       const rect = registry.canvas.getBoundingClientRect?.() ?? root.getBoundingClientRect?.(); if (!rect?.width || !rect?.height) return;
       const ray = new three.Raycaster(); ray.setFromCamera(new three.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1), camera);
       const object = ray.intersectObjects(registry.cards.map((card) => card.mesh), false)?.[0]?.object;
