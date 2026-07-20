@@ -31,6 +31,17 @@ test('mobile archive stacks filters before results in normal document flow', () 
   );
 });
 
+test('mobile tunnel keeps its wordmark and both view controls inside the viewport', () => {
+  const mobileTunnelStart = css.indexOf('@media (max-width: 760px)', css.indexOf('.archive-tunnel-view'));
+  assert.notEqual(mobileTunnelStart, -1, 'missing mobile tunnel rules');
+  const nextMediaQuery = css.indexOf('@media ', mobileTunnelStart + 1);
+  const mobileTunnelCss = css.slice(mobileTunnelStart, nextMediaQuery === -1 ? css.length : nextMediaQuery);
+
+  assert.match(mobileTunnelCss, /\.archive-tunnel-header\s*\{[^}]*flex-wrap:\s*wrap;/s);
+  assert.match(mobileTunnelCss, /\.archive-tunnel-actions\s*\{[^}]*width:\s*100%;[^}]*flex-direction:\s*row;[^}]*justify-content:\s*flex-end;/s);
+  assert.match(mobileTunnelCss, /\.archive-tunnel-actions button\s*\{[^}]*min-width:\s*0;[^}]*padding:\s*9px 14px;/s);
+});
+
 test('the document declares an inline icon so first load has no favicon 404', () => {
   assert.match(html, /<link\s+rel="icon"\s+href="data:,"\s*\/?>/);
 });

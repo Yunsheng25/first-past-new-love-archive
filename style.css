@@ -2638,8 +2638,9 @@ button.archive-filter-chip {
 .archive-case-prompt { line-height: 1.8; white-space: normal; }
 
 @media (max-width: 760px) {
-  .archive-tunnel-header { align-items: flex-start; gap: 14px; }
-  .archive-tunnel-actions { flex-direction: column; }
+  .archive-tunnel-header { align-items: flex-start; flex-wrap: wrap; gap: 12px; padding: 18px 22px; }
+  .archive-tunnel-actions { width: 100%; flex-direction: row; justify-content: flex-end; }
+  .archive-tunnel-actions button { min-width: 0; padding: 9px 14px; }
   .archive-case-modal-backdrop { align-items: end; padding: 10px; }
   .archive-case-modal { width: 100%; max-height: 88dvh; }
   .archive-case-gallery,

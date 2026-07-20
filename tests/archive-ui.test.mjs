@@ -160,6 +160,26 @@ test('a synchronous tunnel fallback leaves only the live list interactions and r
   for (const handlers of listeners.values()) assert.equal(handlers.length, 0);
 });
 
+test('reduced motion enters the complete list without initializing WebGL', async () => {
+  const app = {
+    innerHTML: '', focus() {}, querySelector() { return null; },
+    addEventListener() {}, removeEventListener() {},
+  };
+  let tunnelMounts = 0;
+  mountArchiveRoute(app, { name: 'archive-index' }, {
+    fetchImpl: async () => ({ ok: true, json: async () => archive }),
+    storage: null,
+    documentRef: {},
+    windowRef: { matchMedia: (query) => ({ matches: query === '(prefers-reduced-motion: reduce)' }) },
+    navigatorRef: {},
+    mountTunnel() { tunnelMounts += 1; return { destroy() {} }; },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(tunnelMounts, 0);
+  assert.match(app.innerHTML, /archive-index-view/);
+  assert.equal((app.innerHTML.match(/data-archive-card=/g) ?? []).length, 72);
+});
+
 function mappingSignature(data) {
   const mapping = data.cases.map((item) => ({
     id: item.id,

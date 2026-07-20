@@ -586,6 +586,9 @@ export function mountArchiveRoute(app, route, {
         let view = 'tunnel';
         let savedProgress = 0;
         const safeCall = (callback) => { try { return callback?.(); } catch { return undefined; } };
+        const prefersReducedMotion = safeCall(
+          () => windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches,
+        ) === true;
         const renderList = () => {
           if (!active) return;
           const snapshot = safeCall(() => tunnel?.snapshot?.());
@@ -663,7 +666,8 @@ export function mountArchiveRoute(app, route, {
             safeCall(() => tunnel?.destroy?.()); tunnel = null;
           };
         };
-        renderTunnel();
+        if (prefersReducedMotion) renderList();
+        else renderTunnel();
       } else {
         const resolved = resolveArchiveCase(data, route.id);
         app.innerHTML = buildArchiveDetail(data, route.id);
