@@ -254,6 +254,24 @@ test("parseReview separates adjacent NOTE callouts and preserves quoted blank li
   assert.equal(blocks[2].text, "普通正文");
 });
 
+test("parseReview removes exactly one callout quote marker and preserves nested quotes", () => {
+  const markdown = `## ${originTitle}
+
+> [!NOTE] 引用示例
+> > 内部引用
+> 普通批注文字
+
+> 普通段落引用`;
+  const blocks = parseReview(markdown).chapters[0].blocks;
+
+  assert.equal(blocks[0].children[0].text, "> 内部引用\n普通批注文字");
+  assert.deepEqual(blocks[1], {
+    type: "text",
+    text: "普通段落引用",
+    section: originTitle,
+  });
+});
+
 test("committed review JSON preserves every independently parsed authored block and page occurrence", () => {
   const expected = independentlyParseAuthoredBlocks(fs.readFileSync(reviewPath, "utf8"));
   const committed = JSON.parse(fs.readFileSync(committedReviewPath, "utf8"));

@@ -36,8 +36,10 @@ function textBlock(text, section) {
   return normalized ? { type: "text", text: normalized, section } : null;
 }
 
-function blocksForParagraph(paragraph, section) {
-  const text = paragraph.map((line) => line.replace(/^\s*>\s?/, "")).join("\n");
+function blocksForParagraph(paragraph, section, { stripQuoteMarkers = true } = {}) {
+  const text = paragraph
+    .map((line) => stripQuoteMarkers ? line.replace(/^\s*>\s?/, "") : line)
+    .join("\n");
   const blocks = [];
   let cursor = 0;
   mediaPattern.lastIndex = 0;
@@ -64,7 +66,7 @@ function calloutBlock(lines, section) {
     kind,
     title,
     section,
-    children: blocksForParagraph(body, section),
+    children: blocksForParagraph(body, section, { stripQuoteMarkers: false }),
   };
 }
 
