@@ -484,7 +484,7 @@ test('structured review annotations render one escaped, ordered and complete fra
 
   assert.equal((html.match(/<aside\b[^>]*\breview-callout\b/g) ?? []).length, 1);
   assert.match(html, /<span class="review-callout-label">批注<\/span>/);
-  assert.match(html, /<strong class="review-callout-title">&lt;原始标题&gt;<\/strong>/);
+  assert.match(html, /<strong class="review-callout-title" id="[^"]+">&lt;原始标题&gt;<\/strong>/);
   assert.match(html, /class="review-callout-context"[^>]*>案例上下文</);
   assert.match(html, /<aside\b[^>]*\breview-callout\b[^>]*\bis-oversized\b[^>]*data-scrollable="true"/);
   const calloutStart = html.indexOf('<aside class="review-block review-callout');
@@ -509,6 +509,31 @@ test('annotation CSS scrolls only the oversized body and never fades its media',
   assert.match(body, /overflow-y:\s*auto/);
   assert.match(media, /opacity:\s*1/);
   assert.match(media, /filter:\s*none/);
+});
+
+test('only oversized annotation bodies are named keyboard-scroll regions with unique safe title ids', () => {
+  const callout = (title, oversized) => ({
+    type: 'callout', kind: 'NOTE', title, oversized, scrollable: oversized,
+    children: [{ type: 'text', text: '内容' }],
+  });
+  const data = {
+    chapters: [{
+      slug: 'sample"><unsafe', title: '示例', summary: '',
+      pages: [[callout('<标题一>', true), callout('<标题二>', true), callout('普通', false)]],
+    }],
+  };
+  const html = buildReviewPage(data, normalizeReviewTarget(data, 'sample"><unsafe', 1));
+  const titleIds = [...html.matchAll(/class="review-callout-title" id="([^"]+)"/g)].map((match) => match[1]);
+  const bodies = [...html.matchAll(/<div class="review-callout-body"([^>]*)>/g)].map((match) => match[1]);
+
+  assert.equal(new Set(titleIds).size, 3);
+  assert.ok(titleIds.every((id) => !/[<>"']/.test(id)));
+  assert.match(html, /class="review-callout-title" id="[^"]+">&lt;标题一&gt;<\/strong>/);
+  assert.match(bodies[0], /tabindex="0"/);
+  assert.match(bodies[0], /role="region"/);
+  assert.match(bodies[0], new RegExp(`aria-labelledby="${titleIds[0]}"`));
+  assert.match(bodies[1], new RegExp(`aria-labelledby="${titleIds[1]}"`));
+  assert.doesNotMatch(bodies[2], /tabindex=|role=|aria-labelledby=/);
 });
 
 test('progress stores only chapter, page, and updatedAt and survives denied storage', () => {

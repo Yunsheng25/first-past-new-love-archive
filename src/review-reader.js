@@ -170,6 +170,10 @@ function blockMarkup(block, blockIndex, chapterSlug, page, { sectionTitle = fals
     const oversized = block.oversized || block.scrollable;
     const classes = `review-block review-callout${oversized ? ' is-oversized' : ''}`;
     const originalTitle = block.title || block.kind || '说明';
+    const calloutTitleId = escapeHtml(`review-callout-title-${encodeURIComponent(chapterSlug)}-p${page}-b${blockIndex}`);
+    const bodyAccessibility = oversized
+      ? ` tabindex="0" role="region" aria-labelledby="${calloutTitleId}"`
+      : '';
     const contextHeading = block.contextHeading?.text
       ? `<p class="review-callout-context">${renderInlineMarkdown(block.contextHeading.text)}</p>`
       : '';
@@ -184,10 +188,10 @@ function blockMarkup(block, blockIndex, chapterSlug, page, { sectionTitle = fals
     return `<aside class="${classes}" ${common}${block.scrollable ? ' data-scrollable="true"' : ''}>
       <header class="review-callout-header">
         <span class="review-callout-label">批注</span>
-        <strong class="review-callout-title">${escapeHtml(originalTitle)}</strong>
+        <strong class="review-callout-title" id="${calloutTitleId}">${escapeHtml(originalTitle)}</strong>
       </header>
       ${contextHeading}
-      <div class="review-callout-body">${children}</div>
+      <div class="review-callout-body"${bodyAccessibility}>${children}</div>
     </aside>`;
   }
 

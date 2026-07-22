@@ -78,6 +78,13 @@ function isTopLevelMediaLine(line) {
   return String(line).replace(mediaPattern, "").trim() === "";
 }
 
+function isQuotedMediaContinuation(line) {
+  if (!/^\s*>/.test(line) || calloutStartPattern.test(line)) return false;
+  const body = String(line).replace(/^\s*>\s?/, "");
+  const refs = [...body.matchAll(mediaPattern)];
+  return refs.length > 0 && body.replace(mediaPattern, "").trim() === "";
+}
+
 function visitBlocks(blocks, visit) {
   for (const block of blocks) {
     visit(block);
@@ -239,10 +246,15 @@ export function parseReview(markdown) {
       if (exampleCalloutTitlePattern.test(callout.title)) {
         let cursor = lineIndex + 1;
         let lastMediaIndex = lineIndex;
+        let absorbedUnquotedMedia = false;
         while (cursor < lines.length) {
           while (cursor < lines.length && lines[cursor].trim() === "") cursor += 1;
-          if (cursor >= lines.length || !isTopLevelMediaLine(lines[cursor])) break;
+          if (cursor >= lines.length) break;
+          const topLevelMedia = isTopLevelMediaLine(lines[cursor]);
+          const quotedContinuation = absorbedUnquotedMedia && isQuotedMediaContinuation(lines[cursor]);
+          if (!topLevelMedia && !quotedContinuation) break;
           callout.children.push(...blocksForParagraph([lines[cursor]], section.title));
+          absorbedUnquotedMedia ||= topLevelMedia;
           lastMediaIndex = cursor;
           cursor += 1;
         }

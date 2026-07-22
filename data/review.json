@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-22T05:40:00.082Z",
+  "generatedAt": "2026-07-22T05:48:24.432Z",
   "chapters": [
     {
       "slug": "origin",
@@ -816,12 +816,12 @@
         {
           "title": "音乐节奏",
           "level": 6,
-          "index": 133
+          "index": 132
         },
         {
           "title": "音效",
           "level": 6,
-          "index": 151
+          "index": 150
         }
       ],
       "blocks": [
@@ -1709,15 +1709,15 @@
               "rawRef": "fe0efbc4-3df0-4491-9fd4-e0059b5cceee 3.png",
               "section": "转场和黑场",
               "src": "assets/review-media/028-fe0efbc4-3df0-4491-9fd4-e0059b5cceee 3.png"
+            },
+            {
+              "type": "video",
+              "ref": "vidu-video-3292017413314188.mp4",
+              "rawRef": "vidu-video-3292017413314188.mp4",
+              "section": "转场和黑场",
+              "src": "assets/review-media/029-vidu-video-3292017413314188.mp4"
             }
           ]
-        },
-        {
-          "type": "video",
-          "ref": "vidu-video-3292017413314188.mp4",
-          "rawRef": "vidu-video-3292017413314188.mp4",
-          "section": "转场和黑场",
-          "src": "assets/review-media/029-vidu-video-3292017413314188.mp4"
         },
         {
           "type": "text",
@@ -3057,18 +3057,20 @@
                 "rawRef": "fe0efbc4-3df0-4491-9fd4-e0059b5cceee 3.png",
                 "section": "转场和黑场",
                 "src": "assets/review-media/028-fe0efbc4-3df0-4491-9fd4-e0059b5cceee 3.png"
+              },
+              {
+                "type": "video",
+                "ref": "vidu-video-3292017413314188.mp4",
+                "rawRef": "vidu-video-3292017413314188.mp4",
+                "section": "转场和黑场",
+                "src": "assets/review-media/029-vidu-video-3292017413314188.mp4"
               }
-            ]
+            ],
+            "oversized": true,
+            "scrollable": true
           }
         ],
         [
-          {
-            "type": "video",
-            "ref": "vidu-video-3292017413314188.mp4",
-            "rawRef": "vidu-video-3292017413314188.mp4",
-            "section": "转场和黑场",
-            "src": "assets/review-media/029-vidu-video-3292017413314188.mp4"
-          },
           {
             "type": "text",
             "text": "再比如老人的手变成年轻时候的手。这里需要保持的不只是“手”这个元素本身，还有手的位置、动作、角度和画面比例。",
