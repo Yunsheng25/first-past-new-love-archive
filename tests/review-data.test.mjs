@@ -231,6 +231,29 @@ test("parseReview keeps an Obsidian NOTE as one ordered structured block", () =>
   ]);
 });
 
+test("parseReview separates adjacent NOTE callouts and preserves quoted blank lines", () => {
+  const markdown = `## ${originTitle}
+
+> [!NOTE] one
+> 第一行
+>
+> 第二行
+> [!NOTE] two
+> ![[second.png]]
+
+普通正文`;
+  const blocks = parseReview(markdown).chapters[0].blocks;
+
+  assert.equal(blocks.length, 3);
+  assert.deepEqual(blocks.slice(0, 2).map(({ type, kind, title }) => ({ type, kind, title })), [
+    { type: "callout", kind: "NOTE", title: "one" },
+    { type: "callout", kind: "NOTE", title: "two" },
+  ]);
+  assert.equal(blocks[0].children[0].text, "第一行\n\n第二行");
+  assert.deepEqual(blocks[1].children.map((block) => block.type), ["image"]);
+  assert.equal(blocks[2].text, "普通正文");
+});
+
 test("committed review JSON preserves every independently parsed authored block and page occurrence", () => {
   const expected = independentlyParseAuthoredBlocks(fs.readFileSync(reviewPath, "utf8"));
   const committed = JSON.parse(fs.readFileSync(committedReviewPath, "utf8"));

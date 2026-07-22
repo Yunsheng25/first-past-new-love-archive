@@ -11,6 +11,7 @@ const chapterTitles = [
 ];
 const chapterByTitle = new Map(chapterTitles);
 const mediaPattern = /!\[\[([^\]]+)\]\]/g;
+const calloutStartPattern = /^\s*>\s*\[![^\]]+\]/;
 const obsidianRootDefault = "D:/\u9ed1\u66dc\u77f3";
 const reviewMarkdownDefault = `${obsidianRootDefault}/\u4ea7\u54c1\u8d44\u6599/\u300a\u521d\u604b\u65e7\u7231\u65b0\u6b22\u300b\u89c6\u9891\u590d\u76d8/\u300a\u521d\u604b\u65e7\u7231\u65b0\u6b22\u300b\u590d\u76d8\u624b\u8bb0.md`;
 
@@ -184,10 +185,14 @@ export function parseReview(markdown) {
         chapter.sections.push(section);
         chapter.blocks.push({ type: "heading", text: title, level, section: title });
       }
-    } else if (chapter && /^\s*>\s*\[![^\]]+\]/.test(line)) {
+    } else if (chapter && calloutStartPattern.test(line)) {
       flushParagraph();
       const quotedLines = [line];
-      while (lineIndex + 1 < lines.length && /^\s*>/.test(lines[lineIndex + 1])) {
+      while (
+        lineIndex + 1 < lines.length
+        && /^\s*>/.test(lines[lineIndex + 1])
+        && !calloutStartPattern.test(lines[lineIndex + 1])
+      ) {
         quotedLines.push(lines[++lineIndex]);
       }
       chapter.blocks.push(calloutBlock(quotedLines, section.title));
