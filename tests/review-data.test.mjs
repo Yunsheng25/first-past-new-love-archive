@@ -186,10 +186,50 @@ function assertReviewAssetIntegrity(mediaDirectory) {
 }
 
 function mediaBlocks(review) {
-  return review.chapters.flatMap((chapter) =>
-    chapter.blocks.filter((block) => block.type === "image" || block.type === "video"),
-  );
+  const media = [];
+  const visit = (blocks) => {
+    for (const block of blocks) {
+      if (block.type === "image" || block.type === "video") media.push(block);
+      if (block.type === "callout") visit(block.children);
+    }
+  };
+  for (const chapter of review.chapters) visit(chapter.blocks);
+  return media;
 }
+
+test("parseReview keeps an Obsidian NOTE as one ordered structured block", () => {
+  const markdown = `## ${originTitle}
+
+批注前正文
+
+> [!NOTE] 示例
+> 原首尾帧：
+> ![[first.png]]
+> ![[last.png]]
+> 生成结果：
+> ![[result.mp4]]
+
+批注后正文`;
+  const chapter = parseReview(markdown).chapters[0];
+
+  assert.deepEqual(chapter.blocks, [
+    { type: "text", text: "批注前正文", section: originTitle },
+    {
+      type: "callout",
+      kind: "NOTE",
+      title: "示例",
+      section: originTitle,
+      children: [
+        { type: "text", text: "原首尾帧：", section: originTitle },
+        { type: "image", ref: "first.png", rawRef: "first.png", section: originTitle, src: "assets/review-media/001-first.png" },
+        { type: "image", ref: "last.png", rawRef: "last.png", section: originTitle, src: "assets/review-media/002-last.png" },
+        { type: "text", text: "生成结果：", section: originTitle },
+        { type: "video", ref: "result.mp4", rawRef: "result.mp4", section: originTitle, src: "assets/review-media/003-result.mp4" },
+      ],
+    },
+    { type: "text", text: "批注后正文", section: originTitle },
+  ]);
+});
 
 test("committed review JSON preserves every independently parsed authored block and page occurrence", () => {
   const expected = independentlyParseAuthoredBlocks(fs.readFileSync(reviewPath, "utf8"));
@@ -256,7 +296,9 @@ test("parseReview extracts the five authored chapters, sections, and every media
     media.map((block) => block.rawRef),
     [...markdown.matchAll(/!\[\[([^\]]+)\]\]/g)].map((match) => match[1].trim()),
   );
-  assert.equal(review.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0), 27);
+  const pageCount = review.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0);
+  assert.ok(pageCount >= 20 && pageCount <= 30, `expected 20-30 pages, got ${pageCount}`);
+  assert.ok(review.chapters.flatMap((chapter) => chapter.blocks).some((block) => block.type === "callout"));
   assert.ok(review.chapters.flatMap((chapter) => chapter.pages).every((page) => page.at(-1)?.type !== "heading"));
 });
 

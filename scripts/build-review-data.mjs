@@ -53,6 +53,27 @@ function blocksForParagraph(paragraph, section) {
   return blocks;
 }
 
+function calloutBlock(lines, section) {
+  const match = lines[0]?.match(/^\s*>\s*\[!([^\]]+)\]\s*(.*)$/);
+  if (!match) return null;
+  const [, kind, title = ""] = match;
+  const body = lines.slice(1).map((line) => line.replace(/^\s*>\s?/, ""));
+  return {
+    type: "callout",
+    kind,
+    title,
+    section,
+    children: blocksForParagraph(body, section),
+  };
+}
+
+function visitBlocks(blocks, visit) {
+  for (const block of blocks) {
+    visit(block);
+    if (block.type === "callout") visitBlocks(block.children, visit);
+  }
+}
+
 function blockSize(block) {
   return block.type === "text" || block.type === "heading" ? block.text.length : 0;
 }
@@ -124,11 +145,11 @@ function assignMediaSources(chapters) {
   const names = new Map();
   let number = 0;
   for (const chapter of chapters) {
-    for (const block of chapter.blocks) {
-      if (!["image", "video", "media"].includes(block.type)) continue;
+    visitBlocks(chapter.blocks, (block) => {
+      if (!["image", "video", "media"].includes(block.type)) return;
       if (!names.has(block.ref)) names.set(block.ref, stableName(block.ref, ++number));
       block.src = `assets/review-media/${names.get(block.ref)}`;
-    }
+    });
   }
   return names;
 }
@@ -144,7 +165,9 @@ export function parseReview(markdown) {
     paragraph = [];
   };
 
-  for (const line of String(markdown).replace(/^\uFEFF/, "").split(/\r?\n/)) {
+  const lines = String(markdown).replace(/^\uFEFF/, "").split(/\r?\n/);
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
     const heading = line.match(/^(#{2,6})\s+(.+?)\s*#*\s*$/);
     if (heading) {
       flushParagraph();
@@ -161,6 +184,13 @@ export function parseReview(markdown) {
         chapter.sections.push(section);
         chapter.blocks.push({ type: "heading", text: title, level, section: title });
       }
+    } else if (chapter && /^\s*>\s*\[![^\]]+\]/.test(line)) {
+      flushParagraph();
+      const quotedLines = [line];
+      while (lineIndex + 1 < lines.length && /^\s*>/.test(lines[lineIndex + 1])) {
+        quotedLines.push(lines[++lineIndex]);
+      }
+      chapter.blocks.push(calloutBlock(quotedLines, section.title));
     } else if (chapter && line.trim() === "") {
       flushParagraph();
     } else if (chapter) {
@@ -171,10 +201,11 @@ export function parseReview(markdown) {
 
   assignMediaSources(chapters);
   for (const item of chapters) {
-    const text = item.blocks
-      .filter((block) => block.type === "text" || block.type === "heading")
-      .map((block) => block.text)
-      .join("\n");
+    const textParts = [];
+    visitBlocks(item.blocks, (block) => {
+      if (block.type === "text" || block.type === "heading") textParts.push(block.text);
+    });
+    const text = textParts.join("\n");
     item.summary = text.replace(/\s+/g, " ").slice(0, 160);
     item.characterCount = text.length;
     item.pages = paginateBlocks(item.blocks);
@@ -382,7 +413,13 @@ export function replaceOutputs({ mediaOutputDir, temporaryMediaDir, outputPath, 
 }
 
 function reviewMedia(review) {
-  return review.chapters.flatMap((chapter) => chapter.blocks.filter((block) => ["image", "video", "media"].includes(block.type)));
+  const media = [];
+  for (const chapter of review.chapters) {
+    visitBlocks(chapter.blocks, (block) => {
+      if (["image", "video", "media"].includes(block.type)) media.push(block);
+    });
+  }
+  return media;
 }
 
 export function writeReviewData(options = {}) {
