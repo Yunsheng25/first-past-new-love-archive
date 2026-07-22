@@ -476,7 +476,11 @@ test("paginateBlocks does not bind a heading to an oversized callout", () => {
 
   const pages = paginateBlocks([heading, callout, after], 900);
 
-  assert.deepEqual(pages, [[heading], [callout], [after]]);
+  assert.deepEqual(pages, [[callout], [after]]);
+  assert.equal(pages.some((page) => page.length === 1 && page[0].type === "heading"), false);
+  assert.deepEqual(callout.contextHeading, heading);
+  assert.equal(callout.contextHeading.text, "案例批注");
+  assert.deepEqual(pages.flat().map((block) => block.type), ["callout", "text"]);
   assert.equal(callout.oversized, true);
   assert.equal(callout.scrollable, true);
 });

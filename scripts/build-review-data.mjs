@@ -89,6 +89,7 @@ export function paginateBlocks(blocks, limit = 900) {
   if (!Array.isArray(blocks) || blocks.length === 0) return [];
   for (const block of blocks) {
     if (block.type !== "callout") continue;
+    delete block.contextHeading;
     const oversized = blockSize(block) > limit;
     if (oversized) {
       block.oversized = true;
@@ -127,6 +128,17 @@ function semanticUnits(blocks) {
 
   while (index < blocks.length) {
     const block = blocks[index++];
+    if (
+      block.type === "heading"
+      && index < blocks.length
+      && blocks[index].type === "callout"
+      && blocks[index].oversized
+    ) {
+      const callout = blocks[index++];
+      callout.contextHeading = { ...block };
+      units.push([callout]);
+      continue;
+    }
     const unit = [block];
     if (block.type === "callout") {
       units.push(unit);
