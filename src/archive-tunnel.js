@@ -87,6 +87,12 @@ export function mountArchiveTunnel(root, data, options = {}) {
     }
     for (let index = nextRange.start; index <= nextRange.end; index += 1) {
       const entry = cards[index];
+      if (!entry.activated) {
+        entry.image.loading = "eager";
+        entry.image.fetchPriority = "high";
+        entry.image.src = entry.occurrence.src;
+        entry.activated = true;
+      }
       const pose = approvedTunnelPoseInto(index, camera, entry.pose);
       if (!pose.visible) continue;
       if (!entry.visible) { entry.card.hidden = false; entry.visible = true; }
@@ -209,10 +215,10 @@ export function mountArchiveTunnel(root, data, options = {}) {
       card.dataset.status = occurrence.status;
       card.setAttribute?.("aria-label", `${occurrence.title} · ${occurrence.role ?? "案例图片"}`);
       const image = documentRef.createElement("img");
-      image.src = occurrence.src;
       image.alt = `${occurrence.title} · ${occurrence.role ?? "案例图片"}`;
-      image.loading = index > 48 ? "lazy" : "eager";
+      image.loading = "lazy";
       image.decoding = "async";
+      image.fetchPriority = "low";
       card.append(image);
       if (occurrence.status === "error") {
         const badge = documentRef.createElement("span");
@@ -223,7 +229,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
       layer.append(card);
       card.hidden = true;
       card.style.zIndex = String(10000 - index * APPROVED_TUNNEL_DEPTH_STEP);
-      cards.push({ card, image, occurrence, click: null, pose: {}, visible: false, opacity: null, transform: null });
+      cards.push({ card, image, occurrence, click: null, pose: {}, visible: false, activated: false, opacity: null, transform: null });
     });
     cards.forEach((entry) => {
       entry.click = () => {

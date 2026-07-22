@@ -565,6 +565,34 @@ test("DOM fallback controllers are frozen, atomic and report exact reasons once"
   h.controller.destroy();
 });
 
+test("renderer eagerly activates only the approved visible image window and preserves loaded cache on range exit", () => {
+  const h = createDomHarness({ initialMode: "paused" });
+  const cards = h.root.children[0].children;
+  for (let index = 0; index <= 91; index += 1) {
+    const image = cards[index].children[0];
+    assert.equal(image.src, archiveData.cases.flatMap(item => item.images)[index].src);
+    assert.equal(image.loading, "eager");
+    assert.equal(image.decoding, "async");
+    assert.equal(image.fetchPriority, "high");
+  }
+  for (let index = 92; index < cards.length; index += 1) {
+    const image = cards[index].children[0];
+    assert.equal(image.src ?? "", "");
+    assert.equal(image.loading, "lazy");
+    assert.equal(image.fetchPriority, "low");
+  }
+
+  h.root.fire("wheel", { deltaY: 99999, preventDefault() {} });
+  assert.equal(cards[0].children[0].src, archiveData.cases[0].images[0].src, "leaving the range retains the decoded/cacheable source");
+  for (let index = 128; index < cards.length; index += 1) {
+    const image = cards[index].children[0];
+    assert.ok(image.src);
+    assert.equal(image.loading, "eager");
+    assert.equal(image.fetchPriority, "high");
+  }
+  h.controller.destroy();
+});
+
 test("restored progress renders its approved camera position and resumes cruise from that exact occurrence", () => {
   const h = createDomHarness({ initialProgress: 41 });
   assert.equal(h.controller.snapshot().progress, 41);
