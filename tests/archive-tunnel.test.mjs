@@ -5,10 +5,14 @@ import fs from "node:fs";
 
 import archiveData from "../data/archive.json" with { type: "json" };
 import {
+  APPROVED_TUNNEL_CAMERA_END,
+  APPROVED_TUNNEL_CAMERA_START,
+  APPROVED_TUNNEL_DEPTH_STEP,
   TUNNEL_RADIUS_X,
   TUNNEL_RADIUS_Y,
   TUNNEL_MAX_INDEX,
   TUNNEL_STEP,
+  approvedTunnelPose,
   flattenArchiveOccurrences,
   groupCaseImages,
   tunnelPose,
@@ -126,6 +130,65 @@ test("empty and malformed archive input produces immutable empty results", () =>
     const grouped = groupCaseImages(data, "case-01");
     assert.deepEqual(grouped, []);
     assert.ok(Object.isFrozen(grouped));
+  }
+});
+
+test("matches the approved v15 projection signatures at the entrance, middle, and end", () => {
+  const viewport = { width: 1440, height: 900 };
+  const signatures = [
+    approvedTunnelPose(0, { ...viewport, position: APPROVED_TUNNEL_CAMERA_START }),
+    approvedTunnelPose(8, { ...viewport, position: APPROVED_TUNNEL_CAMERA_START }),
+    approvedTunnelPose(68, { ...viewport, position: 3562 }),
+    approvedTunnelPose(137, { ...viewport, position: APPROVED_TUNNEL_CAMERA_END }),
+  ].map(({ x, y, scale, opacity, visible, zIndex }) => ({
+    x: Number(x.toFixed(6)),
+    y: Number(y.toFixed(6)),
+    scale: Number(scale.toFixed(6)),
+    opacity: Number(opacity.toFixed(6)),
+    visible,
+    zIndex,
+  }));
+
+  assert.deepEqual(signatures, [
+    { x: 348.095238, y: 0, scale: 0.809524, opacity: 1, visible: true, zIndex: 9840 },
+    { x: 227.191413, y: 33.672692, scale: 0.541401, opacity: 0.787261, visible: true, zIndex: 9424 },
+    { x: 84.088177, y: -291.042059, scale: 1.039755, opacity: 1, visible: true, zIndex: 10026 },
+    { x: -79.938296, y: -280.031908, scale: 1, opacity: 1, visible: true, zIndex: 10000 },
+  ]);
+});
+
+test("the approved v15 model recedes toward the center with dense separated rings and no card rotation", () => {
+  const camera = { width: 1440, height: 900, position: APPROVED_TUNNEL_CAMERA_START };
+  const near = approvedTunnelPose(0, camera);
+  const middle = approvedTunnelPose(8, camera);
+  const deep = approvedTunnelPose(16, camera);
+  const radii = [near, middle, deep].map((pose) => Math.hypot(pose.x, pose.y));
+
+  assert.ok(near.scale > middle.scale && middle.scale > deep.scale);
+  assert.ok(radii[0] > radii[1] && radii[1] > radii[2]);
+  assert.ok(radii[0] - radii[1] > 100 && radii[0] - radii[1] < 150);
+  assert.ok(radii[1] - radii[2] > 45 && radii[1] - radii[2] < 90);
+  for (const pose of [near, middle, deep]) {
+    assert.deepEqual(Object.keys(pose), ["x", "y", "scale", "opacity", "visible", "zIndex"]);
+    assert.ok(Object.isFrozen(pose));
+    assert.equal("rotationX" in pose, false);
+    assert.equal("rotationY" in pose, false);
+    assert.equal("rotationZ" in pose, false);
+  }
+});
+
+test("the approved v15 visibility window preserves its long depth and rejects invalid camera input", () => {
+  const camera = { width: 1440, height: 900, position: APPROVED_TUNNEL_CAMERA_START };
+  assert.equal(APPROVED_TUNNEL_DEPTH_STEP, 52);
+  assert.equal(approvedTunnelPose(91, camera).visible, true);
+  assert.equal(approvedTunnelPose(92, camera).visible, false);
+  assert.ok(approvedTunnelPose(91, camera).opacity >= 0.1);
+
+  for (const invalidIndex of [-1, 1.5, 138, NaN, Infinity, "1"]) {
+    assert.throws(() => approvedTunnelPose(invalidIndex, camera), RangeError);
+  }
+  for (const invalidCamera of [null, {}, { width: 0, height: 900, position: 0 }, { width: 1440, height: NaN, position: 0 }, { width: 1440, height: 900, position: Infinity }]) {
+    assert.throws(() => approvedTunnelPose(0, invalidCamera), RangeError);
   }
 });
 

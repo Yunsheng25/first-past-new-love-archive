@@ -3,6 +3,24 @@ export const TUNNEL_RADIUS_X = 4.25;
 export const TUNNEL_RADIUS_Y = 2.82;
 export const TUNNEL_MAX_INDEX = 137;
 
+// Exact projection constants from the user-approved v15 preview.
+export const APPROVED_TUNNEL_CAMERA_START = -160;
+export const APPROVED_TUNNEL_CAMERA_END = 7124;
+export const APPROVED_TUNNEL_DEPTH_STEP = 52;
+
+const APPROVED_CARDS_PER_TURN = 8;
+const APPROVED_RING_PHASE_DRIFT = 0.22;
+const APPROVED_FOCAL_LENGTH = 680;
+const APPROVED_NEAR_CLAMP = -430;
+const APPROVED_VISIBLE_NEAR = -470;
+const APPROVED_VISIBLE_FAR = 4900;
+const APPROVED_FADE_IN_DISTANCE = 700;
+const APPROVED_FADE_BEHIND_DISTANCE = 250;
+const APPROVED_MAX_RADIUS_X = 430;
+const APPROVED_MAX_RADIUS_Y = 285;
+const APPROVED_VIEWPORT_RADIUS_X = 0.38;
+const APPROVED_VIEWPORT_RADIUS_Y = 0.39;
+
 const EMPTY_GROUP = Object.freeze([]);
 const CARDS_PER_TURN = 8;
 const RING_PHASE_DRIFT = 0.095;
@@ -43,6 +61,45 @@ export function groupCaseImages(data, caseId) {
   const item = data.cases.find((candidate) => candidate?.id === caseId);
   if (!Array.isArray(item?.images)) return EMPTY_GROUP;
   return Object.freeze(item.images.map((image) => Object.freeze({ ...image })));
+}
+
+/**
+ * The exact front-facing pixel projection used by approved preview v15.
+ * `camera.position` is the preview's longitudinal camera value; width/height
+ * are the stage's CSS-pixel dimensions. Rotation is deliberately absent:
+ * cards always face the viewer in this model.
+ */
+export function approvedTunnelPose(index, camera) {
+  if (!Number.isInteger(index) || index < 0 || index > TUNNEL_MAX_INDEX) {
+    throw new RangeError(`Tunnel pose index must be an integer from 0 to ${TUNNEL_MAX_INDEX}`);
+  }
+  const width = camera?.width;
+  const height = camera?.height;
+  const position = camera?.position;
+  if (!Number.isFinite(width) || width <= 0
+    || !Number.isFinite(height) || height <= 0
+    || !Number.isFinite(position)) {
+    throw new RangeError("Approved tunnel camera needs finite positive width/height and a finite position");
+  }
+
+  const z = index * APPROVED_TUNNEL_DEPTH_STEP - position;
+  const scale = APPROVED_FOCAL_LENGTH
+    / (APPROVED_FOCAL_LENGTH + Math.max(z, APPROVED_NEAR_CLAMP));
+  const angle = (index * Math.PI * 2 / APPROVED_CARDS_PER_TURN)
+    + (Math.floor(index / APPROVED_CARDS_PER_TURN) * APPROVED_RING_PHASE_DRIFT);
+  const radiusX = Math.min(width * APPROVED_VIEWPORT_RADIUS_X, APPROVED_MAX_RADIUS_X);
+  const radiusY = Math.min(height * APPROVED_VIEWPORT_RADIUS_Y, APPROVED_MAX_RADIUS_Y);
+  const fadeIn = Math.min(1, (APPROVED_VISIBLE_FAR - z) / APPROVED_FADE_IN_DISTANCE);
+  const fadeBehind = Math.min(1, (z - APPROVED_VISIBLE_NEAR) / APPROVED_FADE_BEHIND_DISTANCE);
+
+  return Object.freeze({
+    x: Math.cos(angle) * radiusX * scale,
+    y: Math.sin(angle) * radiusY * scale,
+    scale,
+    opacity: Math.max(0.1, Math.min(fadeIn, fadeBehind, 0.3 + scale * 0.9)),
+    visible: z >= APPROVED_VISIBLE_NEAR && z <= APPROVED_VISIBLE_FAR,
+    zIndex: Math.round(10000 - z),
+  });
 }
 
 /**
