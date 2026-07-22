@@ -87,6 +87,17 @@ function blockSize(block) {
 
 export function paginateBlocks(blocks, limit = 900) {
   if (!Array.isArray(blocks) || blocks.length === 0) return [];
+  for (const block of blocks) {
+    if (block.type !== "callout") continue;
+    const oversized = blockSize(block) > limit;
+    if (oversized) {
+      block.oversized = true;
+      block.scrollable = true;
+    } else {
+      delete block.oversized;
+      delete block.scrollable;
+    }
+  }
   const units = semanticUnits(blocks);
   const pages = [];
   let page = [];
@@ -102,7 +113,7 @@ export function paginateBlocks(blocks, limit = 900) {
     pageSize += size;
   }
   if (page.length > 0) pages.push(page);
-  rebalancePages(pages, Math.max(limit, 1000));
+  rebalancePages(pages, limit);
   return pages.filter((unitsOnPage) => unitsOnPage.length > 0).map((unitsOnPage) => unitsOnPage.flat());
 }
 
@@ -120,7 +131,12 @@ function semanticUnits(blocks) {
     if (block.type === "callout") {
       units.push(unit);
       continue;
-    } else if (block.type === "heading" && index < blocks.length && blocks[index].type !== "heading") {
+    } else if (
+      block.type === "heading"
+      && index < blocks.length
+      && blocks[index].type !== "heading"
+      && !(blocks[index].type === "callout" && blocks[index].oversized)
+    ) {
       unit.push(blocks[index++]);
       if (unit.at(-1).type === "text") appendMedia(unit);
     } else if (block.type === "text") {

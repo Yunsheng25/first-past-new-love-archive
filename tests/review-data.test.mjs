@@ -219,6 +219,8 @@ test("parseReview keeps an Obsidian NOTE as one ordered structured block", () =>
       kind: "NOTE",
       title: "示例",
       section: originTitle,
+      oversized: true,
+      scrollable: true,
       children: [
         { type: "text", text: "原首尾帧：", section: originTitle },
         { type: "image", ref: "first.png", rawRef: "first.png", section: originTitle, src: "assets/review-media/001-first.png" },
@@ -425,6 +427,18 @@ test("paginateBlocks moves a structured callout wholly to the next page when it 
   assert.deepEqual(pages[1][0].children.map((child) => child.type), ["text", "image", "video"]);
 });
 
+test("paginateBlocks rebalancing never pulls a callout past the caller page limit", () => {
+  const text = { type: "text", text: "甲".repeat(100) };
+  const callout = {
+    type: "callout",
+    kind: "NOTE",
+    title: "接近满页",
+    children: [{ type: "text", text: "乙".repeat(670) }],
+  };
+
+  assert.deepEqual(paginateBlocks([text, callout], 900), [[text], [callout]]);
+});
+
 test("paginateBlocks gives an oversized callout its own page without splitting its children", () => {
   const callout = {
     type: "callout",
@@ -443,6 +457,40 @@ test("paginateBlocks gives an oversized callout its own page without splitting i
 
   assert.deepEqual(pages, [[before], [callout], [after]]);
   assert.deepEqual(pages[1][0].children.map((child) => child.type), ["text", "image", "image", "video"]);
+  assert.equal(pages[1][0].oversized, true);
+  assert.equal(pages[1][0].scrollable, true);
+});
+
+test("paginateBlocks does not bind a heading to an oversized callout", () => {
+  const heading = { type: "heading", text: "案例批注", level: 3 };
+  const callout = {
+    type: "callout",
+    kind: "NOTE",
+    title: "超高批注",
+    children: [
+      { type: "text", text: "长批注".repeat(300) },
+      { type: "image", ref: "result.png", src: "assets/review-media/result.png" },
+    ],
+  };
+  const after = { type: "text", text: "后文".repeat(300) };
+
+  const pages = paginateBlocks([heading, callout, after], 900);
+
+  assert.deepEqual(pages, [[heading], [callout], [after]]);
+  assert.equal(callout.oversized, true);
+  assert.equal(callout.scrollable, true);
+});
+
+test("parseReview marks the two authored oversized callouts as internally scrollable", () => {
+  const review = parseReview(fs.readFileSync(reviewPath, "utf8"));
+  const callouts = review.chapters.flatMap((chapter) => chapter.blocks)
+    .filter((block) => block.type === "callout");
+  const oversized = callouts.filter((block) => block.oversized || block.scrollable);
+
+  assert.equal(oversized.length, 2);
+  assert.ok(oversized.every((block) => block.oversized === true && block.scrollable === true));
+  assert.ok(oversized.every((block) => review.chapters.some((chapter) =>
+    chapter.pages.some((page) => page.length === 1 && page[0] === block))));
 });
 
 test("writeReviewData copies all media and writes readable UTF-8 pages", () => {
