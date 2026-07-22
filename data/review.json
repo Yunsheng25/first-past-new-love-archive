@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-18T07:35:59.399Z",
+  "generatedAt": "2026-07-22T05:26:57.607Z",
   "chapters": [
     {
       "slug": "origin",
@@ -452,23 +452,26 @@
           "section": "故事设计：一个想法怎么变成完整叙事"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 最终画面",
-          "section": "故事设计：一个想法怎么变成完整叙事"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260619214557.png",
-          "rawRef": "Pasted image 20260619214557.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "最终画面",
           "section": "故事设计：一个想法怎么变成完整叙事",
-          "src": "assets/review-media/001-Pasted image 20260619214557.png"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260619214606.png",
-          "rawRef": "Pasted image 20260619214606.png",
-          "section": "故事设计：一个想法怎么变成完整叙事",
-          "src": "assets/review-media/002-Pasted image 20260619214606.png"
+          "children": [
+            {
+              "type": "image",
+              "ref": "Pasted image 20260619214557.png",
+              "rawRef": "Pasted image 20260619214557.png",
+              "section": "故事设计：一个想法怎么变成完整叙事",
+              "src": "assets/review-media/001-Pasted image 20260619214557.png"
+            },
+            {
+              "type": "image",
+              "ref": "Pasted image 20260619214606.png",
+              "rawRef": "Pasted image 20260619214606.png",
+              "section": "故事设计：一个想法怎么变成完整叙事",
+              "src": "assets/review-media/002-Pasted image 20260619214606.png"
+            }
+          ]
         },
         {
           "type": "text",
@@ -531,7 +534,7 @@
           "section": "故事设计：一个想法怎么变成完整叙事"
         }
       ],
-      "characterCount": 2517,
+      "characterCount": 2504,
       "pages": [
         [
           {
@@ -640,38 +643,43 @@
             "type": "text",
             "text": "第一视角下，我拿着一台录像机走在路上，女孩忽然从身边探出来，带着一点俏皮的笑意看向“我”，然后自然而然地牵起“我”的手，拉着“我”一起往前走。",
             "section": "故事设计：一个想法怎么变成完整叙事"
-          },
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 最终画面",
-            "section": "故事设计：一个想法怎么变成完整叙事"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260619214557.png",
-            "rawRef": "Pasted image 20260619214557.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "最终画面",
             "section": "故事设计：一个想法怎么变成完整叙事",
-            "src": "assets/review-media/001-Pasted image 20260619214557.png"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260619214606.png",
-            "rawRef": "Pasted image 20260619214606.png",
-            "section": "故事设计：一个想法怎么变成完整叙事",
-            "src": "assets/review-media/002-Pasted image 20260619214606.png"
+            "children": [
+              {
+                "type": "image",
+                "ref": "Pasted image 20260619214557.png",
+                "rawRef": "Pasted image 20260619214557.png",
+                "section": "故事设计：一个想法怎么变成完整叙事",
+                "src": "assets/review-media/001-Pasted image 20260619214557.png"
+              },
+              {
+                "type": "image",
+                "ref": "Pasted image 20260619214606.png",
+                "rawRef": "Pasted image 20260619214606.png",
+                "section": "故事设计：一个想法怎么变成完整叙事",
+                "src": "assets/review-media/002-Pasted image 20260619214606.png"
+              }
+            ]
           },
           {
             "type": "text",
             "text": "当然这是其中一个比较顺畅的例子，真实的创作场景下往往并不那么轻松地便点对点地串起来出现一个画面，而更多时候是有浑浊的、内在的感受找不到落点的。",
             "section": "故事设计：一个想法怎么变成完整叙事"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "遇到这种情况，我通常会先和AI进行几轮深入对话。我会尽可能详细地描述自己从这段旋律或这句歌词里感受到的东西，包括人物所处的状态、情绪发生的变化，以及某些自己暂时无法说清的联想，再让它提供一些可能的画面方向。",
             "section": "故事设计：一个想法怎么变成完整叙事"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "歌词很重要，但我的意思并不是说每一帧画面都要遵循着歌词的意象来生成。",
@@ -748,72 +756,72 @@
         {
           "title": "空间逻辑",
           "level": 5,
-          "index": 13
+          "index": 12
         },
         {
           "title": "第一层：文字提示词",
           "level": 6,
-          "index": 27
+          "index": 20
         },
         {
           "title": "第二层：给它更直观的空间参照",
           "level": 6,
-          "index": 37
+          "index": 30
         },
         {
           "title": "第三层：重置镜头逻辑",
           "level": 6,
-          "index": 49
+          "index": 40
         },
         {
           "title": "视频",
           "level": 4,
-          "index": 58
+          "index": 49
         },
         {
           "title": "选图与设计运动",
           "level": 5,
-          "index": 61
+          "index": 52
         },
         {
           "title": "视频提示词、生成与筛选",
           "level": 5,
-          "index": 85
+          "index": 74
         },
         {
           "title": "首尾帧衔接和过渡帧补充",
           "level": 5,
-          "index": 97
+          "index": 84
         },
         {
           "title": "剪辑",
           "level": 4,
-          "index": 133
+          "index": 104
         },
         {
           "title": "一般流程",
           "level": 5,
-          "index": 134
+          "index": 105
         },
         {
           "title": "具体细节",
           "level": 5,
-          "index": 143
+          "index": 114
         },
         {
           "title": "转场和黑场",
           "level": 6,
-          "index": 145
+          "index": 116
         },
         {
           "title": "音乐节奏",
           "level": 6,
-          "index": 173
+          "index": 139
         },
         {
           "title": "音效",
           "level": 6,
-          "index": 194
+          "index": 157
         }
       ],
       "blocks": [
@@ -855,16 +863,19 @@
           "section": "风格母图"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 注：这个视频最开始的风格母图",
-          "section": "风格母图"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260619162326.png",
-          "rawRef": "Pasted image 20260619162326.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "注：这个视频最开始的风格母图",
           "section": "风格母图",
-          "src": "assets/review-media/003-Pasted image 20260619162326.png"
+          "children": [
+            {
+              "type": "image",
+              "ref": "Pasted image 20260619162326.png",
+              "rawRef": "Pasted image 20260619162326.png",
+              "section": "风格母图",
+              "src": "assets/review-media/003-Pasted image 20260619162326.png"
+            }
+          ]
         },
         {
           "type": "text",
@@ -913,52 +924,58 @@
           "section": "空间逻辑"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 例子1",
-          "section": "空间逻辑"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260619154519.png",
-          "rawRef": "Pasted image 20260619154519.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "例子1",
           "section": "空间逻辑",
-          "src": "assets/review-media/004-Pasted image 20260619154519.png"
+          "children": [
+            {
+              "type": "image",
+              "ref": "Pasted image 20260619154519.png",
+              "rawRef": "Pasted image 20260619154519.png",
+              "section": "空间逻辑",
+              "src": "assets/review-media/004-Pasted image 20260619154519.png"
+            },
+            {
+              "type": "image",
+              "ref": "Pasted image 20260619154546.png",
+              "rawRef": "Pasted image 20260619154546.png",
+              "section": "空间逻辑",
+              "src": "assets/review-media/005-Pasted image 20260619154546.png"
+            },
+            {
+              "type": "text",
+              "text": "人物低头去看自己手里的饭碗，按正常逻辑，桌上的饭菜应该相对留在原位，退到视线更远的位置；但 AI 往往不会真正理解这种视角变化，它只会保留“饭桌”和“饭菜”这些元素，结果就是那些菜像在抢镜一样，依旧立在视线中央，导致整个空间关系变得很奇怪",
+              "section": "空间逻辑"
+            }
+          ]
         },
         {
-          "type": "image",
-          "ref": "Pasted image 20260619154546.png",
-          "rawRef": "Pasted image 20260619154546.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "例子2",
           "section": "空间逻辑",
-          "src": "assets/review-media/005-Pasted image 20260619154546.png"
-        },
-        {
-          "type": "text",
-          "text": "人物低头去看自己手里的饭碗，按正常逻辑，桌上的饭菜应该相对留在原位，退到视线更远的位置；但 AI 往往不会真正理解这种视角变化，它只会保留“饭桌”和“饭菜”这些元素，结果就是那些菜像在抢镜一样，依旧立在视线中央，导致整个空间关系变得很奇怪",
-          "section": "空间逻辑"
-        },
-        {
-          "type": "text",
-          "text": "[!NOTE] 例子2",
-          "section": "空间逻辑"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260619155425.png",
-          "rawRef": "Pasted image 20260619155425.png",
-          "section": "空间逻辑",
-          "src": "assets/review-media/006-Pasted image 20260619155425.png"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260619155522.png",
-          "rawRef": "Pasted image 20260619155522.png",
-          "section": "空间逻辑",
-          "src": "assets/review-media/007-Pasted image 20260619155522.png"
-        },
-        {
-          "type": "text",
-          "text": "物体朝向很难精确控制。我想让电子琴正对帘子，但无论怎么强调角度和位置，AI 都会回到它更熟悉的斜侧构图/又或者就直接乱七八糟来。元素和氛围一致，但真正想调整的空间关系却始终调不动。",
-          "section": "空间逻辑"
+          "children": [
+            {
+              "type": "image",
+              "ref": "Pasted image 20260619155425.png",
+              "rawRef": "Pasted image 20260619155425.png",
+              "section": "空间逻辑",
+              "src": "assets/review-media/006-Pasted image 20260619155425.png"
+            },
+            {
+              "type": "image",
+              "ref": "Pasted image 20260619155522.png",
+              "rawRef": "Pasted image 20260619155522.png",
+              "section": "空间逻辑",
+              "src": "assets/review-media/007-Pasted image 20260619155522.png"
+            },
+            {
+              "type": "text",
+              "text": "物体朝向很难精确控制。我想让电子琴正对帘子，但无论怎么强调角度和位置，AI 都会回到它更熟悉的斜侧构图/又或者就直接乱七八糟来。元素和氛围一致，但真正想调整的空间关系却始终调不动。",
+              "section": "空间逻辑"
+            }
+          ]
         },
         {
           "type": "text",
@@ -1007,9 +1024,17 @@
           "section": "第一层：文字提示词"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] Prompt\n第一视角俯视手中的饭碗，饭碗位于画面下半部分中央，占据画面约三分之一面积；双手和筷子在饭碗两侧，靠近镜头，是清晰近景；桌面从画面下方延伸到上方，菜盘位于画面上方远处，体积明显小于饭碗，只作为背景元素；杯子和纸巾盒靠近画面边缘，可以只露出一部分；不要让菜盘靠近饭碗，也不要让饭菜挤在画面中心。",
-          "section": "第一层：文字提示词"
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "Prompt",
+          "section": "第一层：文字提示词",
+          "children": [
+            {
+              "type": "text",
+              "text": "第一视角俯视手中的饭碗，饭碗位于画面下半部分中央，占据画面约三分之一面积；双手和筷子在饭碗两侧，靠近镜头，是清晰近景；桌面从画面下方延伸到上方，菜盘位于画面上方远处，体积明显小于饭碗，只作为背景元素；杯子和纸巾盒靠近画面边缘，可以只露出一部分；不要让菜盘靠近饭碗，也不要让饭菜挤在画面中心。",
+              "section": "第一层：文字提示词"
+            }
+          ]
         },
         {
           "type": "text",
@@ -1048,23 +1073,26 @@
           "section": "第二层：给它更直观的空间参照"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 示例（图①+图②=图③）",
-          "section": "第二层：给它更直观的空间参照"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260619222441.png",
-          "rawRef": "Pasted image 20260619222441.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "示例（图①+图②=图③）",
           "section": "第二层：给它更直观的空间参照",
-          "src": "assets/review-media/008-Pasted image 20260619222441.png"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260619155522.png",
-          "rawRef": "Pasted image 20260619155522.png",
-          "section": "第二层：给它更直观的空间参照",
-          "src": "assets/review-media/007-Pasted image 20260619155522.png"
+          "children": [
+            {
+              "type": "image",
+              "ref": "Pasted image 20260619222441.png",
+              "rawRef": "Pasted image 20260619222441.png",
+              "section": "第二层：给它更直观的空间参照",
+              "src": "assets/review-media/008-Pasted image 20260619222441.png"
+            },
+            {
+              "type": "image",
+              "ref": "Pasted image 20260619155522.png",
+              "rawRef": "Pasted image 20260619155522.png",
+              "section": "第二层：给它更直观的空间参照",
+              "src": "assets/review-media/007-Pasted image 20260619155522.png"
+            }
+          ]
         },
         {
           "type": "image",
@@ -1184,28 +1212,34 @@
           "section": "选图与设计运动"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] “戴”戒指",
-          "section": "选图与设计运动"
-        },
-        {
-          "type": "video",
-          "ref": "“戴”戒指.mp4",
-          "rawRef": "“戴”戒指.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "“戴”戒指",
           "section": "选图与设计运动",
-          "src": "assets/review-media/011-“戴”戒指.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "“戴”戒指.mp4",
+              "rawRef": "“戴”戒指.mp4",
+              "section": "选图与设计运动",
+              "src": "assets/review-media/011-“戴”戒指.mp4"
+            }
+          ]
         },
         {
-          "type": "text",
-          "text": "[!NOTE] “弹”钢琴",
-          "section": "选图与设计运动"
-        },
-        {
-          "type": "video",
-          "ref": "“弹”钢琴.mp4",
-          "rawRef": "“弹”钢琴.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "“弹”钢琴",
           "section": "选图与设计运动",
-          "src": "assets/review-media/012-“弹”钢琴.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "“弹”钢琴.mp4",
+              "rawRef": "“弹”钢琴.mp4",
+              "section": "选图与设计运动",
+              "src": "assets/review-media/012-“弹”钢琴.mp4"
+            }
+          ]
         },
         {
           "type": "text",
@@ -1309,16 +1343,19 @@
           "section": "视频提示词、生成与筛选"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 示例",
-          "section": "视频提示词、生成与筛选"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260620160734.png",
-          "rawRef": "Pasted image 20260620160734.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "示例",
           "section": "视频提示词、生成与筛选",
-          "src": "assets/review-media/013-Pasted image 20260620160734.png"
+          "children": [
+            {
+              "type": "image",
+              "ref": "Pasted image 20260620160734.png",
+              "rawRef": "Pasted image 20260620160734.png",
+              "section": "视频提示词、生成与筛选",
+              "src": "assets/review-media/013-Pasted image 20260620160734.png"
+            }
+          ]
         },
         {
           "type": "text",
@@ -1326,16 +1363,19 @@
           "section": "视频提示词、生成与筛选"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 示例（by《知我》之前做过的另一个视频）",
-          "section": "视频提示词、生成与筛选"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260620161558.png",
-          "rawRef": "Pasted image 20260620161558.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "示例（by《知我》之前做过的另一个视频）",
           "section": "视频提示词、生成与筛选",
-          "src": "assets/review-media/014-Pasted image 20260620161558.png"
+          "children": [
+            {
+              "type": "image",
+              "ref": "Pasted image 20260620161558.png",
+              "rawRef": "Pasted image 20260620161558.png",
+              "section": "视频提示词、生成与筛选",
+              "src": "assets/review-media/014-Pasted image 20260620161558.png"
+            }
+          ]
         },
         {
           "type": "heading",
@@ -1379,47 +1419,55 @@
           "section": "首尾帧衔接和过渡帧补充"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 示例\n原图：",
-          "section": "首尾帧衔接和过渡帧补充"
-        },
-        {
-          "type": "image",
-          "ref": "9c986860-16c4-44c2-89ed-797674a42c6f.png",
-          "rawRef": "9c986860-16c4-44c2-89ed-797674a42c6f.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "示例",
           "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/015-9c986860-16c4-44c2-89ed-797674a42c6f.png"
-        },
-        {
-          "type": "image",
-          "ref": "3789431f-f263-45d4-961e-9eeaf77d40cc 1.png",
-          "rawRef": "3789431f-f263-45d4-961e-9eeaf77d40cc 1.png",
-          "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/016-3789431f-f263-45d4-961e-9eeaf77d40cc 1.png"
-        },
-        {
-          "type": "text",
-          "text": "视频效果：",
-          "section": "首尾帧衔接和过渡帧补充"
-        },
-        {
-          "type": "video",
-          "ref": "vidu-video-3294774092084574.mp4",
-          "rawRef": "vidu-video-3294774092084574.mp4",
-          "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/017-vidu-video-3294774092084574.mp4"
-        },
-        {
-          "type": "text",
-          "text": "可以发现两者的色调、模糊度是有一些不同的。\n尾帧续写效果：",
-          "section": "首尾帧衔接和过渡帧补充"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-20 165924.mp4",
-          "rawRef": "屏幕录制 2026-06-20 165924.mp4",
-          "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/018-屏幕录制 2026-06-20 165924.mp4"
+          "children": [
+            {
+              "type": "text",
+              "text": "原图：",
+              "section": "首尾帧衔接和过渡帧补充"
+            },
+            {
+              "type": "image",
+              "ref": "9c986860-16c4-44c2-89ed-797674a42c6f.png",
+              "rawRef": "9c986860-16c4-44c2-89ed-797674a42c6f.png",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/015-9c986860-16c4-44c2-89ed-797674a42c6f.png"
+            },
+            {
+              "type": "image",
+              "ref": "3789431f-f263-45d4-961e-9eeaf77d40cc 1.png",
+              "rawRef": "3789431f-f263-45d4-961e-9eeaf77d40cc 1.png",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/016-3789431f-f263-45d4-961e-9eeaf77d40cc 1.png"
+            },
+            {
+              "type": "text",
+              "text": "视频效果：",
+              "section": "首尾帧衔接和过渡帧补充"
+            },
+            {
+              "type": "video",
+              "ref": "vidu-video-3294774092084574.mp4",
+              "rawRef": "vidu-video-3294774092084574.mp4",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/017-vidu-video-3294774092084574.mp4"
+            },
+            {
+              "type": "text",
+              "text": "可以发现两者的色调、模糊度是有一些不同的。\n尾帧续写效果：",
+              "section": "首尾帧衔接和过渡帧补充"
+            },
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-20 165924.mp4",
+              "rawRef": "屏幕录制 2026-06-20 165924.mp4",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/018-屏幕录制 2026-06-20 165924.mp4"
+            }
+          ]
         },
         {
           "type": "text",
@@ -1447,66 +1495,74 @@
           "section": "首尾帧衔接和过渡帧补充"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 示例\n原首尾帧：",
-          "section": "首尾帧衔接和过渡帧补充"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260620172202.png",
-          "rawRef": "Pasted image 20260620172202.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "示例",
           "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/019-Pasted image 20260620172202.png"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260620172208.png",
-          "rawRef": "Pasted image 20260620172208.png",
-          "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/020-Pasted image 20260620172208.png"
-        },
-        {
-          "type": "text",
-          "text": "这里我想让“我”的视角转头看到老人，而生成了好几次始终是乱七八糟的比如：",
-          "section": "首尾帧衔接和过渡帧补充"
-        },
-        {
-          "type": "video",
-          "ref": "vidu-video-3298771883635777.mp4",
-          "rawRef": "vidu-video-3298771883635777.mp4",
-          "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/021-vidu-video-3298771883635777.mp4"
-        },
-        {
-          "type": "text",
-          "text": "于是我加了一张过渡帧的图片，也就是：",
-          "section": "首尾帧衔接和过渡帧补充"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260620172404.png",
-          "rawRef": "Pasted image 20260620172404.png",
-          "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/022-Pasted image 20260620172404.png"
-        },
-        {
-          "type": "text",
-          "text": "再去生成的效果就变成了：",
-          "section": "首尾帧衔接和过渡帧补充"
-        },
-        {
-          "type": "video",
-          "ref": "vidu-video-3298788518429876.mp4",
-          "rawRef": "vidu-video-3298788518429876.mp4",
-          "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/023-vidu-video-3298788518429876.mp4"
-        },
-        {
-          "type": "video",
-          "ref": "vidu-video-3298795186246424.mp4",
-          "rawRef": "vidu-video-3298795186246424.mp4",
-          "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/024-vidu-video-3298795186246424.mp4"
+          "children": [
+            {
+              "type": "text",
+              "text": "原首尾帧：",
+              "section": "首尾帧衔接和过渡帧补充"
+            },
+            {
+              "type": "image",
+              "ref": "Pasted image 20260620172202.png",
+              "rawRef": "Pasted image 20260620172202.png",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/019-Pasted image 20260620172202.png"
+            },
+            {
+              "type": "image",
+              "ref": "Pasted image 20260620172208.png",
+              "rawRef": "Pasted image 20260620172208.png",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/020-Pasted image 20260620172208.png"
+            },
+            {
+              "type": "text",
+              "text": "这里我想让“我”的视角转头看到老人，而生成了好几次始终是乱七八糟的比如：",
+              "section": "首尾帧衔接和过渡帧补充"
+            },
+            {
+              "type": "video",
+              "ref": "vidu-video-3298771883635777.mp4",
+              "rawRef": "vidu-video-3298771883635777.mp4",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/021-vidu-video-3298771883635777.mp4"
+            },
+            {
+              "type": "text",
+              "text": "于是我加了一张过渡帧的图片，也就是：",
+              "section": "首尾帧衔接和过渡帧补充"
+            },
+            {
+              "type": "image",
+              "ref": "Pasted image 20260620172404.png",
+              "rawRef": "Pasted image 20260620172404.png",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/022-Pasted image 20260620172404.png"
+            },
+            {
+              "type": "text",
+              "text": "再去生成的效果就变成了：",
+              "section": "首尾帧衔接和过渡帧补充"
+            },
+            {
+              "type": "video",
+              "ref": "vidu-video-3298788518429876.mp4",
+              "rawRef": "vidu-video-3298788518429876.mp4",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/023-vidu-video-3298788518429876.mp4"
+            },
+            {
+              "type": "video",
+              "ref": "vidu-video-3298795186246424.mp4",
+              "rawRef": "vidu-video-3298795186246424.mp4",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/024-vidu-video-3298795186246424.mp4"
+            }
+          ]
         },
         {
           "type": "text",
@@ -1524,16 +1580,19 @@
           "section": "首尾帧衔接和过渡帧补充"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 示例",
-          "section": "首尾帧衔接和过渡帧补充"
-        },
-        {
-          "type": "image",
-          "ref": "Pasted image 20260620175930.png",
-          "rawRef": "Pasted image 20260620175930.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "示例",
           "section": "首尾帧衔接和过渡帧补充",
-          "src": "assets/review-media/025-Pasted image 20260620175930.png"
+          "children": [
+            {
+              "type": "image",
+              "ref": "Pasted image 20260620175930.png",
+              "rawRef": "Pasted image 20260620175930.png",
+              "section": "首尾帧衔接和过渡帧补充",
+              "src": "assets/review-media/025-Pasted image 20260620175930.png"
+            }
+          ]
         },
         {
           "type": "image",
@@ -1632,16 +1691,19 @@
           "section": "转场和黑场"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 示例 「相近元素」",
-          "section": "转场和黑场"
-        },
-        {
-          "type": "image",
-          "ref": "4 1.png",
-          "rawRef": "4 1.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "示例 「相近元素」",
           "section": "转场和黑场",
-          "src": "assets/review-media/027-4 1.png"
+          "children": [
+            {
+              "type": "image",
+              "ref": "4 1.png",
+              "rawRef": "4 1.png",
+              "section": "转场和黑场",
+              "src": "assets/review-media/027-4 1.png"
+            }
+          ]
         },
         {
           "type": "image",
@@ -1663,16 +1725,19 @@
           "section": "转场和黑场"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 示例「动作」",
-          "section": "转场和黑场"
-        },
-        {
-          "type": "image",
-          "ref": "29.png",
-          "rawRef": "29.png",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "示例「动作」",
           "section": "转场和黑场",
-          "src": "assets/review-media/030-29.png"
+          "children": [
+            {
+              "type": "image",
+              "ref": "29.png",
+              "rawRef": "29.png",
+              "section": "转场和黑场",
+              "src": "assets/review-media/030-29.png"
+            }
+          ]
         },
         {
           "type": "image",
@@ -1704,28 +1769,36 @@
           "section": "转场和黑场"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 示例\n没加叠化效果：",
-          "section": "转场和黑场"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-25 210134.mp4",
-          "rawRef": "屏幕录制 2026-06-25 210134.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "示例",
           "section": "转场和黑场",
-          "src": "assets/review-media/033-屏幕录制 2026-06-25 210134.mp4"
-        },
-        {
-          "type": "text",
-          "text": "加了叠化的效果：",
-          "section": "转场和黑场"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-25 210334.mp4",
-          "rawRef": "屏幕录制 2026-06-25 210334.mp4",
-          "section": "转场和黑场",
-          "src": "assets/review-media/034-屏幕录制 2026-06-25 210334.mp4"
+          "children": [
+            {
+              "type": "text",
+              "text": "没加叠化效果：",
+              "section": "转场和黑场"
+            },
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-25 210134.mp4",
+              "rawRef": "屏幕录制 2026-06-25 210134.mp4",
+              "section": "转场和黑场",
+              "src": "assets/review-media/033-屏幕录制 2026-06-25 210134.mp4"
+            },
+            {
+              "type": "text",
+              "text": "加了叠化的效果：",
+              "section": "转场和黑场"
+            },
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-25 210334.mp4",
+              "rawRef": "屏幕录制 2026-06-25 210334.mp4",
+              "section": "转场和黑场",
+              "src": "assets/review-media/034-屏幕录制 2026-06-25 210334.mp4"
+            }
+          ]
         },
         {
           "type": "text",
@@ -1753,9 +1826,11 @@
           "section": "转场和黑场"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 示例",
-          "section": "转场和黑场"
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "示例",
+          "section": "转场和黑场",
+          "children": []
         },
         {
           "type": "video",
@@ -1831,40 +1906,49 @@
           "section": "音乐节奏"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 结尾闪回",
-          "section": "音乐节奏"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-26 210837.mp4",
-          "rawRef": "屏幕录制 2026-06-26 210837.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "结尾闪回",
           "section": "音乐节奏",
-          "src": "assets/review-media/036-屏幕录制 2026-06-26 210837.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-26 210837.mp4",
+              "rawRef": "屏幕录制 2026-06-26 210837.mp4",
+              "section": "音乐节奏",
+              "src": "assets/review-media/036-屏幕录制 2026-06-26 210837.mp4"
+            }
+          ]
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 图片切换",
-          "section": "音乐节奏"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-26 211220.mp4",
-          "rawRef": "屏幕录制 2026-06-26 211220.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "图片切换",
           "section": "音乐节奏",
-          "src": "assets/review-media/037-屏幕录制 2026-06-26 211220.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-26 211220.mp4",
+              "rawRef": "屏幕录制 2026-06-26 211220.mp4",
+              "section": "音乐节奏",
+              "src": "assets/review-media/037-屏幕录制 2026-06-26 211220.mp4"
+            }
+          ]
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 钢琴匹配（举一例）",
-          "section": "音乐节奏"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-26 211452.mp4",
-          "rawRef": "屏幕录制 2026-06-26 211452.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "钢琴匹配（举一例）",
           "section": "音乐节奏",
-          "src": "assets/review-media/038-屏幕录制 2026-06-26 211452.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-26 211452.mp4",
+              "rawRef": "屏幕录制 2026-06-26 211452.mp4",
+              "section": "音乐节奏",
+              "src": "assets/review-media/038-屏幕录制 2026-06-26 211452.mp4"
+            }
+          ]
         },
         {
           "type": "text",
@@ -1968,52 +2052,68 @@
           "section": "音效"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 脚步声\n没有音效：",
-          "section": "音效"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-26 222352.mp4",
-          "rawRef": "屏幕录制 2026-06-26 222352.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "脚步声",
           "section": "音效",
-          "src": "assets/review-media/039-屏幕录制 2026-06-26 222352.mp4"
+          "children": [
+            {
+              "type": "text",
+              "text": "没有音效：",
+              "section": "音效"
+            },
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-26 222352.mp4",
+              "rawRef": "屏幕录制 2026-06-26 222352.mp4",
+              "section": "音效",
+              "src": "assets/review-media/039-屏幕录制 2026-06-26 222352.mp4"
+            },
+            {
+              "type": "text",
+              "text": "有音效：",
+              "section": "音效"
+            },
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-25 213400.mp4",
+              "rawRef": "屏幕录制 2026-06-25 213400.mp4",
+              "section": "音效",
+              "src": "assets/review-media/035-屏幕录制 2026-06-25 213400.mp4"
+            }
+          ]
         },
         {
-          "type": "text",
-          "text": "有音效：",
-          "section": "音效"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-25 213400.mp4",
-          "rawRef": "屏幕录制 2026-06-25 213400.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "女孩的笑声",
           "section": "音效",
-          "src": "assets/review-media/035-屏幕录制 2026-06-25 213400.mp4"
-        },
-        {
-          "type": "text",
-          "text": "[!NOTE] 女孩的笑声\n没音效：",
-          "section": "音效"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-26 222928.mp4",
-          "rawRef": "屏幕录制 2026-06-26 222928.mp4",
-          "section": "音效",
-          "src": "assets/review-media/040-屏幕录制 2026-06-26 222928.mp4"
-        },
-        {
-          "type": "text",
-          "text": "有音效：",
-          "section": "音效"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-26 222747.mp4",
-          "rawRef": "屏幕录制 2026-06-26 222747.mp4",
-          "section": "音效",
-          "src": "assets/review-media/041-屏幕录制 2026-06-26 222747.mp4"
+          "children": [
+            {
+              "type": "text",
+              "text": "没音效：",
+              "section": "音效"
+            },
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-26 222928.mp4",
+              "rawRef": "屏幕录制 2026-06-26 222928.mp4",
+              "section": "音效",
+              "src": "assets/review-media/040-屏幕录制 2026-06-26 222928.mp4"
+            },
+            {
+              "type": "text",
+              "text": "有音效：",
+              "section": "音效"
+            },
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-26 222747.mp4",
+              "rawRef": "屏幕录制 2026-06-26 222747.mp4",
+              "section": "音效",
+              "src": "assets/review-media/041-屏幕录制 2026-06-26 222747.mp4"
+            }
+          ]
         },
         {
           "type": "image",
@@ -2023,7 +2123,7 @@
           "src": "assets/review-media/042-Pasted image 20260716153618.png"
         }
       ],
-      "characterCount": 10301,
+      "characterCount": 9992,
       "pages": [
         [
           {
@@ -2064,16 +2164,19 @@
             "section": "风格母图"
           },
           {
-            "type": "text",
-            "text": "[!NOTE] 注：这个视频最开始的风格母图",
-            "section": "风格母图"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260619162326.png",
-            "rawRef": "Pasted image 20260619162326.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "注：这个视频最开始的风格母图",
             "section": "风格母图",
-            "src": "assets/review-media/003-Pasted image 20260619162326.png"
+            "children": [
+              {
+                "type": "image",
+                "ref": "Pasted image 20260619162326.png",
+                "rawRef": "Pasted image 20260619162326.png",
+                "section": "风格母图",
+                "src": "assets/review-media/003-Pasted image 20260619162326.png"
+              }
+            ]
           },
           {
             "type": "text",
@@ -2089,7 +2192,9 @@
             "type": "text",
             "text": "一是**后续生图的时候直接垫着这张图去继续生成**，让新的画面沿着它的视觉基调去延伸；",
             "section": "风格母图"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "二是**用大模型把这张图的提示词结构提取出来，拆解出它的风格特征，后续每次生图时都把这一组风格提示放在前面，作为统一的视觉前缀**。",
@@ -2120,62 +2225,72 @@
             "type": "text",
             "text": "比如说，你想让人物向右转一点，或者想让镜头从当前角度略微偏向左边，又或者想让某张图在原有基础上往某个方向延展，AI 往往并不能稳定地完成这种要求。它不会像人类一样，基于原本已经成立的空间关系，继续做出一个逻辑连贯的推演。",
             "section": "空间逻辑"
-          },
-          {
-            "type": "text",
-            "text": "[!NOTE] 例子1",
-            "section": "空间逻辑"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260619154519.png",
-            "rawRef": "Pasted image 20260619154519.png",
-            "section": "空间逻辑",
-            "src": "assets/review-media/004-Pasted image 20260619154519.png"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260619154546.png",
-            "rawRef": "Pasted image 20260619154546.png",
-            "section": "空间逻辑",
-            "src": "assets/review-media/005-Pasted image 20260619154546.png"
           }
         ],
         [
           {
-            "type": "text",
-            "text": "人物低头去看自己手里的饭碗，按正常逻辑，桌上的饭菜应该相对留在原位，退到视线更远的位置；但 AI 往往不会真正理解这种视角变化，它只会保留“饭桌”和“饭菜”这些元素，结果就是那些菜像在抢镜一样，依旧立在视线中央，导致整个空间关系变得很奇怪",
-            "section": "空间逻辑"
-          },
-          {
-            "type": "text",
-            "text": "[!NOTE] 例子2",
-            "section": "空间逻辑"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260619155425.png",
-            "rawRef": "Pasted image 20260619155425.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "例子1",
             "section": "空间逻辑",
-            "src": "assets/review-media/006-Pasted image 20260619155425.png"
-          },
+            "children": [
+              {
+                "type": "image",
+                "ref": "Pasted image 20260619154519.png",
+                "rawRef": "Pasted image 20260619154519.png",
+                "section": "空间逻辑",
+                "src": "assets/review-media/004-Pasted image 20260619154519.png"
+              },
+              {
+                "type": "image",
+                "ref": "Pasted image 20260619154546.png",
+                "rawRef": "Pasted image 20260619154546.png",
+                "section": "空间逻辑",
+                "src": "assets/review-media/005-Pasted image 20260619154546.png"
+              },
+              {
+                "type": "text",
+                "text": "人物低头去看自己手里的饭碗，按正常逻辑，桌上的饭菜应该相对留在原位，退到视线更远的位置；但 AI 往往不会真正理解这种视角变化，它只会保留“饭桌”和“饭菜”这些元素，结果就是那些菜像在抢镜一样，依旧立在视线中央，导致整个空间关系变得很奇怪",
+                "section": "空间逻辑"
+              }
+            ]
+          }
+        ],
+        [
           {
-            "type": "image",
-            "ref": "Pasted image 20260619155522.png",
-            "rawRef": "Pasted image 20260619155522.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "例子2",
             "section": "空间逻辑",
-            "src": "assets/review-media/007-Pasted image 20260619155522.png"
-          },
-          {
-            "type": "text",
-            "text": "物体朝向很难精确控制。我想让电子琴正对帘子，但无论怎么强调角度和位置，AI 都会回到它更熟悉的斜侧构图/又或者就直接乱七八糟来。元素和氛围一致，但真正想调整的空间关系却始终调不动。",
-            "section": "空间逻辑"
+            "children": [
+              {
+                "type": "image",
+                "ref": "Pasted image 20260619155425.png",
+                "rawRef": "Pasted image 20260619155425.png",
+                "section": "空间逻辑",
+                "src": "assets/review-media/006-Pasted image 20260619155425.png"
+              },
+              {
+                "type": "image",
+                "ref": "Pasted image 20260619155522.png",
+                "rawRef": "Pasted image 20260619155522.png",
+                "section": "空间逻辑",
+                "src": "assets/review-media/007-Pasted image 20260619155522.png"
+              },
+              {
+                "type": "text",
+                "text": "物体朝向很难精确控制。我想让电子琴正对帘子，但无论怎么强调角度和位置，AI 都会回到它更熟悉的斜侧构图/又或者就直接乱七八糟来。元素和氛围一致，但真正想调整的空间关系却始终调不动。",
+                "section": "空间逻辑"
+              }
+            ]
           },
           {
             "type": "text",
             "text": "关于空间逻辑的问题，我有三个层次的处理方式。",
             "section": "空间逻辑"
-          },
+          }
+        ],
+        [
           {
             "type": "heading",
             "text": "第一层：文字提示词",
@@ -2216,14 +2331,22 @@
             "type": "text",
             "text": "比如处理“低头看饭”这个画面时，我的提示词会修改为：",
             "section": "第一层：文字提示词"
+          },
+          {
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "Prompt",
+            "section": "第一层：文字提示词",
+            "children": [
+              {
+                "type": "text",
+                "text": "第一视角俯视手中的饭碗，饭碗位于画面下半部分中央，占据画面约三分之一面积；双手和筷子在饭碗两侧，靠近镜头，是清晰近景；桌面从画面下方延伸到上方，菜盘位于画面上方远处，体积明显小于饭碗，只作为背景元素；杯子和纸巾盒靠近画面边缘，可以只露出一部分；不要让菜盘靠近饭碗，也不要让饭菜挤在画面中心。",
+                "section": "第一层：文字提示词"
+              }
+            ]
           }
         ],
         [
-          {
-            "type": "text",
-            "text": "[!NOTE] Prompt\n第一视角俯视手中的饭碗，饭碗位于画面下半部分中央，占据画面约三分之一面积；双手和筷子在饭碗两侧，靠近镜头，是清晰近景；桌面从画面下方延伸到上方，菜盘位于画面上方远处，体积明显小于饭碗，只作为背景元素；杯子和纸巾盒靠近画面边缘，可以只露出一部分；不要让菜盘靠近饭碗，也不要让饭菜挤在画面中心。",
-            "section": "第一层：文字提示词"
-          },
           {
             "type": "text",
             "text": "当然这只是个示例，重点要传达的是：当画面涉及视角变化、物体移动、人物转向时，不能只告诉 AI “发生了什么动作”，要直接告诉它“动作之后画面应该长成什么样”。",
@@ -2259,26 +2382,33 @@
             "type": "text",
             "text": "这样做的好处是，问题被缩小了。原本 AI 要同时处理一整个房间，现在只需要先处理一个电子琴的角度。等这个关键物件成立之后，再把它和原场景进行融合，成功率便高了很多。这也是目前我确认比较有效的一种方法。",
             "section": "第二层：给它更直观的空间参照"
-          },
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 示例（图①+图②=图③）",
-            "section": "第二层：给它更直观的空间参照"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260619222441.png",
-            "rawRef": "Pasted image 20260619222441.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "示例（图①+图②=图③）",
             "section": "第二层：给它更直观的空间参照",
-            "src": "assets/review-media/008-Pasted image 20260619222441.png"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260619155522.png",
-            "rawRef": "Pasted image 20260619155522.png",
-            "section": "第二层：给它更直观的空间参照",
-            "src": "assets/review-media/007-Pasted image 20260619155522.png"
-          },
+            "children": [
+              {
+                "type": "image",
+                "ref": "Pasted image 20260619222441.png",
+                "rawRef": "Pasted image 20260619222441.png",
+                "section": "第二层：给它更直观的空间参照",
+                "src": "assets/review-media/008-Pasted image 20260619222441.png"
+              },
+              {
+                "type": "image",
+                "ref": "Pasted image 20260619155522.png",
+                "rawRef": "Pasted image 20260619155522.png",
+                "section": "第二层：给它更直观的空间参照",
+                "src": "assets/review-media/007-Pasted image 20260619155522.png"
+              }
+            ]
+          }
+        ],
+        [
           {
             "type": "image",
             "ref": "61251164-f605-4c01-b1f7-0df5ea0d272a 1.png",
@@ -2295,9 +2425,7 @@
             "type": "text",
             "text": "这两种方式我当时没有留下特别完整的案例记录，成功率也没有稳定到我可以义正词严地下结论。但我认为它们和第一种方式的底层逻辑一样，当文字描述开始失效时，给 AI 一个更直观的空间参照，把空间关系直接可视化，再让 AI 在这个基础上生成画面，是一种比继续优化提示词更有效的方式。",
             "section": "第二层：给它更直观的空间参照"
-          }
-        ],
-        [
+          },
           {
             "type": "heading",
             "text": "第三层：重置镜头逻辑",
@@ -2323,7 +2451,9 @@
             "type": "text",
             "text": "但这种方式也不是万能的。而如果我在尝试以上所有方法之后仍旧得不到我满意的画面的话，那我可能会重新审视一下这个镜头，它再这里承载的叙事功能是什么，一定只有这种表现形式吗，我可不可以换一个画面，换一个主体？",
             "section": "第三层：重置镜头逻辑"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "或许这种方法是被称之为“退而求其次”的无奈之举，但事实上我感受到的很多都是“柳暗花明”的某种豁然开朗。就像你一直试图把一把钥匙插进锁孔里，试了一遍又一遍，换角度、加力气、重新打磨钥匙，最后才发现，问题压根不在钥匙上——这扇门本来就不该从这里打开。",
@@ -2387,42 +2517,50 @@
             "type": "text",
             "text": "**越是涉及手部、物体接触和精确位置的动作，越要预期到高抽卡成本。**",
             "section": "选图与设计运动"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "在设计一个图片要如何运动的时候，这部分往往是重灾区。像有些画面只需要轻微运动，比如镜头缓慢推进、窗帘微微晃动，这类动作相对容易稳定。而一旦涉及手部动作（举例），戴戒指啊、弹钢琴啊、牵手啊、握住某个物件啊，事情便很容易朝着不可控的方向发展。",
             "section": "选图与设计运动"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "或许是对视频模型来说，它不仅要理解动作本身，还要同时兼顾诸如手指数量、手部结构、物体位置、接触关系和镜头视角等等环节。而只要其中一个部分出现纰漏，画面就变得十分有百分之不奇怪。",
             "section": "选图与设计运动"
           },
           {
-            "type": "text",
-            "text": "[!NOTE] “戴”戒指",
-            "section": "选图与设计运动"
-          },
-          {
-            "type": "video",
-            "ref": "“戴”戒指.mp4",
-            "rawRef": "“戴”戒指.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "“戴”戒指",
             "section": "选图与设计运动",
-            "src": "assets/review-media/011-“戴”戒指.mp4"
-          },
+            "children": [
+              {
+                "type": "video",
+                "ref": "“戴”戒指.mp4",
+                "rawRef": "“戴”戒指.mp4",
+                "section": "选图与设计运动",
+                "src": "assets/review-media/011-“戴”戒指.mp4"
+              }
+            ]
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] “弹”钢琴",
-            "section": "选图与设计运动"
-          },
-          {
-            "type": "video",
-            "ref": "“弹”钢琴.mp4",
-            "rawRef": "“弹”钢琴.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "“弹”钢琴",
             "section": "选图与设计运动",
-            "src": "assets/review-media/012-“弹”钢琴.mp4"
+            "children": [
+              {
+                "type": "video",
+                "ref": "“弹”钢琴.mp4",
+                "rawRef": "“弹”钢琴.mp4",
+                "section": "选图与设计运动",
+                "src": "assets/review-media/012-“弹”钢琴.mp4"
+              }
+            ]
           },
           {
             "type": "text",
@@ -2463,7 +2601,9 @@
             "type": "text",
             "text": "第四步，才是**调整提示词和继续生成**。",
             "section": "选图与设计运动"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "提示词需要明确主体、动作幅度、物体位置、手部关系和镜头状态，同时删掉互相冲突的要求。把动作、限制和禁止事项写清楚，然后继续生成多个版本。但提示词能够解决的范围有限。当连续多次生成都在同一个地方失控时，继续堆叠限制词，往往只会增加成本。这时更有效的选择，是回到镜头设计本身，重新判断动作能否简化、拆分或换一种方式表达。",
@@ -2473,9 +2613,7 @@
             "type": "text",
             "text": "因此，面对高难动作，真正需要控制的并不只有提示词，也包括镜头本身的野心。",
             "section": "选图与设计运动"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "画面是否值得反复生成，他又到底承担了什么，是否需要及时换一种表达。继续抽卡和调整镜头之间，需要有一条明确的止损线。否则，制作很容易陷入一种错觉：仿佛只要再生成一次，模型就会突然理解我脑海中的全部空间关系。",
@@ -2526,38 +2664,46 @@
             "type": "text",
             "text": "所以我会让它拆解成具体的动作描述，只保留一两个关键的抽象描述。视频模型我使用的是vidu AI ，我习惯于用它的“闪电出片”模式，一般生成 5 秒，一次出 4 个版本，然后从里面挑最符合预期的。",
             "section": "视频提示词、生成与筛选"
-          },
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 示例",
-            "section": "视频提示词、生成与筛选"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260620160734.png",
-            "rawRef": "Pasted image 20260620160734.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "示例",
             "section": "视频提示词、生成与筛选",
-            "src": "assets/review-media/013-Pasted image 20260620160734.png"
+            "children": [
+              {
+                "type": "image",
+                "ref": "Pasted image 20260620160734.png",
+                "rawRef": "Pasted image 20260620160734.png",
+                "section": "视频提示词、生成与筛选",
+                "src": "assets/review-media/013-Pasted image 20260620160734.png"
+              }
+            ]
           },
           {
             "type": "text",
             "text": "如果是比较复杂的动作，或者反复生成都不理想的画面，可能就需要进一步让它把提示词拆得更细致，第几秒到第几秒保持稳定，第几秒开始动作，第几秒完成动作，最后停在哪个画面状态，以及用到“电影大片”模式。",
             "section": "视频提示词、生成与筛选"
-          },
-          {
-            "type": "text",
-            "text": "[!NOTE] 示例（by《知我》之前做过的另一个视频）",
-            "section": "视频提示词、生成与筛选"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260620161558.png",
-            "rawRef": "Pasted image 20260620161558.png",
-            "section": "视频提示词、生成与筛选",
-            "src": "assets/review-media/014-Pasted image 20260620161558.png"
           }
         ],
         [
+          {
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "示例（by《知我》之前做过的另一个视频）",
+            "section": "视频提示词、生成与筛选",
+            "children": [
+              {
+                "type": "image",
+                "ref": "Pasted image 20260620161558.png",
+                "rawRef": "Pasted image 20260620161558.png",
+                "section": "视频提示词、生成与筛选",
+                "src": "assets/review-media/014-Pasted image 20260620161558.png"
+              }
+            ]
+          },
           {
             "type": "heading",
             "text": "首尾帧衔接和过渡帧补充",
@@ -2588,7 +2734,9 @@
             "type": "text",
             "text": "且因为图生视频之后，模型并不会完整保留原图的色调和质感。它会在生成过程中对画面做一层处理，可能多出一点所谓的电影感、光影变化或颗粒质感等。也就是说，视频里的最后一帧，和一开始拿去生成的那张原图，已经不完全一样了。",
             "section": "首尾帧衔接和过渡帧补充"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "如果下一段视频继续用原始图片作为衔接起点，画面之间就可能出现轻微的质感不一：上一段结束时是视频处理后的画面，下一段开始却又跳回原始图片的状态，衔接效果会打一点折扣。",
@@ -2598,50 +2746,64 @@
             "type": "text",
             "text": "而“尾帧续写”也解决了这个问题。这给我一种发现新大陆的感觉。这种方式也在这个视频被广泛使用。",
             "section": "首尾帧衔接和过渡帧补充"
-          },
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 示例\n原图：",
-            "section": "首尾帧衔接和过渡帧补充"
-          },
-          {
-            "type": "image",
-            "ref": "9c986860-16c4-44c2-89ed-797674a42c6f.png",
-            "rawRef": "9c986860-16c4-44c2-89ed-797674a42c6f.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "示例",
             "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/015-9c986860-16c4-44c2-89ed-797674a42c6f.png"
-          },
-          {
-            "type": "image",
-            "ref": "3789431f-f263-45d4-961e-9eeaf77d40cc 1.png",
-            "rawRef": "3789431f-f263-45d4-961e-9eeaf77d40cc 1.png",
-            "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/016-3789431f-f263-45d4-961e-9eeaf77d40cc 1.png"
-          },
-          {
-            "type": "text",
-            "text": "视频效果：",
-            "section": "首尾帧衔接和过渡帧补充"
-          },
-          {
-            "type": "video",
-            "ref": "vidu-video-3294774092084574.mp4",
-            "rawRef": "vidu-video-3294774092084574.mp4",
-            "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/017-vidu-video-3294774092084574.mp4"
-          },
-          {
-            "type": "text",
-            "text": "可以发现两者的色调、模糊度是有一些不同的。\n尾帧续写效果：",
-            "section": "首尾帧衔接和过渡帧补充"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-20 165924.mp4",
-            "rawRef": "屏幕录制 2026-06-20 165924.mp4",
-            "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/018-屏幕录制 2026-06-20 165924.mp4"
-          },
+            "children": [
+              {
+                "type": "text",
+                "text": "原图：",
+                "section": "首尾帧衔接和过渡帧补充"
+              },
+              {
+                "type": "image",
+                "ref": "9c986860-16c4-44c2-89ed-797674a42c6f.png",
+                "rawRef": "9c986860-16c4-44c2-89ed-797674a42c6f.png",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/015-9c986860-16c4-44c2-89ed-797674a42c6f.png"
+              },
+              {
+                "type": "image",
+                "ref": "3789431f-f263-45d4-961e-9eeaf77d40cc 1.png",
+                "rawRef": "3789431f-f263-45d4-961e-9eeaf77d40cc 1.png",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/016-3789431f-f263-45d4-961e-9eeaf77d40cc 1.png"
+              },
+              {
+                "type": "text",
+                "text": "视频效果：",
+                "section": "首尾帧衔接和过渡帧补充"
+              },
+              {
+                "type": "video",
+                "ref": "vidu-video-3294774092084574.mp4",
+                "rawRef": "vidu-video-3294774092084574.mp4",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/017-vidu-video-3294774092084574.mp4"
+              },
+              {
+                "type": "text",
+                "text": "可以发现两者的色调、模糊度是有一些不同的。\n尾帧续写效果：",
+                "section": "首尾帧衔接和过渡帧补充"
+              },
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-20 165924.mp4",
+                "rawRef": "屏幕录制 2026-06-20 165924.mp4",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/018-屏幕录制 2026-06-20 165924.mp4"
+              }
+            ],
+            "oversized": true,
+            "scrollable": true
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "当然，在实际制作里，我并不是完全抛开原本的首尾帧图片，只使用视频尾帧截图。更准确地说，是两种方式要灵活使用。",
@@ -2656,9 +2818,7 @@
             "type": "text",
             "text": "**所谓首尾帧，就是给视频模型两张图：一张作为开始，一张作为结束。它的任务不再是单纯让某一张图动起来，而是在两张图之间生成一段运动。这样一来，镜头衔接就从“我凭空设计下一段”变成了“让 A 画面过渡到 B 画面”。**",
             "section": "首尾帧衔接和过渡帧补充"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "而倘若起始帧和结束帧之间的差异太大，视频模型可能并不能稳定理解中间应该怎样变化。它会按照自己的逻辑去补足运动路径，结果可能出现镜头乱飞、人物关系错位、空间方向混乱、画面突然变形等情况。",
@@ -2668,69 +2828,83 @@
             "type": "text",
             "text": "这就需要补过渡帧。",
             "section": "首尾帧衔接和过渡帧补充"
-          },
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 示例\n原首尾帧：",
-            "section": "首尾帧衔接和过渡帧补充"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260620172202.png",
-            "rawRef": "Pasted image 20260620172202.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "示例",
             "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/019-Pasted image 20260620172202.png"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260620172208.png",
-            "rawRef": "Pasted image 20260620172208.png",
-            "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/020-Pasted image 20260620172208.png"
-          },
-          {
-            "type": "text",
-            "text": "这里我想让“我”的视角转头看到老人，而生成了好几次始终是乱七八糟的比如：",
-            "section": "首尾帧衔接和过渡帧补充"
-          },
-          {
-            "type": "video",
-            "ref": "vidu-video-3298771883635777.mp4",
-            "rawRef": "vidu-video-3298771883635777.mp4",
-            "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/021-vidu-video-3298771883635777.mp4"
-          },
-          {
-            "type": "text",
-            "text": "于是我加了一张过渡帧的图片，也就是：",
-            "section": "首尾帧衔接和过渡帧补充"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260620172404.png",
-            "rawRef": "Pasted image 20260620172404.png",
-            "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/022-Pasted image 20260620172404.png"
-          },
-          {
-            "type": "text",
-            "text": "再去生成的效果就变成了：",
-            "section": "首尾帧衔接和过渡帧补充"
-          },
-          {
-            "type": "video",
-            "ref": "vidu-video-3298788518429876.mp4",
-            "rawRef": "vidu-video-3298788518429876.mp4",
-            "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/023-vidu-video-3298788518429876.mp4"
-          },
-          {
-            "type": "video",
-            "ref": "vidu-video-3298795186246424.mp4",
-            "rawRef": "vidu-video-3298795186246424.mp4",
-            "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/024-vidu-video-3298795186246424.mp4"
-          },
+            "children": [
+              {
+                "type": "text",
+                "text": "原首尾帧：",
+                "section": "首尾帧衔接和过渡帧补充"
+              },
+              {
+                "type": "image",
+                "ref": "Pasted image 20260620172202.png",
+                "rawRef": "Pasted image 20260620172202.png",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/019-Pasted image 20260620172202.png"
+              },
+              {
+                "type": "image",
+                "ref": "Pasted image 20260620172208.png",
+                "rawRef": "Pasted image 20260620172208.png",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/020-Pasted image 20260620172208.png"
+              },
+              {
+                "type": "text",
+                "text": "这里我想让“我”的视角转头看到老人，而生成了好几次始终是乱七八糟的比如：",
+                "section": "首尾帧衔接和过渡帧补充"
+              },
+              {
+                "type": "video",
+                "ref": "vidu-video-3298771883635777.mp4",
+                "rawRef": "vidu-video-3298771883635777.mp4",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/021-vidu-video-3298771883635777.mp4"
+              },
+              {
+                "type": "text",
+                "text": "于是我加了一张过渡帧的图片，也就是：",
+                "section": "首尾帧衔接和过渡帧补充"
+              },
+              {
+                "type": "image",
+                "ref": "Pasted image 20260620172404.png",
+                "rawRef": "Pasted image 20260620172404.png",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/022-Pasted image 20260620172404.png"
+              },
+              {
+                "type": "text",
+                "text": "再去生成的效果就变成了：",
+                "section": "首尾帧衔接和过渡帧补充"
+              },
+              {
+                "type": "video",
+                "ref": "vidu-video-3298788518429876.mp4",
+                "rawRef": "vidu-video-3298788518429876.mp4",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/023-vidu-video-3298788518429876.mp4"
+              },
+              {
+                "type": "video",
+                "ref": "vidu-video-3298795186246424.mp4",
+                "rawRef": "vidu-video-3298795186246424.mp4",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/024-vidu-video-3298795186246424.mp4"
+              }
+            ],
+            "oversized": true,
+            "scrollable": true
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "过渡帧的作用，是把跨度太大的变化拆小。原本从 A 直接到 C，模型理解不了，就在中间补一张 B。这样视频模型不需要一次完成太大的空间跳跃，而是先从 A 到 B，再从 B 到 C。",
@@ -2747,17 +2921,22 @@
             "section": "首尾帧衔接和过渡帧补充"
           },
           {
-            "type": "text",
-            "text": "[!NOTE] 示例",
-            "section": "首尾帧衔接和过渡帧补充"
-          },
-          {
-            "type": "image",
-            "ref": "Pasted image 20260620175930.png",
-            "rawRef": "Pasted image 20260620175930.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "示例",
             "section": "首尾帧衔接和过渡帧补充",
-            "src": "assets/review-media/025-Pasted image 20260620175930.png"
-          },
+            "children": [
+              {
+                "type": "image",
+                "ref": "Pasted image 20260620175930.png",
+                "rawRef": "Pasted image 20260620175930.png",
+                "section": "首尾帧衔接和过渡帧补充",
+                "src": "assets/review-media/025-Pasted image 20260620175930.png"
+              }
+            ]
+          }
+        ],
+        [
           {
             "type": "image",
             "ref": "Pasted image 20260716151430.png",
@@ -2801,9 +2980,7 @@
             "type": "text",
             "text": "每补上一段，原本停留在想象里的故事就会更落于实处，哪怕整条视频还远没有完成。时间线不断被填满的过程，会带来很直接的成就感。事实上，我之所以长期采用这种方式，很大一部分原因便来自这种即时反馈，它让我更愿意继续推进。",
             "section": "一般流程"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "但它也会带来一个问题：由于每一段素材刚进入时间线时，就已经被我按照当前结构仔细处理过，前后镜头之间会形成很强的依赖。一旦后期发现某个段落的节奏有问题，或者想替换其中一个镜头，需要调整的往往不只是一处。镜头长度、音乐落点、前后衔接，甚至后续已经生成的内容，都可能跟着发生变化。",
@@ -2813,7 +2990,9 @@
             "type": "text",
             "text": "看似只是换掉几秒画面，实际却可能需要重新整理整段时间线。",
             "section": "一般流程"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "边生成边精剪确实能够提供动力，但它同样容易让尚未稳定的结构过早凝固。局部完成度越高，后续推翻它时的心理阻力和调整成本也会越大。因此，采用这种方式时，需要有意识地给前期剪辑保留弹性。某些镜头可以先确认位置和大致长度，暂时不急着将每一个节奏点都修到极致；对于仍可能发生变化的段落，也需要允许它以一种不完整的状态停留在时间线上等等。",
@@ -2855,19 +3034,26 @@
             "type": "text",
             "text": "这同样可以为制作首尾帧图片提供一种思路，比如琴谱变成少年时代的书。它们不是同一个物件，但都属于纸张类的阅读载体，都有翻页、文字、桌面、手部这些相近的视觉关系。所以在制作首尾帧时，就可以让琴谱和书保持相似的构图位置、观看角度和画面重心——",
             "section": "转场和黑场"
-          },
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 示例 「相近元素」",
-            "section": "转场和黑场"
-          },
-          {
-            "type": "image",
-            "ref": "4 1.png",
-            "rawRef": "4 1.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "示例 「相近元素」",
             "section": "转场和黑场",
-            "src": "assets/review-media/027-4 1.png"
-          },
+            "children": [
+              {
+                "type": "image",
+                "ref": "4 1.png",
+                "rawRef": "4 1.png",
+                "section": "转场和黑场",
+                "src": "assets/review-media/027-4 1.png"
+              }
+            ]
+          }
+        ],
+        [
           {
             "type": "image",
             "ref": "fe0efbc4-3df0-4491-9fd4-e0059b5cceee 3.png",
@@ -2886,19 +3072,26 @@
             "type": "text",
             "text": "再比如老人的手变成年轻时候的手。这里需要保持的不只是“手”这个元素本身，还有手的位置、动作、角度和画面比例。",
             "section": "转场和黑场"
-          },
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 示例「动作」",
-            "section": "转场和黑场"
-          },
-          {
-            "type": "image",
-            "ref": "29.png",
-            "rawRef": "29.png",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "示例「动作」",
             "section": "转场和黑场",
-            "src": "assets/review-media/030-29.png"
-          },
+            "children": [
+              {
+                "type": "image",
+                "ref": "29.png",
+                "rawRef": "29.png",
+                "section": "转场和黑场",
+                "src": "assets/review-media/030-29.png"
+              }
+            ]
+          }
+        ],
+        [
           {
             "type": "image",
             "ref": "653e01ee-1abc-459f-8317-f8aa77b17530.png",
@@ -2917,9 +3110,7 @@
             "type": "text",
             "text": "而剪辑层面的转场特效，我比较常用是「**叠化**」。",
             "section": "转场和黑场"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "因为 AI 生成的视频片段，很多都是单独生成出来的。它们单独看可能都成立，但直接拼在一起时，前后之间还是会有一点卡顿。尤其是场景、人物位置、光线或镜头方向发生变化时，硬切会让画面显得生硬。",
@@ -2929,36 +3120,48 @@
             "type": "text",
             "text": "而叠化最直接的作用，是让前后两个画面通过透明度变化短暂重叠，从而减少硬切带来的跳跃感。它可以缓冲两个片段之间的断裂感，尤其适合回忆、梦境、时间流动这类节奏比较慢的段落。",
             "section": "转场和黑场"
-          },
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 示例\n没加叠化效果：",
-            "section": "转场和黑场"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-25 210134.mp4",
-            "rawRef": "屏幕录制 2026-06-25 210134.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "示例",
             "section": "转场和黑场",
-            "src": "assets/review-media/033-屏幕录制 2026-06-25 210134.mp4"
-          },
-          {
-            "type": "text",
-            "text": "加了叠化的效果：",
-            "section": "转场和黑场"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-25 210334.mp4",
-            "rawRef": "屏幕录制 2026-06-25 210334.mp4",
-            "section": "转场和黑场",
-            "src": "assets/review-media/034-屏幕录制 2026-06-25 210334.mp4"
+            "children": [
+              {
+                "type": "text",
+                "text": "没加叠化效果：",
+                "section": "转场和黑场"
+              },
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-25 210134.mp4",
+                "rawRef": "屏幕录制 2026-06-25 210134.mp4",
+                "section": "转场和黑场",
+                "src": "assets/review-media/033-屏幕录制 2026-06-25 210134.mp4"
+              },
+              {
+                "type": "text",
+                "text": "加了叠化的效果：",
+                "section": "转场和黑场"
+              },
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-25 210334.mp4",
+                "rawRef": "屏幕录制 2026-06-25 210334.mp4",
+                "section": "转场和黑场",
+                "src": "assets/review-media/034-屏幕录制 2026-06-25 210334.mp4"
+              }
+            ]
           },
           {
             "type": "text",
             "text": "除了叠化之外，我还会用「黑场」。",
             "section": "转场和黑场"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "严格来说，黑场并不是一种转场特效，它更像是一个被放进时间线里的空白画面。它的作用并非让两个画面通过某种效果衔接起来，而是直接让画面暂时消失，给前后段落之间留出一个停顿。从而让观众在进入下一个画面之前，先有一个短暂的缓冲——\n这个时候它承担的是「**分隔节奏**」的功能。就像在剪辑的过程中打了一个顿号，尤其是当两个场景之间存在时间跳跃、现实与回忆切换、情绪从平静转向沉重，或者从沉重重新回到现实的时候，黑场可以让这种转换更有段落感。",
@@ -2980,9 +3183,11 @@
             "section": "转场和黑场"
           },
           {
-            "type": "text",
-            "text": "[!NOTE] 示例",
-            "section": "转场和黑场"
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "示例",
+            "section": "转场和黑场",
+            "children": []
           },
           {
             "type": "video",
@@ -3001,7 +3206,9 @@
             "type": "text",
             "text": "剪辑里的第二个重点，是「**画面和音乐节奏的匹配**」。",
             "section": "音乐节奏"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "我理解的音乐节奏匹配，不只是通常说的“卡点”。卡点当然是一种方式，但它更多是在回应某一个明确的节奏落点。真正更重要的，是音乐本身会给观众带来一种模糊的感受：这一段是应该慢一点还是快一点；是应该停下来，还是继续推进；应该轻轻带过，还是细细诉说等等。",
@@ -3011,9 +3218,7 @@
             "type": "text",
             "text": "剪辑要做的，就是用画面的节奏去回应这种感受。",
             "section": "音乐节奏"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "当音乐比较舒缓时，画面可以停得更久，让观众有时间进入场景；当音乐开始变得强劲、紧促、浓烈，画面也需要进入更高的密度。像一次憋气终于提到了胸口，画面不能还慢慢地、平平地往外吐，它也要跟着变急、变重、变密，让那口气真正吐出来。",
@@ -3058,42 +3263,55 @@
             "type": "text",
             "text": "所以剪辑里的音乐匹配，可以理解为：**音乐先给观众一种画面应该如何变化的预期，剪辑再用画面的停顿、切换、密度、动作和节奏去回应它**——称之为「**合拍」。",
             "section": "音乐节奏"
-          },
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 结尾闪回",
-            "section": "音乐节奏"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-26 210837.mp4",
-            "rawRef": "屏幕录制 2026-06-26 210837.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "结尾闪回",
             "section": "音乐节奏",
-            "src": "assets/review-media/036-屏幕录制 2026-06-26 210837.mp4"
+            "children": [
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-26 210837.mp4",
+                "rawRef": "屏幕录制 2026-06-26 210837.mp4",
+                "section": "音乐节奏",
+                "src": "assets/review-media/036-屏幕录制 2026-06-26 210837.mp4"
+              }
+            ]
           },
           {
-            "type": "text",
-            "text": "[!NOTE] 图片切换",
-            "section": "音乐节奏"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-26 211220.mp4",
-            "rawRef": "屏幕录制 2026-06-26 211220.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "图片切换",
             "section": "音乐节奏",
-            "src": "assets/review-media/037-屏幕录制 2026-06-26 211220.mp4"
-          },
+            "children": [
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-26 211220.mp4",
+                "rawRef": "屏幕录制 2026-06-26 211220.mp4",
+                "section": "音乐节奏",
+                "src": "assets/review-media/037-屏幕录制 2026-06-26 211220.mp4"
+              }
+            ]
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 钢琴匹配（举一例）",
-            "section": "音乐节奏"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-26 211452.mp4",
-            "rawRef": "屏幕录制 2026-06-26 211452.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "钢琴匹配（举一例）",
             "section": "音乐节奏",
-            "src": "assets/review-media/038-屏幕录制 2026-06-26 211452.mp4"
+            "children": [
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-26 211452.mp4",
+                "rawRef": "屏幕录制 2026-06-26 211452.mp4",
+                "section": "音乐节奏",
+                "src": "assets/review-media/038-屏幕录制 2026-06-26 211452.mp4"
+              }
+            ]
           },
           {
             "type": "text",
@@ -3115,9 +3333,7 @@
             "type": "text",
             "text": "音效这一部分，是我在剪辑过程中才真正意识到重要性的。",
             "section": "音效"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "最开始我并没有特别在意它。那时候因为剪辑流程里出了点问题，我暂时没有办法加转场，就先单独把主素材剪了一剥离了所有的声音。",
@@ -3137,7 +3353,9 @@
             "type": "text",
             "text": "**它补充了画面里事物之间的关系。**",
             "section": "音效"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "画面可以让观众看到那里有什么：老人、钢琴、戒指……但如果仅仅是看见，那就只是一些孤零零的元素，它并没有给人那种真正地、与周围的世界发生关系的感觉。",
@@ -3182,9 +3400,7 @@
             "type": "text",
             "text": "女孩的笑声也类似。",
             "section": "音效"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "如果画面里只是女孩出现，观众看到的是她的样子；但笑声一出来，她的俏皮、青春、亲近感就会更直接地成立。这个声音补充了这个人物和“我”之间的关系。它让那个瞬间更像一段真实的记忆，而不只是一张好看的画面。",
@@ -3199,55 +3415,77 @@
             "type": "text",
             "text": "**它出现得越少，出现的位置就越重要。**",
             "section": "音效"
-          },
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 脚步声\n没有音效：",
-            "section": "音效"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-26 222352.mp4",
-            "rawRef": "屏幕录制 2026-06-26 222352.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "脚步声",
             "section": "音效",
-            "src": "assets/review-media/039-屏幕录制 2026-06-26 222352.mp4"
-          },
+            "children": [
+              {
+                "type": "text",
+                "text": "没有音效：",
+                "section": "音效"
+              },
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-26 222352.mp4",
+                "rawRef": "屏幕录制 2026-06-26 222352.mp4",
+                "section": "音效",
+                "src": "assets/review-media/039-屏幕录制 2026-06-26 222352.mp4"
+              },
+              {
+                "type": "text",
+                "text": "有音效：",
+                "section": "音效"
+              },
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-25 213400.mp4",
+                "rawRef": "屏幕录制 2026-06-25 213400.mp4",
+                "section": "音效",
+                "src": "assets/review-media/035-屏幕录制 2026-06-25 213400.mp4"
+              }
+            ]
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "有音效：",
-            "section": "音效"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-25 213400.mp4",
-            "rawRef": "屏幕录制 2026-06-25 213400.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "女孩的笑声",
             "section": "音效",
-            "src": "assets/review-media/035-屏幕录制 2026-06-25 213400.mp4"
-          },
-          {
-            "type": "text",
-            "text": "[!NOTE] 女孩的笑声\n没音效：",
-            "section": "音效"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-26 222928.mp4",
-            "rawRef": "屏幕录制 2026-06-26 222928.mp4",
-            "section": "音效",
-            "src": "assets/review-media/040-屏幕录制 2026-06-26 222928.mp4"
-          },
-          {
-            "type": "text",
-            "text": "有音效：",
-            "section": "音效"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-26 222747.mp4",
-            "rawRef": "屏幕录制 2026-06-26 222747.mp4",
-            "section": "音效",
-            "src": "assets/review-media/041-屏幕录制 2026-06-26 222747.mp4"
-          },
+            "children": [
+              {
+                "type": "text",
+                "text": "没音效：",
+                "section": "音效"
+              },
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-26 222928.mp4",
+                "rawRef": "屏幕录制 2026-06-26 222928.mp4",
+                "section": "音效",
+                "src": "assets/review-media/040-屏幕录制 2026-06-26 222928.mp4"
+              },
+              {
+                "type": "text",
+                "text": "有音效：",
+                "section": "音效"
+              },
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-26 222747.mp4",
+                "rawRef": "屏幕录制 2026-06-26 222747.mp4",
+                "section": "音效",
+                "src": "assets/review-media/041-屏幕录制 2026-06-26 222747.mp4"
+              }
+            ]
+          }
+        ],
+        [
           {
             "type": "image",
             "ref": "Pasted image 20260716153618.png",
@@ -3276,12 +3514,12 @@
         {
           "title": "画面之间的连续性问题",
           "level": 4,
-          "index": 29
+          "index": 24
         },
         {
           "title": "叙事层面的遗憾",
           "level": 4,
-          "index": 44
+          "index": 37
         }
       ],
       "blocks": [
@@ -3312,64 +3550,79 @@
           "section": "局部细节仍有穿帮"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 桌子上突然出现的笔",
-          "section": "局部细节仍有穿帮"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-27 145909.mp4",
-          "rawRef": "屏幕录制 2026-06-27 145909.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "桌子上突然出现的笔",
           "section": "局部细节仍有穿帮",
-          "src": "assets/review-media/043-屏幕录制 2026-06-27 145909.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-27 145909.mp4",
+              "rawRef": "屏幕录制 2026-06-27 145909.mp4",
+              "section": "局部细节仍有穿帮",
+              "src": "assets/review-media/043-屏幕录制 2026-06-27 145909.mp4"
+            }
+          ]
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 架子随着转身位置、大小发生了变化",
-          "section": "局部细节仍有穿帮"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-27 150326.mp4",
-          "rawRef": "屏幕录制 2026-06-27 150326.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "架子随着转身位置、大小发生了变化",
           "section": "局部细节仍有穿帮",
-          "src": "assets/review-media/044-屏幕录制 2026-06-27 150326.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-27 150326.mp4",
+              "rawRef": "屏幕录制 2026-06-27 150326.mp4",
+              "section": "局部细节仍有穿帮",
+              "src": "assets/review-media/044-屏幕录制 2026-06-27 150326.mp4"
+            }
+          ]
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 女孩的六根手指",
-          "section": "局部细节仍有穿帮"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-27 151044.mp4",
-          "rawRef": "屏幕录制 2026-06-27 151044.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "女孩的六根手指",
           "section": "局部细节仍有穿帮",
-          "src": "assets/review-media/045-屏幕录制 2026-06-27 151044.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-27 151044.mp4",
+              "rawRef": "屏幕录制 2026-06-27 151044.mp4",
+              "section": "局部细节仍有穿帮",
+              "src": "assets/review-media/045-屏幕录制 2026-06-27 151044.mp4"
+            }
+          ]
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 墙上出现的日文",
-          "section": "局部细节仍有穿帮"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-27 153511.mp4",
-          "rawRef": "屏幕录制 2026-06-27 153511.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "墙上出现的日文",
           "section": "局部细节仍有穿帮",
-          "src": "assets/review-media/046-屏幕录制 2026-06-27 153511.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-27 153511.mp4",
+              "rawRef": "屏幕录制 2026-06-27 153511.mp4",
+              "section": "局部细节仍有穿帮",
+              "src": "assets/review-media/046-屏幕录制 2026-06-27 153511.mp4"
+            }
+          ]
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 色调的变化",
-          "section": "局部细节仍有穿帮"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-27 153822.mp4",
-          "rawRef": "屏幕录制 2026-06-27 153822.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "色调的变化",
           "section": "局部细节仍有穿帮",
-          "src": "assets/review-media/047-屏幕录制 2026-06-27 153822.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-27 153822.mp4",
+              "rawRef": "屏幕录制 2026-06-27 153822.mp4",
+              "section": "局部细节仍有穿帮",
+              "src": "assets/review-media/047-屏幕录制 2026-06-27 153822.mp4"
+            }
+          ]
         },
         {
           "type": "text",
@@ -3453,16 +3706,19 @@
           "section": "画面之间的连续性问题"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 动态突兀地变成了静态",
-          "section": "画面之间的连续性问题"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-27 160625.mp4",
-          "rawRef": "屏幕录制 2026-06-27 160625.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "动态突兀地变成了静态",
           "section": "画面之间的连续性问题",
-          "src": "assets/review-media/048-屏幕录制 2026-06-27 160625.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-27 160625.mp4",
+              "rawRef": "屏幕录制 2026-06-27 160625.mp4",
+              "section": "画面之间的连续性问题",
+              "src": "assets/review-media/048-屏幕录制 2026-06-27 160625.mp4"
+            }
+          ]
         },
         {
           "type": "text",
@@ -3495,16 +3751,19 @@
           "section": "画面之间的连续性问题"
         },
         {
-          "type": "text",
-          "text": "[!NOTE] 转场后视角的不匹配",
-          "section": "画面之间的连续性问题"
-        },
-        {
-          "type": "video",
-          "ref": "屏幕录制 2026-06-27 162647.mp4",
-          "rawRef": "屏幕录制 2026-06-27 162647.mp4",
+          "type": "callout",
+          "kind": "NOTE",
+          "title": "转场后视角的不匹配",
           "section": "画面之间的连续性问题",
-          "src": "assets/review-media/049-屏幕录制 2026-06-27 162647.mp4"
+          "children": [
+            {
+              "type": "video",
+              "ref": "屏幕录制 2026-06-27 162647.mp4",
+              "rawRef": "屏幕录制 2026-06-27 162647.mp4",
+              "section": "画面之间的连续性问题",
+              "src": "assets/review-media/049-屏幕录制 2026-06-27 162647.mp4"
+            }
+          ]
         },
         {
           "type": "text",
@@ -3598,7 +3857,7 @@
           "section": "叙事层面的遗憾"
         }
       ],
-      "characterCount": 2961,
+      "characterCount": 2835,
       "pages": [
         [
           {
@@ -3628,70 +3887,91 @@
             "section": "局部细节仍有穿帮"
           },
           {
-            "type": "text",
-            "text": "[!NOTE] 桌子上突然出现的笔",
-            "section": "局部细节仍有穿帮"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-27 145909.mp4",
-            "rawRef": "屏幕录制 2026-06-27 145909.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "桌子上突然出现的笔",
             "section": "局部细节仍有穿帮",
-            "src": "assets/review-media/043-屏幕录制 2026-06-27 145909.mp4"
-          },
+            "children": [
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-27 145909.mp4",
+                "rawRef": "屏幕录制 2026-06-27 145909.mp4",
+                "section": "局部细节仍有穿帮",
+                "src": "assets/review-media/043-屏幕录制 2026-06-27 145909.mp4"
+              }
+            ]
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 架子随着转身位置、大小发生了变化",
-            "section": "局部细节仍有穿帮"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-27 150326.mp4",
-            "rawRef": "屏幕录制 2026-06-27 150326.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "架子随着转身位置、大小发生了变化",
             "section": "局部细节仍有穿帮",
-            "src": "assets/review-media/044-屏幕录制 2026-06-27 150326.mp4"
+            "children": [
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-27 150326.mp4",
+                "rawRef": "屏幕录制 2026-06-27 150326.mp4",
+                "section": "局部细节仍有穿帮",
+                "src": "assets/review-media/044-屏幕录制 2026-06-27 150326.mp4"
+              }
+            ]
           },
           {
-            "type": "text",
-            "text": "[!NOTE] 女孩的六根手指",
-            "section": "局部细节仍有穿帮"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-27 151044.mp4",
-            "rawRef": "屏幕录制 2026-06-27 151044.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "女孩的六根手指",
             "section": "局部细节仍有穿帮",
-            "src": "assets/review-media/045-屏幕录制 2026-06-27 151044.mp4"
-          },
+            "children": [
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-27 151044.mp4",
+                "rawRef": "屏幕录制 2026-06-27 151044.mp4",
+                "section": "局部细节仍有穿帮",
+                "src": "assets/review-media/045-屏幕录制 2026-06-27 151044.mp4"
+              }
+            ]
+          }
+        ],
+        [
           {
-            "type": "text",
-            "text": "[!NOTE] 墙上出现的日文",
-            "section": "局部细节仍有穿帮"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-27 153511.mp4",
-            "rawRef": "屏幕录制 2026-06-27 153511.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "墙上出现的日文",
             "section": "局部细节仍有穿帮",
-            "src": "assets/review-media/046-屏幕录制 2026-06-27 153511.mp4"
+            "children": [
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-27 153511.mp4",
+                "rawRef": "屏幕录制 2026-06-27 153511.mp4",
+                "section": "局部细节仍有穿帮",
+                "src": "assets/review-media/046-屏幕录制 2026-06-27 153511.mp4"
+              }
+            ]
           },
           {
-            "type": "text",
-            "text": "[!NOTE] 色调的变化",
-            "section": "局部细节仍有穿帮"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-27 153822.mp4",
-            "rawRef": "屏幕录制 2026-06-27 153822.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "色调的变化",
             "section": "局部细节仍有穿帮",
-            "src": "assets/review-media/047-屏幕录制 2026-06-27 153822.mp4"
+            "children": [
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-27 153822.mp4",
+                "rawRef": "屏幕录制 2026-06-27 153822.mp4",
+                "section": "局部细节仍有穿帮",
+                "src": "assets/review-media/047-屏幕录制 2026-06-27 153822.mp4"
+              }
+            ]
           },
           {
             "type": "text",
             "text": "这些问题的出现大都来自于两个原因：",
             "section": "局部细节仍有穿帮"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "第一个原因，**是生图阶段没有考虑得足够周到。**",
@@ -3736,9 +4016,7 @@
             "type": "text",
             "text": "第二个原因，**是审美和判断上的疏漏。**",
             "section": "局部细节仍有穿帮"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "在制作过程中，我很容易被一个画面的整体呈现的感觉说服。只要这张图的氛围对了，情绪对了，“显得”合理，我就倾向于认为它是可用的。但反复观看之后才发现，整体成立并不代表细节也成立。",
@@ -3753,7 +4031,9 @@
             "type": "text",
             "text": "所以这类问题给我的提醒是：**AI 视频制作里，前期素材一旦进入后面的流程，返工成本就会迅速变高。**",
             "section": "局部细节仍有穿帮"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "我不可能在一开始就预判清楚所有问题，但至少在一张图进入视频生成之前，在一段视频进入剪辑轨道之前，都应该多做一次冷静检查。因为前期多看几遍，可能只是多花几分钟；后期再发现问题，就可能牵扯到重新生图、重新抽视频、重新筛选、重新剪辑，太过于损耗。",
@@ -3771,16 +4051,19 @@
             "section": "画面之间的连续性问题"
           },
           {
-            "type": "text",
-            "text": "[!NOTE] 动态突兀地变成了静态",
-            "section": "画面之间的连续性问题"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-27 160625.mp4",
-            "rawRef": "屏幕录制 2026-06-27 160625.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "动态突兀地变成了静态",
             "section": "画面之间的连续性问题",
-            "src": "assets/review-media/048-屏幕录制 2026-06-27 160625.mp4"
+            "children": [
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-27 160625.mp4",
+                "rawRef": "屏幕录制 2026-06-27 160625.mp4",
+                "section": "画面之间的连续性问题",
+                "src": "assets/review-media/048-屏幕录制 2026-06-27 160625.mp4"
+              }
+            ]
           },
           {
             "type": "text",
@@ -3791,7 +4074,9 @@
             "type": "text",
             "text": "它需要的是一种突然、轻快、带一点玩闹感的动态关系。镜头应该保持行走中的晃动，女孩出现的那一下也应该接住这种运动状态，这样“被吓一跳”和“俏皮地笑”才会成立。",
             "section": "画面之间的连续性问题"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "但实际成片里，前半段镜头还处在行走中的动态状态，画面有左右晃动；到了后面，画面却突然进入一种接近静止的状态。于是原本应该是“女孩突然闯进镜头”的瞬间，变成了一个动态画面强行接到静态画面上。那种被吓到的轻微反应、镜头的晃动感、女孩突然出现的俏皮感，都没有完全出来。",
@@ -3806,31 +4091,34 @@
             "type": "text",
             "text": "**它适合用来控制画面从 A 到 B 的变化，但如果前一个镜头本身正处在一个持续运动的状态里，比如行走、晃动、转头、追赶、奔跑，这时候突然用一张静态图片作为后续目标，就很容易造成动静态之间的不协调。**",
             "section": "画面之间的连续性问题"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "因为模型会试图从一个正在运动的画面（又或者说，它压根不知道那个画面是运动的），过渡到一个静止的画面。结果中间的运动逻辑没有接住，镜头像是突然停了下来，原本应该存在的身体反应和镜头惯性也被切断了。",
             "section": "画面之间的连续性问题"
           },
           {
-            "type": "text",
-            "text": "[!NOTE] 转场后视角的不匹配",
-            "section": "画面之间的连续性问题"
-          },
-          {
-            "type": "video",
-            "ref": "屏幕录制 2026-06-27 162647.mp4",
-            "rawRef": "屏幕录制 2026-06-27 162647.mp4",
+            "type": "callout",
+            "kind": "NOTE",
+            "title": "转场后视角的不匹配",
             "section": "画面之间的连续性问题",
-            "src": "assets/review-media/049-屏幕录制 2026-06-27 162647.mp4"
+            "children": [
+              {
+                "type": "video",
+                "ref": "屏幕录制 2026-06-27 162647.mp4",
+                "rawRef": "屏幕录制 2026-06-27 162647.mp4",
+                "section": "画面之间的连续性问题",
+                "src": "assets/review-media/049-屏幕录制 2026-06-27 162647.mp4"
+              }
+            ]
           },
           {
             "type": "text",
             "text": "这一段属于转场前后的视角不匹配问题。前一个镜头里，“我”正牵着老人的手，为了可以承接到下一段，我选择把镜头落到牵手的特写上，接着画面转到商场，仍然由牵着的手向上看向女孩。",
             "section": "画面之间的连续性问题"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "问题也正出现在这里，镜头在推进手部特写的时候，观察未知已经随之降低，到了下一个画面，这个较低的视角又被直接保留下来，于是原本应该是一个成年人平视女孩的画面，变成了一个孩子视角从较低位置仰头看向女孩的画面。",
@@ -3881,9 +4169,7 @@
             "type": "text",
             "text": "而视频中有一个反复出现的意象是戒指。在我的设想里，戒指在琴盖上消失，意味着老人离开现实进入梦境，戒指重新在琴盖上出现，代表着梦境结束，回到现实。",
             "section": "叙事层面的遗憾"
-          }
-        ],
-        [
+          },
           {
             "type": "text",
             "text": "但实际的画面中，戒指有时候出现，有时左手没有出现在画面里，我也没有通过镜头去反复强调它，所以观众很难意识到戒指其实正在承担一项叙事功能。到了最后当戒指重新出现的时候，它自然而然也就无法再成为“梦醒”的信号，更像是一个可有可无的饰品。",
@@ -3898,7 +4184,9 @@
             "type": "text",
             "text": "可这些都只是我知道，观众并不知道。",
             "section": "叙事层面的遗憾"
-          },
+          }
+        ],
+        [
           {
             "type": "text",
             "text": "对于观众来说，他们并没有一个足够明确的瞬间去意识到故事已经离开现实，进入了梦境。于是后面浮现的画面，就更容易被理解成叙事上的混乱，又或者，是单纯地对于画面的直观感受。",

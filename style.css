@@ -1127,6 +1127,76 @@ h5.review-heading { font-size: clamp(17px, 1.4vw, 20px); }
   color: #c9beb2;
 }
 
+.review-callout {
+  margin: clamp(24px, 4dvh, 42px) 0;
+  padding: clamp(18px, 2.4vw, 28px);
+  border: 1px solid rgba(170, 140, 119, 0.4);
+  border-radius: 6px;
+  background: rgba(27, 23, 20, 0.78);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.review-callout-header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid rgba(170, 140, 119, 0.24);
+}
+
+.review-callout-label {
+  flex: 0 0 auto;
+  color: #c49a7c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.review-callout-title {
+  color: #eee4d8;
+  font-family: "Noto Serif CJK SC", "Songti SC", "STSong", SimSun, serif;
+  font-size: clamp(16px, 1.35vw, 20px);
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.review-callout-context {
+  margin: 14px 0 0;
+  color: #aa8c77;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.review-callout-body {
+  min-height: 0;
+  padding-top: 18px;
+}
+
+.review-callout.is-oversized .review-callout-body {
+  max-height: min(62dvh, 680px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(170, 140, 119, 0.42) transparent;
+}
+
+.review-callout-body > :first-child {
+  margin-top: 0;
+}
+
+.review-callout-body > :last-child {
+  margin-bottom: 0;
+}
+
+.review-callout .review-media {
+  margin: clamp(20px, 3dvh, 32px) 0;
+}
+
+.review-callout .review-media img,
+.review-callout .review-media video {
+  opacity: 1;
+  filter: none;
+}
+
 .review-media {
   margin: clamp(28px, 4.5dvh, 48px) 0;
 }

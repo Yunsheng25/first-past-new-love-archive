@@ -78,15 +78,19 @@ export function normalizeReviewTarget(data, chapterSlug, requestedPage = 1) {
   };
 }
 
+function flattenReviewBlocks(blocks = []) {
+  return blocks.flatMap((block) => [block, ...flattenReviewBlocks(block.children)]);
+}
+
 export function estimateReadingMinutes(chapter) {
-  const characterCount = chapter.pages.flat()
+  const characterCount = flattenReviewBlocks(chapter.pages.flat())
     .filter((block) => block.type === 'text' || block.type === 'heading')
     .reduce((sum, block) => sum + (String(block.text).match(/[\u3400-\u9fff]/g)?.length ?? 0), 0);
   return Math.max(1, Math.ceil(characterCount / 400));
 }
 
 function summaryFor(chapter) {
-  const fallback = chapter.pages?.flat().find((block) => block.type === 'text')?.text ?? '';
+  const fallback = flattenReviewBlocks(chapter.pages?.flat()).find((block) => block.type === 'text')?.text ?? '';
   const summary = String(chapter.summary || fallback)
     .replace(/^\[!NOTE\]\s*/, '')
     .replace(/[*`]/g, '')
@@ -114,7 +118,7 @@ function chapterDirectory(data, activeSlug = '') {
 }
 
 function chapterPreview(chapter, index) {
-  const firstImage = chapter.pages.flat().find((block) => block.type === 'image');
+  const firstImage = flattenReviewBlocks(chapter.pages.flat()).find((block) => block.type === 'image');
   if (firstImage) {
     return `<span class="review-index-preview"><img data-chapter-preview="${escapeHtml(chapter.slug)}" src="${escapeHtml(firstImage.src)}" alt="${escapeHtml(chapter.title)}章节预览" loading="lazy" decoding="async"></span>`;
   }
@@ -159,7 +163,33 @@ export function buildReviewIndex(data, progress = null) {
 
 function blockMarkup(block, blockIndex, chapterSlug, page, { sectionTitle = false } = {}) {
   const occurrence = `${chapterSlug}-p${page}-b${blockIndex}`;
-  const common = `data-block-type="${escapeHtml(block.type)}" data-block-index="${blockIndex}"`;
+  const safeBlockIndex = escapeHtml(blockIndex);
+  const common = `data-block-type="${escapeHtml(block.type)}" data-block-index="${safeBlockIndex}"`;
+
+  if (block.type === 'callout') {
+    const oversized = block.oversized || block.scrollable;
+    const classes = `review-block review-callout${oversized ? ' is-oversized' : ''}`;
+    const originalTitle = block.title || block.kind || '说明';
+    const contextHeading = block.contextHeading?.text
+      ? `<p class="review-callout-context">${renderInlineMarkdown(block.contextHeading.text)}</p>`
+      : '';
+    const children = (Array.isArray(block.children) ? block.children : [])
+      .map((child, childIndex) => blockMarkup(
+        child,
+        `${blockIndex}-${childIndex}`,
+        chapterSlug,
+        page,
+      ))
+      .join('\n');
+    return `<aside class="${classes}" ${common}${block.scrollable ? ' data-scrollable="true"' : ''}>
+      <header class="review-callout-header">
+        <span class="review-callout-label">批注</span>
+        <strong class="review-callout-title">${escapeHtml(originalTitle)}</strong>
+      </header>
+      ${contextHeading}
+      <div class="review-callout-body">${children}</div>
+    </aside>`;
+  }
 
   if (block.type === 'heading') {
     const level = Math.min(5, Math.max(3, Number(block.level) || 3));

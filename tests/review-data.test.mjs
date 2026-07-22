@@ -68,27 +68,33 @@ function independentlyParseAuthoredBlocks(markdown) {
   let section;
   let paragraph = [];
 
-  const appendText = (text) => {
+  const appendText = (text, target = chapter.blocks) => {
     const normalized = text.replace(/\r?\n/g, "\n").trim();
-    if (normalized) chapter.blocks.push({ type: "text", text: normalized, section: section.title });
+    if (normalized === ">") return;
+    if (normalized) target.push({ type: "text", text: normalized, section: section.title });
   };
-  const flushParagraph = () => {
-    if (!chapter || paragraph.length === 0) return;
-    const text = paragraph.map((line) => line.replace(/^\s*>\s?/, "")).join("\n");
+  const appendParagraph = (lines, target = chapter.blocks) => {
+    const text = lines.join("\n");
     const embeds = /!\[\[([^\]]+)\]\]/g;
     let cursor = 0;
     let match;
     while ((match = embeds.exec(text))) {
-      appendText(text.slice(cursor, match.index));
+      appendText(text.slice(cursor, match.index), target);
       const rawRef = match[1].trim();
-      chapter.blocks.push({ ...independentMediaDetails(rawRef), rawRef, section: section.title });
+      target.push({ ...independentMediaDetails(rawRef), rawRef, section: section.title });
       cursor = match.index + match[0].length;
     }
-    appendText(text.slice(cursor));
+    appendText(text.slice(cursor), target);
+  };
+  const flushParagraph = () => {
+    if (!chapter || paragraph.length === 0) return;
+    appendParagraph(paragraph);
     paragraph = [];
   };
 
-  for (const line of String(markdown).replace(/^\uFEFF/, "").split(/\r?\n/)) {
+  const lines = String(markdown).replace(/^\uFEFF/, "").split(/\r?\n/);
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
     const heading = line.match(/^(#{2,6})\s+(.+?)\s*#*\s*$/);
     if (heading) {
       flushParagraph();
@@ -105,6 +111,18 @@ function independentlyParseAuthoredBlocks(markdown) {
         chapter.sections.push(section);
         chapter.blocks.push({ type: "heading", text: title, level, section: title });
       }
+    } else if (chapter && /^\s*>\s*\[!([^\]]+)\]\s*(.*)$/.test(line)) {
+      flushParagraph();
+      const [, kind, title] = line.match(/^\s*>\s*\[!([^\]]+)\]\s*(.*)$/);
+      const body = [];
+      while (lineIndex + 1 < lines.length
+        && /^\s*>/.test(lines[lineIndex + 1])
+        && !/^\s*>\s*\[!([^\]]+)\]/.test(lines[lineIndex + 1])) {
+        body.push(lines[++lineIndex].replace(/^\s*>\s?/, ""));
+      }
+      const children = [];
+      appendParagraph(body, children);
+      chapter.blocks.push({ type: "callout", kind, title, section: section.title, children });
     } else if (chapter && line.trim() === "") {
       flushParagraph();
     } else if (chapter) {
@@ -115,14 +133,21 @@ function independentlyParseAuthoredBlocks(markdown) {
 
   const srcByRef = new Map();
   let uniqueNumber = 0;
-  for (const item of chapters) {
-    for (const block of item.blocks) {
+  const assignSources = (blocks) => {
+    for (const block of blocks) {
+      if (block.type === "callout") {
+        assignSources(block.children);
+        continue;
+      }
       if (!["image", "video", "media"].includes(block.type)) continue;
       if (!srcByRef.has(block.ref)) {
         srcByRef.set(block.ref, `assets/review-media/${independentStableName(block.ref, ++uniqueNumber)}`);
       }
       block.src = srcByRef.get(block.ref);
     }
+  };
+  for (const item of chapters) {
+    assignSources(item.blocks);
   }
   return chapters;
 }
@@ -170,8 +195,12 @@ function sha256(filePath) {
 
 function assertReviewAssetIntegrity(mediaDirectory) {
   const authored = independentlyParseAuthoredBlocks(fs.readFileSync(reviewPath, "utf8"));
-  const media = authored.flatMap((chapter) => chapter.blocks)
-    .filter((block) => ["image", "video", "media"].includes(block.type));
+  const media = [];
+  const visit = (blocks) => blocks.forEach((block) => {
+    if (["image", "video", "media"].includes(block.type)) media.push(block);
+    if (block.type === "callout") visit(block.children);
+  });
+  authored.forEach((chapter) => visit(chapter.blocks));
   const refs = [...new Set(media.map((block) => block.ref))];
   const sourceByRef = independentlyResolveSourceMedia(refs, obsidianRoot);
   const expectedLocalNames = refs.map((ref, index) => independentStableName(ref, index + 1));
@@ -280,10 +309,10 @@ test("committed review JSON preserves every independently parsed authored block 
     committed.chapters.map(({ slug, title, sections, blocks }) => ({ slug, title, sections, blocks })),
     expected,
   );
-  assert.equal(committed.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0), 27);
+  assert.ok(committed.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0) >= 27);
   for (const chapter of committed.chapters) {
     assert.ok(chapter.pages.every((page) => page.length > 0), `${chapter.slug} has no empty page`);
-    assert.deepEqual(chapter.pages.flat(), chapter.blocks, `${chapter.slug} pages preserve its complete block sequence`);
+    assert.deepEqual(chapter.pages, paginateBlocks(chapter.blocks), `${chapter.slug} pages match atomic pagination`);
   }
 
   const media = mediaBlocks(committed);

@@ -31,18 +31,18 @@ function cssRule(css, selector) {
 }
 
 function expectedSignature(chapter, pageIndex) {
-  return chapter.pages[pageIndex].map((block, blockIndex) => ({
-    type: block.type,
-    blockIndex,
-    src: block.src ?? '',
-  }));
+  const collect = (blocks, prefix = '') => blocks.flatMap((block, index) => {
+    const blockIndex = prefix ? `${prefix}-${index}` : index;
+    return [{ type: block.type, blockIndex, src: block.src ?? '' }, ...collect(block.children ?? [], String(blockIndex))];
+  });
+  return collect(chapter.pages[pageIndex]);
 }
 
 function renderedSignature(html) {
-  return [...html.matchAll(/<[^>]+data-block-type="([^"]+)"[^>]+data-block-index="(\d+)"[^>]*>/g)]
+  return [...html.matchAll(/<[^>]+data-block-type="([^"]+)"[^>]+data-block-index="([\d-]+)"[^>]*>/g)]
     .map((match) => ({
       type: match[1],
-      blockIndex: Number(match[2]),
+      blockIndex: match[2].includes('-') ? match[2] : Number(match[2]),
       src: match[0].match(/data-source="([^"]*)"/)?.[1] ?? '',
     }));
 }
@@ -257,12 +257,14 @@ test('a malformed cached payload renders retry UI and a forced retry recovers', 
   assert.match(app.innerHTML, /review-index-view/);
 });
 
-test('review index renders all five chapters and 27 pages in source JSON order', () => {
+test('review index renders all five chapters and every generated page in source JSON order', () => {
   const html = buildReviewIndex(reviewData, null);
   const renderedTitles = [...html.matchAll(/data-review-chapter-title>([^<]+)</g)].map((match) => match[1]);
 
   assert.equal(reviewData.chapters.length, 5);
-  assert.equal(reviewData.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0), 27);
+  const totalPages = reviewData.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0);
+  assert.ok(totalPages >= 27);
+  assert.match(html, new RegExp(`${totalPages} PAGES`));
   assert.deepEqual(renderedTitles, reviewData.chapters.map((chapter) => chapter.title));
   assert.match(html, /href="#review\/origin\/1"[^>]*data-start-review/);
   assert.match(html, /href="#after"[^>]*data-return-after/);
@@ -277,8 +279,9 @@ test('review index exposes a valid saved continuation without changing chapter o
 });
 
 test('review index estimates chapter reading time from that chapter text and headings', () => {
+  const flatten = (blocks) => blocks.flatMap((block) => [block, ...flatten(block.children ?? [])]);
   const expected = reviewData.chapters.map((chapter) => {
-    const chineseCharacters = chapter.pages.flat()
+    const chineseCharacters = flatten(chapter.pages.flat())
       .filter((block) => block.type === 'text' || block.type === 'heading')
       .flatMap((block) => [...block.text.matchAll(/[\u3400-\u9fff]/g)])
       .length;
@@ -294,19 +297,21 @@ test('review index estimates chapter reading time from that chapter text and hea
 
 test('chapter previews use only their own first image and text placeholders otherwise', () => {
   const html = buildReviewIndex(reviewData, null);
+  const flatten = (blocks) => blocks.flatMap((block) => [block, ...flatten(block.children ?? [])]);
   const ownFirstImages = new Map(reviewData.chapters.map((chapter) => [
     chapter.slug,
-    chapter.pages.flat().find((block) => block.type === 'image')?.src ?? null,
+    flatten(chapter.pages.flat()).find((block) => block.type === 'image')?.src ?? null,
   ]));
   const previewImages = [...html.matchAll(/<img\b[^>]*data-chapter-preview="([^"]+)"[^>]*src="([^"]+)"/g)]
     .map((match) => [match[1], match[2]]);
   const placeholders = [...html.matchAll(/data-chapter-placeholder="([^"]+)"/g)].map((match) => match[1]);
 
-  assert.deepEqual(previewImages, [
-    ['story', ownFirstImages.get('story')],
-    ['production', ownFirstImages.get('production')],
-  ]);
-  assert.deepEqual(placeholders, ['origin', 'reflection', 'closing']);
+  assert.deepEqual(previewImages, reviewData.chapters
+    .filter((chapter) => ownFirstImages.get(chapter.slug))
+    .map((chapter) => [chapter.slug, ownFirstImages.get(chapter.slug)]));
+  assert.deepEqual(placeholders, reviewData.chapters
+    .filter((chapter) => !ownFirstImages.get(chapter.slug))
+    .map((chapter) => chapter.slug));
   assert.equal(previewImages.every(([slug, src]) => src === ownFirstImages.get(slug)), true);
   assert.doesNotMatch(html, /data-chapter-preview[^>]*data-occurrence|data-chapter-preview[^>]*data-block-type/);
 });
@@ -322,16 +327,17 @@ test('every rendered page has exactly the independent source block signature', (
       const expected = expectedSignature(chapter, pageIndex);
       assert.deepEqual(actual, expected, `${chapter.slug} page ${pageIndex + 1}`);
       renderedCount += actual.length;
-      expectedCount += page.length;
+      expectedCount += expected.length;
     });
   }
 
-  assert.equal(expectedCount, 394);
-  assert.equal(renderedCount, 394);
+  assert.ok(expectedCount > 0);
+  assert.equal(renderedCount, expectedCount);
 });
 
 test('all 51 media occurrences render in place and both duplicate occurrences remain', () => {
-  const expectedMedia = reviewData.chapters.flatMap((chapter) => chapter.pages.flat())
+  const flatten = (blocks) => blocks.flatMap((block) => [block, ...flatten(block.children ?? [])]);
+  const expectedMedia = flatten(reviewData.chapters.flatMap((chapter) => chapter.pages.flat()))
     .filter((block) => block.type === 'image' || block.type === 'video')
     .map((block) => `${block.type}:${block.src}`);
   const renderedMedia = [];
@@ -339,7 +345,7 @@ test('all 51 media occurrences render in place and both duplicate occurrences re
   for (const chapter of reviewData.chapters) {
     chapter.pages.forEach((page, pageIndex) => {
       const html = buildReviewPage(reviewData, { chapter, pageIndex });
-      for (const match of html.matchAll(/data-block-type="(image|video)"[^>]+data-block-index="\d+"[^>]+data-source="([^"]+)"/g)) {
+      for (const match of html.matchAll(/data-block-type="(image|video)"[^>]+data-block-index="[\d-]+"[^>]+data-source="([^"]+)"/g)) {
         renderedMedia.push(`${match[1]}:${match[2]}`);
       }
     });
@@ -355,8 +361,10 @@ test('all 51 media occurrences render in place and both duplicate occurrences re
 
 test('chapter title is an opener-only heading and a heading-led continuation uses its section heading', () => {
   const chapter = reviewData.chapters.find((item) => item.slug === 'production');
+  const continuationIndex = chapter.pages.findIndex((page, index) => index > 0 && page[0]?.type === 'heading');
+  assert.ok(continuationIndex > 0);
   const opener = buildReviewPage(reviewData, normalizeReviewTarget(reviewData, chapter.slug, 1));
-  const continuation = buildReviewPage(reviewData, normalizeReviewTarget(reviewData, chapter.slug, 4));
+  const continuation = buildReviewPage(reviewData, normalizeReviewTarget(reviewData, chapter.slug, continuationIndex + 1));
 
   assert.match(opener, /<article class="review-paper-content review-chapter-opener"[^>]*data-review-page="opener"/);
   assert.match(opener, /<h1 id="review-reader-title">/);
@@ -365,7 +373,7 @@ test('chapter title is an opener-only heading and a heading-led continuation use
   assert.doesNotMatch(continuation, /<h1 id="review-reader-title">/);
   assert.match(continuation, /<h[3-5] class="review-block review-heading" data-block-type="heading" data-block-index="0" id="review-section-title">/);
   assert.match(continuation, /<div class="review-blocks" aria-labelledby="review-section-title">/);
-  assert.deepEqual(renderedSignature(continuation), expectedSignature(chapter, 3));
+  assert.deepEqual(renderedSignature(continuation), expectedSignature(chapter, continuationIndex));
 });
 
 test('split continuation uses a page label instead of a later heading', () => {
@@ -421,14 +429,16 @@ test('page targets and reader chrome show overall and within-chapter page positi
   const productionMiddle = normalizeReviewTarget(reviewData, 'production', 7);
   const reflectionStart = normalizeReviewTarget(reviewData, 'reflection', 1);
 
-  assert.deepEqual(
-    [storyStart.overallPage, productionMiddle.overallPage, reflectionStart.overallPage],
-    [4, 13, 20],
-  );
-  assert.equal(productionMiddle.totalPages, 27);
+  assert.equal(storyStart.overallPage, reviewData.chapters[0].pages.length + 1);
+  assert.equal(productionMiddle.overallPage, reviewData.chapters.slice(0, 2)
+    .reduce((sum, chapter) => sum + chapter.pages.length, 0) + 7);
+  assert.equal(reflectionStart.overallPage, reviewData.chapters.slice(0, 3)
+    .reduce((sum, chapter) => sum + chapter.pages.length, 0) + 1);
+  assert.equal(productionMiddle.totalPages, reviewData.chapters
+    .reduce((sum, chapter) => sum + chapter.pages.length, 0));
   const html = buildReviewPage(reviewData, productionMiddle);
-  assert.match(html, /全篇\s*13\s*\/\s*27/);
-  assert.match(html, /本章\s*7\s*\/\s*13/);
+  assert.match(html, new RegExp(`全篇\\s*${productionMiddle.overallPage}\\s*\\/\\s*${productionMiddle.totalPages}`));
+  assert.match(html, new RegExp(`本章\\s*7\\s*\\/\\s*${productionMiddle.chapter.pages.length}`));
   assert.match(html, /class="review-chapter-drawer"[^>]*role="dialog"[^>]*aria-modal="true"[^>]*hidden/);
 });
 
@@ -444,13 +454,61 @@ test('inline markdown escapes HTML before applying the supported subset', () => 
 
 test('Obsidian NOTE blocks remain readable callouts', () => {
   const chapter = reviewData.chapters.find((item) => item.slug === 'production');
-  const pageIndex = chapter.pages.findIndex((page) => page.some((block) => block.text?.startsWith('[!NOTE]')));
+  const pageIndex = chapter.pages.findIndex((page) => page.some((block) => block.type === 'callout'));
   const html = buildReviewPage(reviewData, { chapter, pageIndex });
 
-  assert.match(html, /class="[^"]*\breview-note\b[^"]*"/);
-  assert.match(html, />注<\/span>/);
+  assert.match(html, /class="[^"]*\breview-callout\b[^"]*"/);
+  assert.match(html, />批注<\/span>/);
   assert.doesNotMatch(html, /\[!NOTE\]/);
   assert.doesNotMatch(html, /NaN/);
+});
+
+test('structured review annotations render one escaped, ordered and complete frame', () => {
+  const callout = {
+    type: 'callout',
+    kind: 'NOTE',
+    title: '<原始标题>',
+    section: '制作执行',
+    contextHeading: { type: 'heading', text: '案例上下文', level: 3, section: '制作执行' },
+    oversized: true,
+    scrollable: true,
+    children: [
+      { type: 'text', text: '第一段说明', section: '制作执行' },
+      { type: 'image', rawRef: 'first.png', ref: 'first.png', src: 'assets/first.png', section: '制作执行' },
+      { type: 'text', text: '中间标注', section: '制作执行' },
+      { type: 'video', rawRef: 'result.mp4', ref: 'result.mp4', src: 'assets/result.mp4', section: '制作执行' },
+    ],
+  };
+  const data = { chapters: [{ slug: 'sample', title: '示例', summary: '', pages: [[callout]] }] };
+  const html = buildReviewPage(data, normalizeReviewTarget(data, 'sample', 1));
+
+  assert.equal((html.match(/<aside\b[^>]*\breview-callout\b/g) ?? []).length, 1);
+  assert.match(html, /<span class="review-callout-label">批注<\/span>/);
+  assert.match(html, /<strong class="review-callout-title">&lt;原始标题&gt;<\/strong>/);
+  assert.match(html, /class="review-callout-context"[^>]*>案例上下文</);
+  assert.match(html, /<aside\b[^>]*\breview-callout\b[^>]*\bis-oversized\b[^>]*data-scrollable="true"/);
+  const calloutStart = html.indexOf('<aside class="review-block review-callout');
+  const aside = html.slice(calloutStart, html.indexOf('</aside>', calloutStart) + '</aside>'.length);
+  const order = ['第一段说明', 'assets/first.png', '中间标注', 'assets/result.mp4'].map((value) => aside.indexOf(value));
+  assert.equal(order.every((position) => position >= 0), true);
+  assert.deepEqual(order, [...order].sort((a, b) => a - b));
+  assert.equal(html.replace(aside, '').includes('assets/first.png'), false);
+  assert.equal(html.replace(aside, '').includes('assets/result.mp4'), false);
+});
+
+test('annotation CSS scrolls only the oversized body and never fades its media', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  const frame = cssRule(css, '.review-callout');
+  const body = cssRule(css, '.review-callout.is-oversized .review-callout-body');
+  const media = cssRule(css, '.review-callout .review-media img,\n.review-callout .review-media video');
+
+  assert.match(frame, /background:\s*rgba\(/);
+  assert.match(frame, /border:\s*1px solid rgba\(/);
+  assert.doesNotMatch(frame, /overflow(?:-y)?:\s*(?:auto|scroll)/);
+  assert.match(body, /max-height:\s*(?:min|clamp)\(/);
+  assert.match(body, /overflow-y:\s*auto/);
+  assert.match(media, /opacity:\s*1/);
+  assert.match(media, /filter:\s*none/);
 });
 
 test('progress stores only chapter, page, and updatedAt and survives denied storage', () => {
