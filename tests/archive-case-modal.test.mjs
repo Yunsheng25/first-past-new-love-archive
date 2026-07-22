@@ -72,6 +72,13 @@ test('modal composition keeps the tunnel visible while full-opacity first and la
   assert.match(css, /\.archive-case-image img\s*\{[\s\S]*?opacity:\s*1[\s\S]*?filter:\s*none/);
 });
 
+test('mobile modal removes fixed non-modal controls from the prompt reading area', () => {
+  const mobileStart = css.indexOf('@media (max-width: 760px)', css.indexOf('.archive-tunnel-view'));
+  const mobileCss = css.slice(mobileStart);
+  assert.match(mobileCss, /body:has\(\[data-case-modal\]\)\s*>\s*\.bgm-toggle\s*\{[^}]*display:\s*none\s*!important/s);
+  assert.match(mobileCss, /\.archive-tunnel-view:has\(\[data-case-modal\]\)\s*>\s*\.archive-return-after\s*\{[^}]*display:\s*none\s*!important/s);
+});
+
 test('escapes every modal interpolation without truncating line-broken prompts', () => {
   const item = { id: 'case-<x>', index: 1, title: '<title>', prompt: 'one\ntwo <script>', images: [{ src: 'x" onerror="1', role: '<role>' }] };
   const html = buildArchiveCaseModal(item, { caseId: item.id, imageIndex: 0, src: item.images[0].src, role: item.images[0].role });

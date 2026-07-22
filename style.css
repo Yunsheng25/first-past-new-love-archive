@@ -2826,8 +2826,14 @@ button.archive-filter-chip {
   .archive-tunnel-header { align-items: flex-start; flex-wrap: wrap; gap: 12px; padding: 18px 22px; }
   .archive-tunnel-actions { width: 100%; flex-direction: row; justify-content: flex-end; }
   .archive-tunnel-actions button { min-width: 0; padding: 9px 14px; }
+  .archive-tunnel-card { width: 132px; }
+  .archive-tunnel-card--portrait { height: 138px; }
+  .archive-tunnel-card--tall { height: 108px; }
+  .archive-tunnel-card--landscape { height: 90px; }
   .archive-case-modal-backdrop { align-items: end; padding: 10px; }
   .archive-case-modal { width: 100%; max-height: 88dvh; }
+  body:has([data-case-modal]) > .bgm-toggle { display: none !important; }
+  .archive-tunnel-view:has([data-case-modal]) > .archive-return-after { display: none !important; }
   .archive-case-error-state,
   .archive-error-state { grid-template-columns: auto 1fr; }
   .archive-case-error-state p,

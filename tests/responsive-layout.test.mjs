@@ -42,6 +42,18 @@ test('mobile tunnel keeps its wordmark and both view controls inside the viewpor
   assert.match(mobileTunnelCss, /\.archive-tunnel-actions button\s*\{[^}]*min-width:\s*0;[^}]*padding:\s*9px 14px;/s);
 });
 
+test('mobile tunnel scales only its card bases so the nearest card stays below 95vw', () => {
+  const mobileTunnelStart = css.indexOf('@media (max-width: 760px)', css.indexOf('.archive-tunnel-view'));
+  const mobileTunnelCss = css.slice(mobileTunnelStart);
+  const width = Number(mobileTunnelCss.match(/\.archive-tunnel-card\s*\{[^}]*width:\s*(\d+)px/s)?.[1]);
+  const portrait = Number(mobileTunnelCss.match(/\.archive-tunnel-card--portrait\s*\{[^}]*height:\s*(\d+)px/s)?.[1]);
+  const tall = Number(mobileTunnelCss.match(/\.archive-tunnel-card--tall\s*\{[^}]*height:\s*(\d+)px/s)?.[1]);
+  const landscape = Number(mobileTunnelCss.match(/\.archive-tunnel-card--landscape\s*\{[^}]*height:\s*(\d+)px/s)?.[1]);
+
+  assert.ok(width > 0 && width <= 132, `mobile base width ${width} must keep the near 2.72x card within 95vw at 390px`);
+  assert.ok(portrait > tall && tall > landscape && landscape > 0, 'mobile aspect hierarchy must remain readable');
+});
+
 test('the document declares an inline icon so first load has no favicon 404', () => {
   assert.match(html, /<link\s+rel="icon"\s+href="data:,"\s*\/?>/);
 });
