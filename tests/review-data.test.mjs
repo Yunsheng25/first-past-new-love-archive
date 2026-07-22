@@ -338,7 +338,7 @@ test("parseReview extracts the five authored chapters, sections, and every media
     [...markdown.matchAll(/!\[\[([^\]]+)\]\]/g)].map((match) => match[1].trim()),
   );
   const pageCount = review.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0);
-  assert.ok(pageCount >= 20 && pageCount <= 30, `expected 20-30 pages, got ${pageCount}`);
+  assert.ok(pageCount >= 45 && pageCount <= 60, `expected 45-60 atomic pages, got ${pageCount}`);
   assert.ok(review.chapters.flatMap((chapter) => chapter.blocks).some((block) => block.type === "callout"));
   assert.ok(review.chapters.flatMap((chapter) => chapter.pages).every((page) => page.at(-1)?.type !== "heading"));
 });
@@ -402,6 +402,49 @@ test("paginateBlocks keeps headings with their first paragraph and text with fol
   }
 });
 
+test("paginateBlocks moves a structured callout wholly to the next page when it does not fit", () => {
+  const callout = {
+    type: "callout",
+    kind: "NOTE",
+    title: "完整批注",
+    children: [
+      { type: "text", text: "批注说明".repeat(20) },
+      { type: "image", ref: "first.png", src: "assets/review-media/first.png" },
+      { type: "video", ref: "result.mp4", src: "assets/review-media/result.mp4" },
+    ],
+  };
+  const pages = paginateBlocks([
+    { type: "text", text: "正文".repeat(350) },
+    callout,
+  ], 900);
+
+  assert.equal(pages.length, 2);
+  assert.equal(pages[0].some((block) => block.type === "callout"), false);
+  assert.equal(pages[1].filter((block) => block.type === "callout").length, 1);
+  assert.equal(pages[1][0], callout);
+  assert.deepEqual(pages[1][0].children.map((child) => child.type), ["text", "image", "video"]);
+});
+
+test("paginateBlocks gives an oversized callout its own page without splitting its children", () => {
+  const callout = {
+    type: "callout",
+    kind: "NOTE",
+    title: "超高批注",
+    children: [
+      { type: "text", text: "长批注".repeat(300) },
+      { type: "image", ref: "first.png", src: "assets/review-media/first.png" },
+      { type: "image", ref: "last.png", src: "assets/review-media/last.png" },
+      { type: "video", ref: "result.mp4", src: "assets/review-media/result.mp4" },
+    ],
+  };
+  const before = { type: "text", text: "前文".repeat(200) };
+  const after = { type: "text", text: "后文".repeat(200) };
+  const pages = paginateBlocks([before, callout, after], 900);
+
+  assert.deepEqual(pages, [[before], [callout], [after]]);
+  assert.deepEqual(pages[1][0].children.map((child) => child.type), ["text", "image", "image", "video"]);
+});
+
 test("writeReviewData copies all media and writes readable UTF-8 pages", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "review-data-"));
   const outputPath = path.join(tempDir, "review.json");
@@ -419,7 +462,7 @@ test("writeReviewData copies all media and writes readable UTF-8 pages", () => {
     assert.equal(new Set(media.map((block) => block.ref)).size, 49);
     assert.equal(fs.readdirSync(mediaOutputDir).length, 49);
     assert.equal(written.chapters.length, 5);
-    assert.ok(pageCount >= 20 && pageCount <= 30, `expected 20-30 pages, got ${pageCount}`);
+    assert.ok(pageCount >= 45 && pageCount <= 60, `expected 45-60 atomic pages, got ${pageCount}`);
     assert.ok(!fs.readFileSync(outputPath, "utf8").includes("\uFFFD"));
     assert.ok(written.chapters.some((chapter) => chapter.title.includes("\u5236\u4f5c\u6267\u884c")));
     for (const block of media) assert.ok(fs.existsSync(path.join(mediaOutputDir, path.basename(block.src))), block.ref);

@@ -78,6 +78,10 @@ function visitBlocks(blocks, visit) {
 }
 
 function blockSize(block) {
+  if (block.type === "callout") {
+    return 180 + block.children.reduce((sum, child) => sum + blockSize(child), 0);
+  }
+  if (["image", "video", "media"].includes(block.type)) return 260;
   return block.type === "text" || block.type === "heading" ? block.text.length : 0;
 }
 
@@ -113,7 +117,10 @@ function semanticUnits(blocks) {
   while (index < blocks.length) {
     const block = blocks[index++];
     const unit = [block];
-    if (block.type === "heading" && index < blocks.length && blocks[index].type !== "heading") {
+    if (block.type === "callout") {
+      units.push(unit);
+      continue;
+    } else if (block.type === "heading" && index < blocks.length && blocks[index].type !== "heading") {
       unit.push(blocks[index++]);
       if (unit.at(-1).type === "text") appendMedia(unit);
     } else if (block.type === "text") {
