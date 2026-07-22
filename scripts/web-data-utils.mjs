@@ -3,6 +3,10 @@ import path from "node:path";
 const embedPattern = /!\[\[([^\]]+)\]\]/g;
 const imageExtensionPattern = /\.(png|jpe?g|webp|gif|bmp|svg)$/i;
 const malformedImageEmbedPattern = /!\[\[([^\]\r\n]+?\.(?:png|jpe?g|webp|gif|bmp|svg))\](?!\])/gi;
+const errorGroupLabels = Object.freeze([
+  "出现人脸",
+  "人物呈现的形象特征与前方不符",
+]);
 
 function cleanRef(rawRef) {
   return String(rawRef).split("|")[0].trim().replace(/\\/g, "/");
@@ -113,6 +117,8 @@ export function parseCanvasArchive(canvas) {
     const stage = classifyStage(prompt, refs);
     const id = `case-${String(caseIndex + 1).padStart(2, "0")}`;
     const uncertainReasons = [];
+    const containingGroups = groupIdsForNode(node, groups);
+    const errorGroup = errorGroupLabels.find((label) => containingGroups.some((group) => group.label === label)) ?? null;
     if (!prompt) uncertainReasons.push("源节点没有提示词");
     if (malformedEmbeds.length > 0) uncertainReasons.push("非标准图片嵌入已从展示文字清理");
     return {
@@ -126,6 +132,9 @@ export function parseCanvasArchive(canvas) {
       rawText: node.text || "",
       uncertain: uncertainReasons.length > 0,
       uncertainReasons,
+      status: errorGroup ? "error" : "normal",
+      errorGroup,
+      errorReason: errorGroup,
       images: refs.map((ref, imageIndex) => ({
         occurrence: imageIndex + 1,
         originalRef: ref,
@@ -136,7 +145,7 @@ export function parseCanvasArchive(canvas) {
         nodeId: node.id,
         position: { x: node.x ?? 0, y: node.y ?? 0 },
         size: { width: node.width ?? 0, height: node.height ?? 0 },
-        groups: groupIdsForNode(node, groups),
+        groups: containingGroups,
       },
     };
   });

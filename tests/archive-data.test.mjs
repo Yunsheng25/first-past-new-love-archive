@@ -495,3 +495,33 @@ test("archive JSON preserves the exact authored case/image occurrence signature"
     );
   }
 });
+
+test("generated real archive derives error attempts exactly from the two authored canvas groups", () => {
+  const parseCanvasArchive = required(utils, "parseCanvasArchive");
+  const raw = JSON.parse(fs.readFileSync(canvasPath, "utf8"));
+  const parsed = parseCanvasArchive(raw);
+  const generated = JSON.parse(fs.readFileSync("data/archive.json", "utf8"));
+  const errorLabels = new Set(["出现人脸", "人物呈现的形象特征与前方不符"]);
+  const groups = raw.nodes.filter((node) => node.type === "group" && errorLabels.has(node.label || ""));
+  const expectedNodeIds = raw.nodes
+    .filter((node) => node.type === "text" && independentImageRefs(node.text || "").length > 0)
+    .filter((node) => {
+      const centerX = node.x + node.width / 2;
+      const centerY = node.y + node.height / 2;
+      return groups.some((group) => centerX >= group.x && centerX <= group.x + group.width
+        && centerY >= group.y && centerY <= group.y + group.height);
+    })
+    .map((node) => node.id)
+    .sort();
+  const actualNodeIds = parsed.cases.filter((item) => item.status === "error").map((item) => item.source.nodeId).sort();
+  const generatedNodeIds = generated.cases.filter((item) => item.status === "error").map((item) => item.source.nodeId).sort();
+
+  assert.ok(expectedNodeIds.length > 0, "real canvas must retain authored error sentinels");
+  assert.deepEqual(actualNodeIds, expectedNodeIds);
+  assert.deepEqual(generatedNodeIds, expectedNodeIds);
+  assert.ok(parsed.cases.filter((item) => item.status === "error").every((item) => errorLabels.has(item.errorGroup)));
+  assert.ok(parsed.cases.filter((item) => item.status === "normal").every((item) => item.errorGroup === null));
+  assert.equal(generated.summary.cases, 72);
+  assert.equal(generated.summary.imageOccurrences, 138);
+  assert.equal(generated.summary.uniqueImages, 137);
+});

@@ -64,6 +64,48 @@ test("parses the real canvas into stable coordinate-ordered cases", () => {
   assert.ok(archive.cases.every((item, index) => item.id === `case-${String(index + 1).padStart(2, "0")}`));
 });
 
+test("marks only nodes geometrically contained by authored error groups without changing visual order", () => {
+  const parseCanvasArchive = required("parseCanvasArchive");
+  const canvas = {
+    nodes: [
+      { id: "face-group", type: "group", label: "出现人脸", x: 0, y: 0, width: 200, height: 200 },
+      { id: "character-group", type: "group", label: "人物呈现的形象特征与前方不符", x: 300, y: 0, width: 200, height: 200 },
+      { id: "inside-face", type: "text", text: "![[face.png]]", x: 10, y: 10, width: 40, height: 40 },
+      { id: "boundary-character", type: "text", text: "![[character.png]]", x: 450, y: 50, width: 100, height: 100 },
+      { id: "outside", type: "text", text: "![[normal.png]]", x: 600, y: 0, width: 100, height: 100 },
+    ],
+    edges: [],
+  };
+  const result = parseCanvasArchive(canvas);
+  const byId = new Map(result.cases.map((item) => [item.source.nodeId, item]));
+
+  assert.equal(byId.get("inside-face").status, "error");
+  assert.equal(byId.get("inside-face").errorGroup, "出现人脸");
+  assert.equal(byId.get("inside-face").errorReason, "出现人脸");
+  assert.equal(byId.get("boundary-character").status, "error");
+  assert.equal(byId.get("boundary-character").errorGroup, "人物呈现的形象特征与前方不符");
+  assert.equal(byId.get("outside").status, "normal");
+  assert.equal(byId.get("outside").errorGroup, null);
+  assert.equal(byId.get("outside").errorReason, null);
+  assert.deepEqual(result.cases.map((item) => item.source.nodeId), ["outside", "inside-face", "boundary-character"]);
+});
+
+test("uses a stable authored priority when a node belongs to both error groups", () => {
+  const parseCanvasArchive = required("parseCanvasArchive");
+  const canvas = {
+    nodes: [
+      { id: "character-group", type: "group", label: "人物呈现的形象特征与前方不符", x: 0, y: 0, width: 300, height: 300 },
+      { id: "face-group", type: "group", label: "出现人脸", x: 50, y: 50, width: 200, height: 200 },
+      { id: "nested", type: "text", text: "![[nested.png]]", x: 100, y: 100, width: 50, height: 50 },
+    ],
+    edges: [],
+  };
+
+  const item = parseCanvasArchive(canvas).cases[0];
+  assert.equal(item.errorGroup, "出现人脸");
+  assert.deepEqual(item.source.groups.map((group) => group.id), ["character-group", "face-group"]);
+});
+
 test("preserves the exact prompt-to-image mapping and duplicate occurrences", () => {
   const parseCanvasArchive = required("parseCanvasArchive");
   const raw = JSON.parse(fs.readFileSync(canvasPath, "utf8"));
