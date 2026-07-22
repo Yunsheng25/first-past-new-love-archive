@@ -27,8 +27,18 @@ export function buildSiteData(options = siteDataOptionsFromEnvironment()) {
   return { review, archive };
 }
 
-function buildSummary({ review, archive }) {
-  const reviewMedia = review.chapters.flatMap((chapter) => chapter.blocks)
+export function* walkReviewBlocks(blocks) {
+  for (const block of blocks) {
+    yield block;
+    if (block.type === "callout" && Array.isArray(block.children)) {
+      yield* walkReviewBlocks(block.children);
+    }
+  }
+}
+
+export function buildSummary({ review, archive }) {
+  const reviewMedia = review.chapters
+    .flatMap((chapter) => [...walkReviewBlocks(chapter.blocks)])
     .filter((block) => ["image", "video", "media"].includes(block.type));
   return {
     review: {

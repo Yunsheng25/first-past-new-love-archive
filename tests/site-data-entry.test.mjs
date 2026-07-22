@@ -10,6 +10,40 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const originTitle = "\u9879\u76ee\u7f18\u8d77\uff1a\u6211\u4e3a\u4ec0\u4e48\u8981\u505a\u8fd9\u4e2a\u89c6\u9891";
 
+test("review summary recursively counts media nested inside callouts", async () => {
+  const siteData = await import("../scripts/build-site-data.mjs");
+  assert.equal(typeof siteData.buildSummary, "function");
+  const summary = siteData.buildSummary({
+    review: {
+      chapters: [{
+        pages: [[]],
+        blocks: [
+          { type: "image" },
+          {
+            type: "callout",
+            children: [
+              { type: "video" },
+              { type: "callout", children: [{ type: "media" }] },
+            ],
+          },
+        ],
+      }],
+    },
+    archive: { summary: {} },
+  });
+
+  assert.equal(summary.review.mediaEmbeds, 3);
+});
+
+test("generated review summary retains all 51 media embeds after callout grouping", async () => {
+  const siteData = await import("../scripts/build-site-data.mjs");
+  assert.equal(typeof siteData.buildSummary, "function");
+  const review = JSON.parse(fs.readFileSync(path.join(projectRoot, "data", "review.json"), "utf8"));
+  const summary = siteData.buildSummary({ review, archive: { summary: {} } });
+
+  assert.equal(summary.review.mediaEmbeds, 51);
+});
+
 test("package build:data rebuilds both ordered site datasets from configured sources", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "site-data-entry-"));
   const vault = path.join(tempDir, "vault");
