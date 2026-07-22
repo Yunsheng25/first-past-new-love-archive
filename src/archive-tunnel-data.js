@@ -61,8 +61,8 @@ export function groupCaseImages(data, caseId) {
 /**
  * The exact front-facing pixel projection used by approved preview v15.
  * `camera.position` is the preview's longitudinal camera value; width/height
- * are the stage's CSS-pixel dimensions. Rotation is deliberately absent:
- * cards always face the viewer in this model.
+ * are the stage's CSS-pixel dimensions. rotationZ is the v15 in-plane
+ * rotation: cards remain front-facing instead of banking in 3D.
  */
 export function approvedTunnelPose(index, camera) {
   return Object.freeze(approvedTunnelPoseInto(index, camera, {}));
@@ -99,6 +99,7 @@ export function approvedTunnelPoseInto(index, camera, target) {
   output.opacity = Math.max(0.1, Math.min(fadeIn, fadeBehind, 0.3 + scale * 0.9));
   output.visible = z >= APPROVED_VISIBLE_NEAR && z <= APPROVED_VISIBLE_FAR;
   output.zIndex = Math.round(10000 - z);
+  output.rotationZ = (angle * 180 / Math.PI) + 90 + ((index % 4) - 1.5) * 4;
   return output;
 }
 

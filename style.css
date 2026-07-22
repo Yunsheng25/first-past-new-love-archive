@@ -2738,8 +2738,15 @@ button.archive-filter-chip {
 .archive-tunnel-card:hover { box-shadow: 0 0 0 1px rgba(255,255,255,.9), 0 0 15px rgba(235,220,240,.48), 0 14px 30px rgba(0,0,0,.62); }
 .archive-tunnel-card img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 1; filter: none; }
 .archive-tunnel-card-error { position: absolute; top: 8px; left: 8px; border-radius: 999px; padding: 5px 8px; color: #fff5f2; background: rgba(145, 36, 31, .88); font-size: 10px; letter-spacing: .08em; }
-.archive-tunnel-count { position: absolute; z-index: 4; right: clamp(22px, 4vw, 62px); bottom: 30px; display: flex; align-items: center; gap: 10px; letter-spacing: .16em; }
+.archive-tunnel-guide { position: absolute; z-index: 4; left: clamp(22px, 4vw, 62px); bottom: 30px; pointer-events: none; }
+.archive-tunnel-guide b { display: block; margin-bottom: 7px; font: 400 17px "Songti SC", "SimSun", serif; letter-spacing: .1em; }
+.archive-tunnel-guide span { color: rgba(255,255,255,.52); font-size: 9px; letter-spacing: .18em; }
+.archive-tunnel-count { position: absolute; z-index: 4; right: clamp(22px, 4vw, 62px); bottom: 30px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; color: rgba(255,255,255,.58); font-size: 9px; letter-spacing: .15em; }
+.archive-tunnel-count strong { color: #fff; font-weight: 400; font-size: 18px; }
+.archive-tunnel-count em { color: rgba(255,255,255,.38); font-style: normal; }
 .archive-tunnel-error-badge { margin-right: 4px; }
+.archive-tunnel-progress { position: absolute; z-index: 4; left: clamp(22px, 4vw, 62px); right: clamp(22px, 4vw, 62px); bottom: 10px; height: 1px; background: rgba(255,255,255,.16); }
+.archive-tunnel-progress i { display: block; width: 0; height: 100%; background: rgba(255,255,255,.82); box-shadow: 0 0 8px #fff; transition: width .12s linear; }
 .archive-rewind {
   position: absolute;
   z-index: 20;
@@ -2759,10 +2766,30 @@ button.archive-filter-chip {
   letter-spacing: .14em;
 }
 
+.archive-rewind.is-archive {
+  width: 84px;
+  height: 84px;
+  border-color: transparent;
+  color: rgba(255, 255, 255, .4);
+  box-shadow: 0 0 45px rgba(225,199,239,.21), 0 0 110px rgba(111,73,133,.2);
+  font-size: 7px;
+  letter-spacing: .26em;
+  cursor: default;
+}
+
 .archive-rewind[hidden] {
   display: none !important;
 }
 .archive-tunnel-view > .archive-return-after { z-index: 5; left: clamp(22px, 4vw, 62px); bottom: 30px; }
+
+@media (max-width: 720px) {
+  .archive-tunnel-header { padding: 18px 16px; }
+  .archive-tunnel-guide { left: 16px; bottom: 28px; max-width: 55vw; }
+  .archive-tunnel-guide b { font-size: 13px; line-height: 1.35; }
+  .archive-tunnel-count { right: 16px; bottom: 28px; }
+  .archive-tunnel-progress { left: 16px; right: 16px; bottom: 9px; }
+  .archive-tunnel-view > .archive-return-after { left: 16px; bottom: 82px; }
+}
 
 [data-archive-modal-host]:empty { display: none; }
 .archive-case-modal-backdrop {

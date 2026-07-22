@@ -97,7 +97,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
       if (!pose.visible) continue;
       if (!entry.visible) { entry.card.hidden = false; entry.visible = true; }
       const opacity = String(pose.opacity);
-      const transform = `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale})`;
+      const transform = `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale}) rotate(${pose.rotationZ}deg)`;
       if (opacity !== entry.opacity) { entry.card.style.opacity = opacity; entry.opacity = opacity; }
       if (transform !== entry.transform) { entry.card.style.transform = transform; entry.transform = transform; }
     }

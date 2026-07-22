@@ -30,7 +30,11 @@ test('archive overview shell defaults to the complete 138-occurrence tunnel', ()
   assert.match(html, /data-tunnel-cruise/);
   assert.match(html, /data-tunnel-current>001</);
   assert.match(html, /001[\s\S]*138/);
-  assert.match(html, /data-tunnel-rewind[^>]+hidden/);
+  assert.match(html, /data-tunnel-rewind[^>]+disabled[^>]*>[\s\S]*ARCHIVE/);
+  assert.match(html, /archive-tunnel-guide[\s\S]*一条真正走得进去的影像长廊/);
+  assert.match(html, /滚轮 \/ 拖动控制前进速度/);
+  assert.match(html, /完整漫游约 90 秒/);
+  assert.match(html, /data-tunnel-progress/);
   assert.match(html, /data-archive-modal-host/);
   assert.match(html, /data-tunnel-error-badge[^>]+hidden/);
   assert.match(html, /href="#after"/);
@@ -54,7 +58,7 @@ test('tunnel selection pauses for a complete modal, resumes in place, and end re
   const listeners = new Map();
   const nodes = {
     tunnel: { clientWidth: 800, clientHeight: 600 },
-    list: {}, cruise: { textContent: '' }, rewind: { hidden: true }, modal: {}, current: { textContent: '' }, errorBadge: { hidden: true, textContent: '', ariaLabel: '' },
+    list: {}, cruise: { textContent: '' }, rewind: { hidden: false, disabled: true, textContent: 'ARCHIVE' }, modal: {}, current: { textContent: '' }, progress: { style: {} }, errorBadge: { hidden: true, textContent: '', ariaLabel: '' },
   };
   const app = {
     innerHTML: '', focus() {},
@@ -62,6 +66,7 @@ test('tunnel selection pauses for a complete modal, resumes in place, and end re
       '[data-archive-tunnel]': nodes.tunnel, '[data-archive-view="list"]': nodes.list,
       '[data-tunnel-cruise]': nodes.cruise, '[data-tunnel-rewind]': nodes.rewind,
       '[data-archive-modal-host]': nodes.modal, '[data-tunnel-current]': nodes.current,
+      '[data-tunnel-progress]': nodes.progress,
       '[data-tunnel-error-badge]': nodes.errorBadge,
     })[selector] ?? null; },
     addEventListener(type, handler) { listeners.set(type, handler); },
@@ -88,14 +93,15 @@ test('tunnel selection pauses for a complete modal, resumes in place, and end re
   modalOptions.onClose();
   assert.equal(resumed, 1);
   tunnelOptions.onEnd();
-  assert.equal(nodes.rewind.hidden, false);
+  assert.equal(nodes.rewind.disabled, false);
+  assert.match(nodes.rewind.textContent, /快速回溯/);
   listeners.get('click')({ target: { closest: (selector) => selector === '[data-tunnel-rewind]' ? nodes.rewind : null } });
   assert.equal(rewound, 1);
   assert.equal(nodes.rewind.hidden, false);
   assert.equal(nodes.rewind.disabled, true);
   tunnelOptions.onProgress({ progress: 0, mode: 'paused' });
-  assert.equal(nodes.rewind.hidden, true);
-  assert.equal(nodes.rewind.disabled, false);
+  assert.equal(nodes.rewind.disabled, true);
+  assert.equal(nodes.rewind.textContent, 'ARCHIVE');
   cleanup();
   assert.equal(destroyed, 1);
 });

@@ -138,24 +138,25 @@ test("matches the approved v15 projection signatures at the entrance, middle, an
     approvedTunnelPose(8, { ...viewport, position: APPROVED_TUNNEL_CAMERA_START }),
     approvedTunnelPose(68, { ...viewport, position: 3562 }),
     approvedTunnelPose(137, { ...viewport, position: APPROVED_TUNNEL_CAMERA_END }),
-  ].map(({ x, y, scale, opacity, visible, zIndex }) => ({
+  ].map(({ x, y, scale, opacity, visible, zIndex, rotationZ }) => ({
     x: Number(x.toFixed(6)),
     y: Number(y.toFixed(6)),
     scale: Number(scale.toFixed(6)),
     opacity: Number(opacity.toFixed(6)),
     visible,
     zIndex,
+    rotationZ: Number(rotationZ.toFixed(6)),
   }));
 
   assert.deepEqual(signatures, [
-    { x: 348.095238, y: 0, scale: 0.809524, opacity: 1, visible: true, zIndex: 9840 },
-    { x: 227.191413, y: 33.672692, scale: 0.541401, opacity: 0.787261, visible: true, zIndex: 9424 },
-    { x: 84.088177, y: -291.042059, scale: 1.039755, opacity: 1, visible: true, zIndex: 10026 },
-    { x: -79.938296, y: -280.031908, scale: 1, opacity: 1, visible: true, zIndex: 10000 },
+    { x: 348.095238, y: 0, scale: 0.809524, opacity: 1, visible: true, zIndex: 9840, rotationZ: 84 },
+    { x: 227.191413, y: 33.672692, scale: 0.541401, opacity: 0.787261, visible: true, zIndex: 9424, rotationZ: 456.605071 },
+    { x: 84.088177, y: -291.042059, scale: 1.039755, opacity: 1, visible: true, zIndex: 10026, rotationZ: 3244.840572 },
+    { x: -79.938296, y: -280.031908, scale: 1, opacity: 1, visible: true, zIndex: 10000, rotationZ: 6467.286215 },
   ]);
 });
 
-test("the approved v15 model recedes toward the center with dense separated rings and no card rotation", () => {
+test("the approved v15 model recedes toward the center with dense separated rings and planar card rotation", () => {
   const camera = { width: 1440, height: 900, position: APPROVED_TUNNEL_CAMERA_START };
   const near = approvedTunnelPose(0, camera);
   const middle = approvedTunnelPose(8, camera);
@@ -167,11 +168,11 @@ test("the approved v15 model recedes toward the center with dense separated ring
   assert.ok(radii[0] - radii[1] > 100 && radii[0] - radii[1] < 150);
   assert.ok(radii[1] - radii[2] > 45 && radii[1] - radii[2] < 90);
   for (const pose of [near, middle, deep]) {
-    assert.deepEqual(Object.keys(pose), ["x", "y", "scale", "opacity", "visible", "zIndex"]);
+    assert.deepEqual(Object.keys(pose), ["x", "y", "scale", "opacity", "visible", "zIndex", "rotationZ"]);
     assert.ok(Object.isFrozen(pose));
     assert.equal("rotationX" in pose, false);
     assert.equal("rotationY" in pose, false);
-    assert.equal("rotationZ" in pose, false);
+    assert.ok(Number.isFinite(pose.rotationZ));
   }
 });
 
@@ -197,7 +198,8 @@ test("production renderer is a front-facing DOM card layer driven only by approv
   assert.match(source, /archive-tunnel-card/);
   assert.match(source, /translate\(-50%,\s*-50%\)\s+translate\(/);
   assert.match(source, /card\.style\.opacity/);
-  assert.doesNotMatch(source, /from\s+["']\.\.\/vendor\/three|WebGLRenderer|PerspectiveCamera|Raycaster|\btunnelPose\b|rotationZ|\.position\.set/);
+  assert.match(source, /rotate\(\$\{pose\.rotationZ\}deg\)/);
+  assert.doesNotMatch(source, /from\s+["']\.\.\/vendor\/three|WebGLRenderer|PerspectiveCamera|Raycaster|\btunnelPose\b|rotationX|rotationY|\.position\.set/);
 });
 
 test("archive tunnel CSS reproduces the approved soft-light stage without ray motifs", () => {
@@ -490,7 +492,7 @@ test("DOM renderer mounts all ordered front-facing cards with exact entrance pos
   const pose = approvedTunnelPose(0, { width: 1440, height: 900, position: APPROVED_TUNNEL_CAMERA_START });
   assert.equal(first.dataset.order, "1");
   assert.equal(first.dataset.status, "error");
-  assert.equal(first.style.transform, `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale})`);
+  assert.equal(first.style.transform, `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale}) rotate(${pose.rotationZ}deg)`);
   assert.equal(first.children[0].src, archiveData.cases[0].images[0].src);
   assert.equal(first.children[0].style.opacity, undefined);
   assert.equal(first.children[1].textContent, "错误尝试");
@@ -600,7 +602,7 @@ test("restored progress renders its approved camera position and resumes cruise 
   assert.deepEqual(h.progress[0], { progress: 41, mode: "cruising" });
   const cameraPosition = APPROVED_TUNNEL_CAMERA_START + (APPROVED_TUNNEL_CAMERA_END - APPROVED_TUNNEL_CAMERA_START) * (41 / 137);
   const pose = approvedTunnelPose(41, { width: 1440, height: 900, position: cameraPosition });
-  assert.equal(h.root.children[0].children[41].style.transform, `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale})`);
+  assert.equal(h.root.children[0].children[41].style.transform, `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale}) rotate(${pose.rotationZ}deg)`);
   h.controller.destroy();
 });
 

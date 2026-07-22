@@ -135,8 +135,10 @@ export function buildArchiveIndexShell(summary = {}) {
       <div class="archive-tunnel-actions"><button type="button" data-archive-view="list">列表模式</button><button type="button" data-tunnel-cruise>暂停漫游</button></div>
     </header>
     <div class="archive-tunnel-stage" data-archive-tunnel aria-label="按制作顺序排列的图片隧道"></div>
-    <div class="archive-tunnel-count"><span class="archive-error-badge archive-tunnel-error-badge" data-tunnel-error-badge hidden>错误尝试</span><b data-tunnel-current>001</b> / ${String(total).padStart(3, '0')}</div>
-    <button type="button" class="archive-rewind" data-tunnel-rewind hidden>↶ 快速回溯</button>
+    <div class="archive-tunnel-guide"><b>一条真正走得进去的影像长廊</b><span>滚轮 / 拖动控制前进速度</span></div>
+    <div class="archive-tunnel-count"><span class="archive-error-badge archive-tunnel-error-badge" data-tunnel-error-badge hidden>错误尝试</span><strong><b data-tunnel-current>001</b> / ${String(total).padStart(3, '0')}</strong><em>完整漫游约 90 秒</em></div>
+    <div class="archive-tunnel-progress"><i data-tunnel-progress></i></div>
+    <button type="button" class="archive-rewind is-archive" data-tunnel-rewind disabled>ARCHIVE</button>
     <div data-archive-modal-host></div>
     <a class="archive-return-after" href="#after" data-return-after>← 返回片后</a>
   </section>`;
@@ -624,6 +626,7 @@ export function mountArchiveRoute(app, route, {
           const rewind = app.querySelector?.('[data-tunnel-rewind]');
           const cruise = app.querySelector?.('[data-tunnel-cruise]');
           const current = app.querySelector?.('[data-tunnel-current]');
+          const progress = app.querySelector?.('[data-tunnel-progress]');
           const errorBadge = app.querySelector?.('[data-tunnel-error-badge]');
           const modalHost = app.querySelector?.('[data-archive-modal-host]');
           const tunnelOccurrences = flattenArchiveOccurrences(data);
@@ -636,6 +639,7 @@ export function mountArchiveRoute(app, route, {
             onProgress(snapshot) {
               latestTunnelMode = snapshot.mode;
               if (current) current.textContent = String(Math.round(snapshot.progress) + 1).padStart(3, '0');
+              if (progress) progress.style.width = `${Math.max(0, Math.min(100, snapshot.progress / Math.max(1, tunnelOccurrences.length - 1) * 100))}%`;
               if (errorBadge) {
                 const occurrence = tunnelOccurrences[Math.round(snapshot.progress)];
                 const isError = occurrence?.status === 'error';
@@ -646,7 +650,7 @@ export function mountArchiveRoute(app, route, {
               if (cruise) cruise.textContent = snapshot.mode === 'cruising' ? '暂停漫游' : '继续漫游';
               if (rewindActive && snapshot.mode === 'paused' && snapshot.progress <= 0.001) {
                 rewindActive = false;
-                if (rewind) { rewind.hidden = true; rewind.disabled = false; rewind.textContent = '↶ 快速回溯'; }
+                if (rewind) { rewind.disabled = true; rewind.classList?.add?.('is-archive'); rewind.textContent = 'ARCHIVE'; }
               }
             },
             onSelect(occurrence, trigger) {
@@ -662,7 +666,7 @@ export function mountArchiveRoute(app, route, {
               }));
               if (!modal && resumeAfterClose) safeCall(() => tunnel?.resume?.());
             },
-            onEnd() { if (rewind) { rewind.hidden = false; rewind.disabled = false; rewind.textContent = '↶ 快速回溯'; } },
+            onEnd() { if (rewind) { rewind.disabled = false; rewind.classList?.remove?.('is-archive'); rewind.textContent = '↶ 快速回溯'; } },
             onFallback() { if (active && view === 'tunnel') renderList(); },
           });
           if (view !== 'tunnel' || app.querySelector?.('[data-archive-tunnel]') !== stage) {
@@ -687,7 +691,7 @@ export function mountArchiveRoute(app, route, {
               if (safeCall(() => tunnel?.startRewind?.())) {
                 latestTunnelMode = 'rewinding';
                 rewindActive = true;
-                if (rewind) { rewind.hidden = false; rewind.disabled = true; rewind.textContent = '正在回溯…'; }
+                if (rewind) { rewind.disabled = true; rewind.classList?.remove?.('is-archive'); rewind.textContent = '正在回溯…'; }
               } else if (rewind) {
                 rewind.hidden = false;
                 rewind.disabled = false;
