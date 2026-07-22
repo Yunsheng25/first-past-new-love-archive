@@ -54,6 +54,19 @@ function createDeferredFade(audio) {
   return { fade, pending };
 }
 
+test('selected soundtrack attribution records its exact Pixabay source and license', async () => {
+  const notices = await readFile(new URL('../THIRD_PARTY_NOTICES.md', import.meta.url), 'utf8');
+  assert.match(notices, /Emotional Piano and Strings/);
+  assert.match(notices, /Pastichio_Piano_Music/);
+  assert.match(notices, /https:\/\/pixabay\.com\/music\/modern-classical-emotional-piano-and-strings-289398\//);
+  assert.match(notices, /Pixabay Content License/);
+});
+
+test('selected soundtrack asset is present and non-trivial', async () => {
+  const soundtrack = await readFile(new URL('../assets/audio/emotional-piano-and-strings.mp3', import.meta.url));
+  assert.ok(soundtrack.byteLength > 100 * 1024);
+});
+
 test('原创钢琴 BGM 是可循环的本地 PCM WAV', async () => {
   const wav = await readFile(new URL('../assets/audio/memory-piano.wav', import.meta.url));
   assert.equal(wav.subarray(0, 4).toString('ascii'), 'RIFF');

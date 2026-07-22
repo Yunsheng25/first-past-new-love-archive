@@ -26,6 +26,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
+## Emotional Piano and Strings
+
+The background soundtrack `assets/audio/emotional-piano-and-strings.mp3` is “Emotional Piano and Strings” by Pastichio_Piano_Music. Source: <https://pixabay.com/music/modern-classical-emotional-piano-and-strings-289398/>. It is used under the Pixabay Content License.
+
 ## FranzLy/TimeChannel
 
 The archive tunnel is inspired by and adapts ideas from TimeChannel's tunnel layout, inertial navigation, and mobile performance approach. No TimeChannel source code is claimed to have been copied here. Repository: <https://github.com/FranzLy/TimeChannel>; license source: <https://raw.githubusercontent.com/FranzLy/TimeChannel/main/LICENSE>. The repository and license were reviewed for this attribution in July 2026.
