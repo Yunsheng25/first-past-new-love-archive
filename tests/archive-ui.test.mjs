@@ -81,7 +81,7 @@ test('tunnel selection pauses for a complete modal, resumes in place, and end re
   tunnelOptions.onProgress({ progress: 0, mode: 'paused' });
   assert.equal(nodes.errorBadge.hidden, false);
   assert.equal(nodes.errorBadge.textContent, '错误尝试');
-  tunnelOptions.onProgress({ progress: 5, mode: 'paused' });
+  tunnelOptions.onProgress({ progress: 41.25, mode: 'cruising' });
   assert.equal(nodes.errorBadge.hidden, true);
   tunnelOptions.onSelect({ caseId: 'case-01', caseIndex: 0, imageIndex: 0, ...archive.cases[0].images[0] }, {});
   assert.equal(paused, 1);
@@ -98,6 +98,83 @@ test('tunnel selection pauses for a complete modal, resumes in place, and end re
   assert.equal(nodes.rewind.disabled, false);
   cleanup();
   assert.equal(destroyed, 1);
+});
+
+test('closing a tunnel modal restores the exact prior paused state instead of starting cruise', async () => {
+  const listeners = new Map();
+  const stage = { clientWidth: 800, clientHeight: 600 };
+  const nodes = { stage, cruise: { textContent: '' }, rewind: { hidden: true }, modal: {}, current: {}, errorBadge: {} };
+  const app = {
+    innerHTML: '', focus() {},
+    querySelector(selector) { return ({
+      '[data-archive-tunnel]': nodes.stage,
+      '[data-tunnel-cruise]': nodes.cruise,
+      '[data-tunnel-rewind]': nodes.rewind,
+      '[data-archive-modal-host]': nodes.modal,
+      '[data-tunnel-current]': nodes.current,
+      '[data-tunnel-error-badge]': nodes.errorBadge,
+    })[selector] ?? null; },
+    addEventListener(type, handler) { listeners.set(type, handler); },
+    removeEventListener(type, handler) { if (listeners.get(type) === handler) listeners.delete(type); },
+  };
+  let tunnelOptions; let modalOptions; let paused = 0; let resumed = 0;
+  const liveSnapshot = { progress: 64.375, mode: 'paused' };
+  const cleanup = mountArchiveRoute(app, { name: 'archive-index' }, {
+    fetchImpl: async () => ({ ok: true, json: async () => archive }), storage: null, documentRef: {}, windowRef: {},
+    mountTunnel(_root, _data, options) {
+      tunnelOptions = options;
+      return {
+        pause() { paused += 1; return false; }, resume() { resumed += 1; return true; },
+        snapshot: () => liveSnapshot, startRewind() {}, destroy() {},
+      };
+    },
+    mountCaseModal(_host, options) { modalOptions = options; return { destroy() {} }; },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  tunnelOptions.onProgress(liveSnapshot);
+  tunnelOptions.onSelect({ caseId: 'case-33', caseIndex: 32, imageIndex: 0, ...archive.cases[32].images[0] }, {});
+  assert.equal(paused, 1);
+  assert.deepEqual(liveSnapshot, { progress: 64.375, mode: 'paused' });
+  modalOptions.onClose();
+  assert.equal(resumed, 0);
+  cleanup();
+});
+
+test('manual cruise pause immediately before selection is preserved when the modal closes', async () => {
+  const listeners = new Map();
+  const nodes = { stage: {}, cruise: {}, rewind: { hidden: true }, modal: {}, current: {}, errorBadge: {} };
+  const app = {
+    innerHTML: '', focus() {},
+    querySelector(selector) { return ({
+      '[data-archive-tunnel]': nodes.stage, '[data-tunnel-cruise]': nodes.cruise,
+      '[data-tunnel-rewind]': nodes.rewind, '[data-archive-modal-host]': nodes.modal,
+      '[data-tunnel-current]': nodes.current, '[data-tunnel-error-badge]': nodes.errorBadge,
+    })[selector] ?? null; },
+    addEventListener(type, handler) { listeners.set(type, handler); },
+    removeEventListener(type, handler) { if (listeners.get(type) === handler) listeners.delete(type); },
+  };
+  let tunnelOptions; let modalOptions; let mode = 'cruising'; let resumes = 0;
+  const cleanup = mountArchiveRoute(app, { name: 'archive-index' }, {
+    fetchImpl: async () => ({ ok: true, json: async () => archive }), storage: null, documentRef: {}, windowRef: {},
+    mountTunnel(_root, _data, options) {
+      tunnelOptions = options;
+      return {
+        snapshot: () => ({ progress: 22.5, mode }),
+        pause() { mode = 'paused'; return true; },
+        resume() { mode = 'cruising'; resumes += 1; return true; },
+        startRewind() {}, destroy() {},
+      };
+    },
+    mountCaseModal(_host, options) { modalOptions = options; return { destroy() {} }; },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  tunnelOptions.onProgress({ progress: 22.5, mode: 'cruising' });
+  listeners.get('click')({ target: { closest: (selector) => selector === '[data-tunnel-cruise]' ? nodes.cruise : null } });
+  assert.equal(mode, 'paused');
+  tunnelOptions.onSelect({ caseId: 'case-12', caseIndex: 11, imageIndex: 0, ...archive.cases[11].images[0] }, {});
+  modalOptions.onClose();
+  assert.equal(resumes, 0);
+  cleanup();
 });
 
 test('a pending shared archive load survives its first mount cleanup and renders the immediate remount once', async () => {

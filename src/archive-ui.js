@@ -628,10 +628,13 @@ export function mountArchiveRoute(app, route, {
           const modalHost = app.querySelector?.('[data-archive-modal-host]');
           const tunnelOccurrences = flattenArchiveOccurrences(data);
           let rewindActive = false;
+          let latestTunnelMode = 'cruising';
+          let modalGeneration = 0;
           const mountedTunnel = mountTunnel(stage, data, {
             windowRef,
             initialProgress: savedProgress,
             onProgress(snapshot) {
+              latestTunnelMode = snapshot.mode;
               if (current) current.textContent = String(Math.round(snapshot.progress) + 1).padStart(3, '0');
               if (errorBadge) {
                 const occurrence = tunnelOccurrences[Math.round(snapshot.progress)];
@@ -647,11 +650,17 @@ export function mountArchiveRoute(app, route, {
               }
             },
             onSelect(occurrence, trigger) {
+              const resumeAfterClose = latestTunnelMode === 'cruising';
+              const generation = ++modalGeneration;
               safeCall(() => tunnel?.pause?.());
               modal = safeCall(() => mountCaseModal(modalHost, { data, occurrence, trigger, documentRef, navigatorRef,
-                onClose() { modal = null; safeCall(() => tunnel?.resume?.()); },
+                onClose() {
+                  if (generation !== modalGeneration || !active || view !== 'tunnel') return;
+                  modal = null;
+                  if (resumeAfterClose) safeCall(() => tunnel?.resume?.());
+                },
               }));
-              if (!modal) safeCall(() => tunnel?.resume?.());
+              if (!modal && resumeAfterClose) safeCall(() => tunnel?.resume?.());
             },
             onEnd() { if (rewind) { rewind.hidden = false; rewind.disabled = false; rewind.textContent = '↶ 快速回溯'; } },
             onFallback() { if (active && view === 'tunnel') renderList(); },
@@ -665,11 +674,18 @@ export function mountArchiveRoute(app, route, {
             if (event.target?.closest?.('[data-archive-view="list"]')) { renderList(); return; }
             if (event.target?.closest?.('[data-tunnel-cruise]')) {
               const snapshot = safeCall(() => tunnel?.snapshot?.());
-              safeCall(() => snapshot?.mode === 'cruising' ? tunnel?.pause?.() : tunnel?.resume?.());
+              if (snapshot?.mode === 'cruising') {
+                safeCall(() => tunnel?.pause?.());
+                latestTunnelMode = 'paused';
+              } else {
+                safeCall(() => tunnel?.resume?.());
+                latestTunnelMode = 'cruising';
+              }
               return;
             }
             if (event.target?.closest?.('[data-tunnel-rewind]')) {
               if (safeCall(() => tunnel?.startRewind?.())) {
+                latestTunnelMode = 'rewinding';
                 rewindActive = true;
                 if (rewind) { rewind.hidden = false; rewind.disabled = true; rewind.textContent = '正在回溯…'; }
               } else if (rewind) {
@@ -681,6 +697,7 @@ export function mountArchiveRoute(app, route, {
           app.addEventListener?.('click', click);
           interactionCleanup = () => {
             app.removeEventListener?.('click', click);
+            modalGeneration += 1;
             safeCall(() => modal?.destroy?.()); modal = null;
             safeCall(() => tunnel?.destroy?.()); tunnel = null;
           };

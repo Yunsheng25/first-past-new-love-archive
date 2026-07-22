@@ -2769,7 +2769,7 @@ button.archive-filter-chip {
   place-items: center;
   padding: clamp(14px, 3vw, 42px);
   background: rgba(2, 1, 5, .06);
-  backdrop-filter: blur(7px);
+  backdrop-filter: none;
 }
 
 .archive-case-modal {
@@ -2783,7 +2783,7 @@ button.archive-filter-chip {
   color: #f4ece5;
   background: rgba(18, 16, 21, .44);
   box-shadow: 0 26px 90px rgba(0, 0, 0, .28);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(10px) saturate(.92);
 }
 
 .archive-case-modal > header { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; }

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import archive from '../data/archive.json' with { type: 'json' };
 import { flattenArchiveOccurrences } from '../src/archive-tunnel-data.js';
@@ -9,6 +10,8 @@ import {
   buildArchiveCaseModal,
   mountArchiveCaseModal,
 } from '../src/archive-case-modal.js';
+
+const css = await readFile(new URL('../style.css', import.meta.url), 'utf8');
 
 const occurrenceFor = (caseItem, imageIndex = 0) => ({
   caseId: caseItem.id,
@@ -60,6 +63,13 @@ test('renders exact actual gallery groups and complete selected case information
   assert.match(nineHtml, /data-case-gallery="many"/);
   assert.equal((nineHtml.match(/data-case-image-role=/g) ?? []).length, 9);
   assert.deepEqual([...nineHtml.matchAll(/<img src="([^"]+)"/g)].map((match) => match[1]), nine.images.map((image) => image.src));
+});
+
+test('modal composition keeps the tunnel visible while full-opacity first and last frames stack vertically', () => {
+  assert.match(css, /\.archive-case-modal-backdrop\s*\{[\s\S]*?background:\s*rgba\(2,\s*1,\s*5,\s*\.06\)[\s\S]*?backdrop-filter:\s*none/);
+  assert.match(css, /\.archive-case-modal\s*\{[\s\S]*?background:\s*rgba\(18,\s*16,\s*21,\s*\.44\)[\s\S]*?backdrop-filter:\s*blur\(10px\)/);
+  assert.match(css, /\.archive-case-modal \.archive-case-gallery\[data-case-gallery="two"\]\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)[\s\S]*?grid-template-rows:\s*auto auto/);
+  assert.match(css, /\.archive-case-image img\s*\{[\s\S]*?opacity:\s*1[\s\S]*?filter:\s*none/);
 });
 
 test('escapes every modal interpolation without truncating line-broken prompts', () => {
