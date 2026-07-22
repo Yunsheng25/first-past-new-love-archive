@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { probeMp3 } from '../scripts/mp3-metadata.mjs';
 import {
   BGM_PREFERENCE_KEY,
   BGM_VOLUME,
@@ -65,6 +66,23 @@ test('selected soundtrack attribution records its exact Pixabay source and licen
 test('selected soundtrack asset is present and non-trivial', async () => {
   const soundtrack = await readFile(new URL('../assets/audio/emotional-piano-and-strings.mp3', import.meta.url));
   assert.ok(soundtrack.byteLength > 100 * 1024);
+});
+
+test('MP3 metadata probe rejects large random data and truncated audio', async () => {
+  assert.throws(() => probeMp3(Buffer.alloc(101 * 1024, 0x5a)), /invalid MP3/i);
+  const soundtrack = await readFile(new URL('../assets/audio/emotional-piano-and-strings.mp3', import.meta.url));
+  assert.throws(() => probeMp3(soundtrack.subarray(0, soundtrack.length - 1)), /truncated MP3/i);
+});
+
+test('selected soundtrack is a finite audio-only MP3', async () => {
+  const soundtrack = await readFile(new URL('../assets/audio/emotional-piano-and-strings.mp3', import.meta.url));
+  const metadata = probeMp3(soundtrack);
+  assert.ok(Number.isFinite(metadata.duration));
+  assert.ok(metadata.duration > 200 && metadata.duration < 210);
+  assert.equal(metadata.audioStreams, 1);
+  assert.equal(metadata.videoStreams, 0);
+  assert.ok(metadata.frameCount > 0);
+  assert.ok(Object.isFrozen(metadata));
 });
 
 test('原创钢琴 BGM 是可循环的本地 PCM WAV', async () => {
