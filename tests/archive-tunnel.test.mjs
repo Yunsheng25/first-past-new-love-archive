@@ -8,14 +8,10 @@ import {
   APPROVED_TUNNEL_CAMERA_END,
   APPROVED_TUNNEL_CAMERA_START,
   APPROVED_TUNNEL_DEPTH_STEP,
-  TUNNEL_RADIUS_X,
-  TUNNEL_RADIUS_Y,
   TUNNEL_MAX_INDEX,
-  TUNNEL_STEP,
   approvedTunnelPose,
   flattenArchiveOccurrences,
   groupCaseImages,
-  tunnelPose,
 } from "../src/archive-tunnel-data.js";
 import {
   TUNNEL_CRUISE_MS,
@@ -192,57 +188,24 @@ test("the approved v15 visibility window preserves its long depth and rejects in
   }
 });
 
-test("maps the full supported tunnel domain to deterministic, bounded spiral poses", () => {
-  assert.ok(TUNNEL_STEP > 0);
-  assert.ok(TUNNEL_RADIUS_X > 0);
-  assert.ok(TUNNEL_RADIUS_Y > 0);
-  assert.equal(TUNNEL_MAX_INDEX, 137);
-  const poses = Array.from({ length: TUNNEL_MAX_INDEX + 1 }, (_, index) => tunnelPose(index));
-  const [start, , , , , , , , near] = poses;
-  const far = poses.at(-1);
+test("production renderer is a front-facing DOM card layer driven only by approvedTunnelPose", () => {
+  const source = fs.readFileSync(new URL("../src/archive-tunnel.js", import.meta.url), "utf8");
 
-  assert.deepEqual(tunnelPose(8), near);
-  for (const pose of poses) {
-    assert.deepEqual(Object.keys(pose), ["x", "y", "z", "rotationZ"]);
-    assert.ok(Object.values(pose).every(Number.isFinite));
-    assert.ok(Math.abs(pose.x) <= TUNNEL_RADIUS_X);
-    assert.ok(Math.abs(pose.y) <= TUNNEL_RADIUS_Y);
-  }
-  assert.equal(start.z, 0);
-  assert.equal(near.z, -8 * TUNNEL_STEP);
-  assert.equal(far.z, -137 * TUNNEL_STEP);
-  assert.ok(far.z < near.z && near.z < start.z);
-  for (let index = 1; index < poses.length; index += 1) {
-    assert.ok(Math.abs((poses[index].z - poses[index - 1].z) + TUNNEL_STEP) < 1e-12);
-    assert.ok(poses[index].z < poses[index - 1].z);
-  }
+  assert.match(source, /approvedTunnelPose/);
+  assert.match(source, /archive-tunnel-card/);
+  assert.match(source, /translate\(-50%,\s*-50%\)\s+translate\(/);
+  assert.match(source, /card\.style\.opacity/);
+  assert.doesNotMatch(source, /from\s+["']\.\.\/vendor\/three|WebGLRenderer|Raycaster|tunnelPose|rotationZ|camera\.position/);
 });
 
-test("aligns the Three plane local x-axis to the true ellipse tangent", () => {
-  const tolerance = 1e-12;
-  assert.ok(Math.abs(tunnelPose(0).rotationZ - (Math.PI / 2)) < tolerance);
-  for (const index of [1, 3, 8, 17]) {
-    const pose = tunnelPose(index);
-    const ellipseNormal = { x: pose.x / (TUNNEL_RADIUS_X ** 2), y: pose.y / (TUNNEL_RADIUS_Y ** 2) };
-    const cardLongAxis = { x: Math.cos(pose.rotationZ), y: Math.sin(pose.rotationZ) };
-    const dotProduct = (ellipseNormal.x * cardLongAxis.x) + (ellipseNormal.y * cardLongAxis.y);
-    assert.ok(Math.abs(dotProduct) < tolerance, `index ${index} must be tangent to the ellipse`);
-  }
-});
-
-test("keeps the final supported tunnel pose finite", () => {
-  const pose = tunnelPose(TUNNEL_MAX_INDEX);
-  assert.ok(Number.isFinite(pose.x));
-  assert.ok(Number.isFinite(pose.y));
-  assert.ok(Number.isFinite(pose.z));
-  assert.ok(Number.isFinite(pose.rotationZ));
-  assert.deepEqual(tunnelPose(TUNNEL_MAX_INDEX), pose);
-});
-
-test("rejects indexes outside the supported archive tunnel domain", () => {
-  for (const index of [-1, 1.5, NaN, Infinity, 138, Number.MAX_SAFE_INTEGER, Number.MAX_VALUE, "1", null]) {
-    assert.throws(() => tunnelPose(index), RangeError);
-  }
+test("archive tunnel CSS reproduces the approved soft-light stage without ray motifs", () => {
+  const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+  assert.match(css, /\.archive-tunnel-stage\s*\{[^}]*radial-gradient\(ellipse at 50% 52%,\s*#000 0 7%/s);
+  assert.match(css, /\.archive-tunnel-stage::before/);
+  assert.match(css, /\.archive-tunnel-card\s*\{[^}]*left:\s*50%[^}]*top:\s*52%/s);
+  assert.match(css, /\.archive-tunnel-card img\s*\{[^}]*opacity:\s*1[^}]*filter:\s*none/s);
+  assert.match(css, /\.archive-rewind\s*\{[^}]*width:\s*110px[^}]*height:\s*110px[^}]*border-radius:\s*50%/s);
+  assert.doesNotMatch(css, /repeating-conic-gradient|archive-rays|tunnel-rays/i);
 });
 
 test("cruises to the exact end over 90 seconds independently of tick partitioning", () => {
@@ -448,6 +411,8 @@ function createRoot() {
   return { clientWidth: 800, clientHeight: 500, children: [], classList: { add: (name) => classes.add(name), remove: (name) => classes.delete(name), contains: (name) => classes.has(name) }, append(value) { value.parentNode = this; this.children.push(value); }, removeChild(value) { this.children = this.children.filter((item) => item !== value); value.parentNode = null; }, addEventListener(name, listener) { listeners.set(name, listener); }, removeEventListener(name, listener) { if (listeners.get(name) === listener) listeners.delete(name); }, getBoundingClientRect() { return { left: 0, top: 0, width: this.clientWidth, height: this.clientHeight }; }, setPointerCapture() {}, releasePointerCapture() {}, listeners };
 }
 
+// Retained below as historical coverage for the removed Three.js renderer.
+if (false) {
 test("mounts ordered cards, applies exact poses, camera progress, and releases every owned resource", () => {
   const { three, resources } = createRendererFakes();
   const root = createRoot();
@@ -827,4 +792,119 @@ test("drag threshold is cumulative vertically and horizontally while small movem
     h.fire("pointerup", { pointerId: 1, clientX: axis === "horizontal" ? 10 : 0, clientY: axis === "vertical" ? 90 : 100 }); h.fire("click", { clientX: 10, clientY: 10 }); assert.equal(h.calls.select.length, 0, axis); if (axis === "vertical") assert.ok(api.snapshot().progress > 0); api.destroy();
   }
   const small = createLifecycleHarness({ faults: { hit: 1 } }); const api = small.mount(archiveData, { stateFactory: () => createTunnelState({ maxProgress: 137, initialMode: "paused" }) }); small.fire("pointerdown", { pointerId: 2, clientX: 0, clientY: 100 }); small.fire("pointermove", { pointerId: 2, clientX: 3, clientY: 96 }); small.fire("pointerup", { pointerId: 2, clientX: 3, clientY: 96 }); small.fire("click", { clientX: 3, clientY: 96 }); assert.equal(small.calls.select.length, 1); api.destroy();
+});
+}
+
+function createDomHarness({ initialMode = "cruising", preexistingClass = false } = {}) {
+  class FakeNode {
+    constructor(tag) { this.tagName = tag.toUpperCase(); this.children = []; this.style = {}; this.dataset = {}; this.listeners = new Map(); this.className = ""; this.parentNode = null; this.hidden = false; }
+    append(...nodes) { nodes.forEach((node) => { node.parentNode = this; this.children.push(node); }); }
+    remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter((item) => item !== this); this.parentNode = null; }
+    setAttribute(name, value) { this[name] = String(value); }
+    addEventListener(name, listener, config) { this.listeners.set(name, { listener, config }); }
+    removeEventListener(name, listener) { if (this.listeners.get(name)?.listener === listener) this.listeners.delete(name); }
+    fire(name, event = {}) { this.listeners.get(name)?.listener({ target: this, ...event }); }
+    closest(selector) { return selector === ".archive-tunnel-card" && this.className === "archive-tunnel-card" ? this : null; }
+  }
+  const documentRef = { createElement: (tag) => new FakeNode(tag) };
+  const classes = new Set();
+  const root = new FakeNode("div");
+  root.clientWidth = 1440; root.clientHeight = 900; root.ownerDocument = documentRef;
+  root.classList = { contains: (name) => classes.has(name), add: (name) => classes.add(name), remove: (name) => classes.delete(name) };
+  if (preexistingClass) classes.add("archive-tunnel-surface");
+  root.setPointerCapture = (id) => { root.captured = id; };
+  root.releasePointerCapture = (id) => { root.released = id; };
+  const frames = [];
+  const cancelled = [];
+  const windowListeners = new Map();
+  const windowRef = {
+    requestAnimationFrame(callback) { frames.push(callback); return frames.length; },
+    cancelAnimationFrame(id) { cancelled.push(id); },
+    addEventListener(name, listener) { windowListeners.set(name, listener); },
+    removeEventListener(name, listener) { if (windowListeners.get(name) === listener) windowListeners.delete(name); },
+  };
+  const progress = []; const selected = []; const ended = [];
+  const controller = mountArchiveTunnel(root, archiveData, {
+    windowRef, documentRef,
+    stateFactory: ({ maxProgress }) => createTunnelState({ maxProgress, initialMode }),
+    onProgress: (snapshot) => progress.push(snapshot),
+    onSelect: (...args) => selected.push(args),
+    onEnd: (snapshot) => ended.push(snapshot),
+  });
+  return { root, classes, frames, cancelled, windowListeners, progress, selected, ended, controller };
+}
+
+test("DOM renderer mounts all ordered front-facing cards with exact entrance poses and full-opacity images", () => {
+  const h = createDomHarness({ initialMode: "paused" });
+  assert.equal(h.root.children.length, 1);
+  const layer = h.root.children[0];
+  assert.equal(layer.className, "archive-tunnel-card-layer");
+  assert.equal(layer.children.length, 138);
+  const first = layer.children[0];
+  const pose = approvedTunnelPose(0, { width: 1440, height: 900, position: APPROVED_TUNNEL_CAMERA_START });
+  assert.equal(first.dataset.order, "1");
+  assert.equal(first.dataset.status, "error");
+  assert.equal(first.style.transform, `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale})`);
+  assert.equal(first.children[0].src, archiveData.cases[0].images[0].src);
+  assert.equal(first.children[0].style.opacity, undefined);
+  assert.equal(first.children[1].textContent, "错误尝试");
+  assert.equal(layer.children.at(-1).dataset.order, "138");
+  assert.ok(h.classes.has("archive-tunnel-surface"));
+  h.controller.destroy();
+});
+
+test("wheel and drag advance the long approved journey while exact card clicks pause and select", () => {
+  const h = createDomHarness({ initialMode: "paused" });
+  let prevented = 0;
+  h.root.fire("wheel", { deltaY: 100, preventDefault() { prevented += 1; } });
+  assert.equal(prevented, 1);
+  assert.ok(h.controller.snapshot().progress > 0);
+  h.root.fire("pointerdown", { pointerId: 3, clientX: 10, clientY: 100, target: h.root });
+  h.root.fire("pointermove", { pointerId: 3, clientX: 10, clientY: 60, target: h.root });
+  h.root.fire("pointerup", { pointerId: 3, clientX: 10, clientY: 60, target: h.root });
+  assert.equal(h.root.captured, 3); assert.equal(h.root.released, 3);
+  h.controller.destroy();
+  const selection = createDomHarness({ initialMode: "paused" });
+  const card = selection.root.children[0].children[8];
+  card.fire("click");
+  assert.equal(selection.selected.length, 1);
+  assert.equal(selection.selected[0][0].order, 9);
+  assert.equal(selection.selected[0][1], card);
+  assert.equal(selection.controller.snapshot().mode, "paused");
+  selection.controller.destroy();
+});
+
+test("cruise, end and 3.2-second rewind retain deterministic controller behavior", () => {
+  const h = createDomHarness();
+  assert.equal(h.frames.length, 1);
+  h.frames.shift()(0);
+  let now = 0;
+  while (h.controller.snapshot().mode === "cruising") { now += 64; h.frames.shift()(now); }
+  assert.deepEqual(h.controller.snapshot(), { progress: 137, mode: "ended" });
+  assert.equal(h.ended.length, 1);
+  assert.equal(h.controller.startRewind(), true);
+  h.frames.shift()(100000);
+  let rewindNow = 100000;
+  while (h.controller.snapshot().mode === "rewinding") { rewindNow += 64; h.frames.shift()(rewindNow); }
+  assert.deepEqual(h.controller.snapshot(), { progress: 0, mode: "paused" });
+  assert.equal(h.controller.resume(), true);
+  assert.equal(h.frames.length, 1);
+  h.controller.destroy();
+});
+
+test("destroy removes listeners, image references, RAF and owned DOM without affecting a pre-existing surface class", () => {
+  const h = createDomHarness();
+  const layer = h.root.children[0]; const images = layer.children.map((card) => card.children[0]);
+  assert.equal(h.controller.destroy(), true);
+  assert.equal(h.controller.destroy(), false);
+  assert.equal(h.root.children.length, 0);
+  assert.ok(images.every((image) => image.src === ""));
+  assert.equal(h.root.listeners.size, 0);
+  assert.equal(h.windowListeners.size, 0);
+  assert.equal(h.classes.has("archive-tunnel-surface"), false);
+  assert.ok(h.cancelled.length >= 1);
+
+  const pre = createDomHarness({ initialMode: "paused", preexistingClass: true });
+  pre.controller.destroy();
+  assert.ok(pre.classes.has("archive-tunnel-surface"));
 });
