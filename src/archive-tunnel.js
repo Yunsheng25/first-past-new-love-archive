@@ -217,7 +217,8 @@ export function mountArchiveTunnel(root, data, options = {}) {
     on(root, "click", clearDragSuppression);
     on(windowRef, "resize", resize);
     if (!root.classList?.contains?.(SURFACE_CLASS)) { root.classList?.add(SURFACE_CLASS); registry.classAdded = true; }
-    root.append(layer); registry.appended = true;
+    registry.appended = true;
+    root.append(layer);
     render(); schedule();
   } catch (_error) {
     cleanup();

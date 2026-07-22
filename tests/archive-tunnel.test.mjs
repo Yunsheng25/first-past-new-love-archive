@@ -412,7 +412,7 @@ function createDomHarness({ initialMode = "cruising", initialProgress, preexisti
   if (preexistingClass) classes.add("archive-tunnel-surface");
   root.setPointerCapture = (id) => { root.captured = id; };
   root.releasePointerCapture = (id) => { root.released = id; };
-  if (faults.append) root.append = () => { throw Error("append failure"); };
+  if (faults.append) root.append = function appendThenThrow(node) { FakeNode.prototype.append.call(this, node); throw Error("append failure"); };
   const frames = [];
   const cancelled = [];
   const windowListeners = new Map();
