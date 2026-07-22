@@ -2758,6 +2758,10 @@ button.archive-filter-chip {
   font-size: 11px;
   letter-spacing: .14em;
 }
+
+.archive-rewind[hidden] {
+  display: none !important;
+}
 .archive-tunnel-view > .archive-return-after { z-index: 5; left: clamp(22px, 4vw, 62px); bottom: 30px; }
 
 [data-archive-modal-host]:empty { display: none; }

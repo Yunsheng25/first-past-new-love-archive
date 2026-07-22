@@ -210,6 +210,11 @@ test("archive tunnel CSS reproduces the approved soft-light stage without ray mo
   assert.doesNotMatch(css, /repeating-conic-gradient|archive-rays|tunnel-rays/i);
 });
 
+test("hidden tunnel controls cannot intercept pointer input", () => {
+  const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+  assert.match(css, /\.archive-rewind\[hidden\]\s*\{[^}]*display:\s*none\s*!important/s);
+});
+
 test("cruises to the exact end over 90 seconds independently of tick partitioning", () => {
   assert.equal(TUNNEL_CRUISE_MS, 90000);
   const oneTick = createTunnelState({ maxProgress: 137 });
