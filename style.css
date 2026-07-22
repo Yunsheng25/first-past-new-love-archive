@@ -2737,6 +2737,9 @@ button.archive-filter-chip {
 .archive-tunnel-card--landscape { height: 139px; }
 .archive-tunnel-card:hover { box-shadow: 0 0 0 1px rgba(255,255,255,.9), 0 0 15px rgba(235,220,240,.48), 0 14px 30px rgba(0,0,0,.62); }
 .archive-tunnel-card img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 1; filter: none; }
+.archive-tunnel-card.is-load-failed { border-color: rgba(218,188,181,.32); background: rgba(15,12,16,.96); box-shadow: 0 9px 22px rgba(0,0,0,.55); }
+.archive-tunnel-card.is-load-failed img { display: none; }
+.archive-tunnel-card.is-load-failed::after { content: "图片暂未载入"; position: absolute; inset: 0; display: grid; place-items: center; color: rgba(238,225,214,.5); font-size: 10px; letter-spacing: .12em; }
 .archive-tunnel-card-error { position: absolute; top: 8px; left: 8px; border-radius: 999px; padding: 5px 8px; color: #fff5f2; background: rgba(145, 36, 31, .88); font-size: 10px; letter-spacing: .08em; }
 .archive-tunnel-guide { position: absolute; z-index: 4; left: clamp(22px, 4vw, 62px); bottom: 30px; pointer-events: none; }
 .archive-tunnel-guide b { display: block; margin-bottom: 7px; font: 400 17px "Songti SC", "SimSun", serif; letter-spacing: .1em; }
@@ -2764,6 +2767,7 @@ button.archive-filter-chip {
   box-shadow: 0 0 0 1px rgba(255,255,255,.24), 0 0 38px rgba(210,182,221,.28), 0 0 100px rgba(111,73,133,.2);
   font-size: 11px;
   letter-spacing: .14em;
+  pointer-events: auto;
 }
 
 .archive-rewind.is-archive {
@@ -2775,12 +2779,15 @@ button.archive-filter-chip {
   font-size: 7px;
   letter-spacing: .26em;
   cursor: default;
+  pointer-events: none;
 }
+
+.archive-rewind:disabled:not(.is-archive) { pointer-events: none; }
 
 .archive-rewind[hidden] {
   display: none !important;
 }
-.archive-tunnel-view > .archive-return-after { z-index: 5; left: clamp(22px, 4vw, 62px); bottom: 30px; }
+.archive-tunnel-view > .archive-return-after { z-index: 5; left: clamp(22px, 4vw, 62px); bottom: 92px; }
 
 @media (max-width: 720px) {
   .archive-tunnel-header { padding: 18px 16px; }
@@ -2788,7 +2795,7 @@ button.archive-filter-chip {
   .archive-tunnel-guide b { font-size: 13px; line-height: 1.35; }
   .archive-tunnel-count { right: 16px; bottom: 28px; }
   .archive-tunnel-progress { left: 16px; right: 16px; bottom: 9px; }
-  .archive-tunnel-view > .archive-return-after { left: 16px; bottom: 82px; }
+  .archive-tunnel-view > .archive-return-after { left: 16px; bottom: 92px; }
 }
 
 [data-archive-modal-host]:empty { display: none; }

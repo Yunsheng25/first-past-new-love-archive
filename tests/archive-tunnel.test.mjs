@@ -212,6 +212,13 @@ test("archive tunnel CSS reproduces the approved soft-light stage without ray mo
   assert.doesNotMatch(css, /repeating-conic-gradient|archive-rays|tunnel-rays/i);
 });
 
+test("the passive ARCHIVE mouth never intercepts the stage while only rewind-ready is interactive", () => {
+  const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+  assert.match(css, /\.archive-rewind\s*\{[^}]*pointer-events:\s*auto/s);
+  assert.match(css, /\.archive-rewind\.is-archive\s*\{[^}]*pointer-events:\s*none/s);
+  assert.match(css, /\.archive-rewind:disabled:not\(\.is-archive\)\s*\{[^}]*pointer-events:\s*none/s);
+});
+
 test("hidden tunnel controls cannot intercept pointer input", () => {
   const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
   assert.match(css, /\.archive-rewind\[hidden\]\s*\{[^}]*display:\s*none\s*!important/s);
@@ -403,11 +410,19 @@ test("validates inputs, restores initial state, and returns immutable snapshots"
 
 function createDomHarness({ initialMode = "cruising", initialProgress, faults = {}, callbacks = {} } = {}) {
   const metrics = { styleWrites: 0, hiddenWrites: 0, hiddenTrue: 0, hiddenFalse: 0 };
+  const imageDecodes = [];
   class FakeNode {
     constructor(tag) {
       this.tagName = tag.toUpperCase(); this.children = [];
       this.style = new Proxy({}, { set(target, key, value) { metrics.styleWrites += 1; target[key] = value; return true; } });
       this.dataset = {}; this.listeners = new Map(); this.className = ""; this.parentNode = null; this._hidden = false;
+      if (tag.toLowerCase() === "img") {
+        this.complete = !faults.pendingImages;
+        this.naturalWidth = faults.pendingImages ? 0 : 100;
+        if (faults.pendingImages) {
+          this.decode = () => new Promise((resolve, reject) => imageDecodes.push({ node: this, resolve, reject }));
+        }
+      }
     }
     get hidden() { return this._hidden; }
     set hidden(value) { metrics.hiddenWrites += 1; metrics[value ? "hiddenTrue" : "hiddenFalse"] += 1; this._hidden = value; }
@@ -447,7 +462,7 @@ function createDomHarness({ initialMode = "cruising", initialProgress, faults = 
     onEnd: callbacks.onEnd ?? ((snapshot) => ended.push(snapshot)),
     onFallback: (reason) => fallback.push(reason),
   });
-  return { root, classes, frames, cancelled, windowListeners, progress, selected, ended, fallback, metrics, controller };
+  return { root, classes, frames, cancelled, windowListeners, progress, selected, ended, fallback, metrics, imageDecodes, controller };
 }
 
 test("DOM construction and append failures fall back atomically without leaked listeners, classes or children", () => {
@@ -495,6 +510,9 @@ test("DOM renderer mounts all ordered front-facing cards with exact entrance pos
   assert.equal(first.style.transform, `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale}) rotate(${pose.rotationZ}deg)`);
   assert.equal(first.children[0].src, archiveData.cases[0].images[0].src);
   assert.equal(first.children[0].style.opacity, undefined);
+  assert.equal(first.dataset.paintReady, "ready");
+  assert.equal(first.dataset.inRange, "true");
+  assert.equal(layer.children.at(-1).dataset.inRange, "false");
   assert.equal(first.children[1].textContent, "错误尝试");
   assert.equal(layer.children.at(-1).dataset.order, "138");
   assert.match(layer.children[0].className, /archive-tunnel-card--portrait/);
@@ -554,6 +572,70 @@ test("destroy removes listeners, image references, RAF and owned DOM idempotentl
   assert.equal(h.root.listeners.size, 0);
   assert.equal(h.windowListeners.size, 0);
   assert.ok(h.cancelled.length >= 1);
+});
+
+test("pending images stay hidden until decoded and loaded cache re-entry paints immediately", async () => {
+  const h = createDomHarness({ initialMode: "paused", faults: { pendingImages: true } });
+  const first = h.root.children[0].children[0];
+  assert.equal(first.hidden, true);
+  assert.equal(first.dataset.paintReady, "pending");
+  await Promise.resolve();
+  const pending = h.imageDecodes.find((item) => item.node === first.children[0]);
+  pending.node.complete = true;
+  pending.node.naturalWidth = 100;
+  pending.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(first.hidden, false);
+  assert.equal(first.dataset.paintReady, "ready");
+
+  h.root.fire("wheel", { deltaY: 99999, preventDefault() {} });
+  assert.equal(first.hidden, true);
+  h.root.fire("wheel", { deltaY: -99999, preventDefault() {} });
+  assert.equal(first.hidden, false);
+  assert.equal(first.dataset.paintReady, "ready");
+  h.controller.destroy();
+});
+
+test("stale decode completion cannot reveal a card after range exit or destroy", async () => {
+  const exited = createDomHarness({ initialMode: "paused", faults: { pendingImages: true } });
+  const first = exited.root.children[0].children[0];
+  await Promise.resolve();
+  const pending = exited.imageDecodes.find((item) => item.node === first.children[0]);
+  exited.root.fire("wheel", { deltaY: 99999, preventDefault() {} });
+  pending.node.complete = true; pending.node.naturalWidth = 100; pending.resolve();
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(first.hidden, true);
+  exited.controller.destroy();
+
+  const destroyed = createDomHarness({ initialMode: "paused", faults: { pendingImages: true } });
+  const destroyedFirst = destroyed.root.children[0].children[0];
+  await Promise.resolve();
+  const destroyedPending = destroyed.imageDecodes.find((item) => item.node === destroyedFirst.children[0]);
+  destroyed.controller.destroy();
+  destroyedPending.node.complete = true; destroyedPending.node.naturalWidth = 100; destroyedPending.resolve();
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(destroyedFirst.hidden, true);
+});
+
+test("decode rejection waits for load and image failure uses a visible non-white fallback", async () => {
+  const h = createDomHarness({ initialMode: "paused", faults: { pendingImages: true } });
+  const first = h.root.children[0].children[0];
+  await Promise.resolve();
+  const firstPending = h.imageDecodes.find((item) => item.node === first.children[0]);
+  firstPending.reject(Error("decode unavailable"));
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(first.hidden, true);
+  first.children[0].complete = true; first.children[0].naturalWidth = 100;
+  first.children[0].fire("load");
+  assert.equal(first.hidden, false);
+  assert.equal(first.dataset.paintReady, "ready");
+
+  const second = h.root.children[0].children[1];
+  second.children[0].fire("error");
+  assert.equal(second.hidden, false);
+  assert.equal(second.dataset.paintReady, "failed");
+  assert.match(second.className, /is-load-failed/);
+  h.controller.destroy();
 });
 
 test("DOM fallback controllers are frozen, atomic and report exact reasons once", () => {

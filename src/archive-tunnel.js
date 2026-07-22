@@ -53,6 +53,42 @@ export function mountArchiveTunnel(root, data, options = {}) {
   let drag = null;
   let dragged = false;
 
+  function addClass(node, name) {
+    if (node.classList?.add) node.classList.add(name);
+    else if (!String(node.className).split(/\s+/).includes(name)) node.className = `${node.className} ${name}`.trim();
+  }
+  function revealIfReady(entry) {
+    if (registry.destroyed || !entry.inRange || (entry.readiness !== "ready" && entry.readiness !== "failed")) return false;
+    if (!entry.visible) { entry.card.hidden = false; entry.visible = true; }
+    return true;
+  }
+  function settleImage(entry, readiness) {
+    if (registry.destroyed || entry.readiness !== "pending") return false;
+    entry.readiness = readiness;
+    entry.card.dataset.paintReady = readiness;
+    if (readiness === "failed") addClass(entry.card, "is-load-failed");
+    return revealIfReady(entry);
+  }
+  function activateImage(entry) {
+    if (entry.activated) return;
+    entry.activated = true;
+    entry.readiness = "pending";
+    entry.card.dataset.paintReady = "pending";
+    entry.image.loading = "eager";
+    entry.image.fetchPriority = "high";
+    entry.image.src = entry.occurrence.src;
+    if (entry.image.complete) {
+      settleImage(entry, Number(entry.image.naturalWidth) > 0 ? "ready" : "failed");
+      return;
+    }
+    if (typeof entry.image.decode === "function") {
+      Promise.resolve().then(() => entry.image.decode()).then(
+        () => { if (Number(entry.image.naturalWidth) > 0) settleImage(entry, "ready"); },
+        () => { if (entry.image.complete && Number(entry.image.naturalWidth) > 0) settleImage(entry, "ready"); },
+      );
+    }
+  }
+
   function isMoving(snapshot) { return snapshot.mode === "cruising" || snapshot.mode === "rewinding"; }
   function stopFrame() {
     registry.frameToken += 1;
@@ -82,24 +118,22 @@ export function mountArchiveTunnel(root, data, options = {}) {
       for (let index = activeRange.start; index <= activeRange.end; index += 1) {
         if (index >= nextRange.start && index <= nextRange.end) continue;
         const entry = cards[index];
+        entry.inRange = false;
+        entry.card.dataset.inRange = "false";
         if (entry.visible) { entry.card.hidden = true; entry.visible = false; }
       }
     }
     for (let index = nextRange.start; index <= nextRange.end; index += 1) {
       const entry = cards[index];
-      if (!entry.activated) {
-        entry.image.loading = "eager";
-        entry.image.fetchPriority = "high";
-        entry.image.src = entry.occurrence.src;
-        entry.activated = true;
-      }
+      if (!entry.inRange) { entry.inRange = true; entry.card.dataset.inRange = "true"; }
+      activateImage(entry);
       const pose = approvedTunnelPoseInto(index, camera, entry.pose);
       if (!pose.visible) continue;
-      if (!entry.visible) { entry.card.hidden = false; entry.visible = true; }
       const opacity = String(pose.opacity);
       const transform = `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale}) rotate(${pose.rotationZ}deg)`;
       if (opacity !== entry.opacity) { entry.card.style.opacity = opacity; entry.opacity = opacity; }
       if (transform !== entry.transform) { entry.card.style.transform = transform; entry.transform = transform; }
+      revealIfReady(entry);
     }
     activeRange = nextRange;
     safe(() => options.onProgress?.(snapshot));
@@ -228,8 +262,13 @@ export function mountArchiveTunnel(root, data, options = {}) {
       }
       layer.append(card);
       card.hidden = true;
+      card.dataset.paintReady = "idle";
+      card.dataset.inRange = "false";
       card.style.zIndex = String(10000 - index * APPROVED_TUNNEL_DEPTH_STEP);
-      cards.push({ card, image, occurrence, click: null, pose: {}, visible: false, activated: false, opacity: null, transform: null });
+      const entry = { card, image, occurrence, click: null, pose: {}, visible: false, inRange: false, activated: false, readiness: "idle", opacity: null, transform: null };
+      on(image, "load", () => settleImage(entry, "ready"));
+      on(image, "error", () => settleImage(entry, "failed"));
+      cards.push(entry);
     });
     cards.forEach((entry) => {
       entry.click = () => {

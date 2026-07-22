@@ -41,6 +41,12 @@ test('archive overview shell defaults to the complete 138-occurrence tunnel', ()
   assert.doesNotMatch(html, /预览末尾|preview end|demo/i);
 });
 
+test('tunnel guide and return use distinct desktop and mobile slots', () => {
+  assert.match(css, /\.archive-tunnel-guide\s*\{[^}]*bottom:\s*30px/s);
+  assert.match(css, /\.archive-tunnel-view\s*>\s*\.archive-return-after\s*\{[^}]*bottom:\s*92px/s);
+  assert.match(css, /@media\s*\(max-width:\s*720px\)[\s\S]*\.archive-tunnel-guide\s*\{[^}]*bottom:\s*28px[\s\S]*\.archive-tunnel-view\s*>\s*\.archive-return-after\s*\{[^}]*bottom:\s*92px/s);
+});
+
 test('list cards mark only authored error attempts with visible escaped text', () => {
   const fixture = { ...archive, cases: [
     { ...archive.cases[0], status: 'error', errorGroup: '出现人脸 <script>' },
