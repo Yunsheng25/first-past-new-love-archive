@@ -12,6 +12,7 @@ const chapterTitles = [
 const chapterByTitle = new Map(chapterTitles);
 const mediaPattern = /!\[\[([^\]]+)\]\]/g;
 const calloutStartPattern = /^\s*>\s*\[![^\]]+\]/;
+const exampleCalloutTitlePattern = /^示例(?:\s*(?:（[^）]*）|「[^」]*」))?\s*$/;
 const obsidianRootDefault = "D:/\u9ed1\u66dc\u77f3";
 const reviewMarkdownDefault = `${obsidianRootDefault}/\u4ea7\u54c1\u8d44\u6599/\u300a\u521d\u604b\u65e7\u7231\u65b0\u6b22\u300b\u89c6\u9891\u590d\u76d8/\u300a\u521d\u604b\u65e7\u7231\u65b0\u6b22\u300b\u590d\u76d8\u624b\u8bb0.md`;
 
@@ -68,6 +69,13 @@ function calloutBlock(lines, section) {
     section,
     children: blocksForParagraph(body, section, { stripQuoteMarkers: false }),
   };
+}
+
+function isTopLevelMediaLine(line) {
+  if (/^\s*>/.test(line)) return false;
+  const refs = [...String(line).matchAll(mediaPattern)];
+  if (refs.length === 0) return false;
+  return String(line).replace(mediaPattern, "").trim() === "";
 }
 
 function visitBlocks(blocks, visit) {
@@ -227,7 +235,20 @@ export function parseReview(markdown) {
       ) {
         quotedLines.push(lines[++lineIndex]);
       }
-      chapter.blocks.push(calloutBlock(quotedLines, section.title));
+      const callout = calloutBlock(quotedLines, section.title);
+      if (exampleCalloutTitlePattern.test(callout.title)) {
+        let cursor = lineIndex + 1;
+        let lastMediaIndex = lineIndex;
+        while (cursor < lines.length) {
+          while (cursor < lines.length && lines[cursor].trim() === "") cursor += 1;
+          if (cursor >= lines.length || !isTopLevelMediaLine(lines[cursor])) break;
+          callout.children.push(...blocksForParagraph([lines[cursor]], section.title));
+          lastMediaIndex = cursor;
+          cursor += 1;
+        }
+        lineIndex = lastMediaIndex;
+      }
+      chapter.blocks.push(callout);
     } else if (chapter && line.trim() === "") {
       flushParagraph();
     } else if (chapter) {

@@ -122,6 +122,23 @@ function independentlyParseAuthoredBlocks(markdown) {
       }
       const children = [];
       appendParagraph(body, children);
+      if (/^示例(?:\s*(?:（[^）]*）|「[^」]*」))?\s*$/.test(title)) {
+        let cursor = lineIndex + 1;
+        let lastMediaIndex = lineIndex;
+        while (cursor < lines.length) {
+          while (cursor < lines.length && lines[cursor].trim() === "") cursor += 1;
+          const candidate = lines[cursor] ?? "";
+          const refs = [...candidate.matchAll(/!\[\[([^\]]+)\]\]/g)];
+          const mediaOnly = !/^\s*>/.test(candidate)
+            && refs.length > 0
+            && candidate.replace(/!\[\[([^\]]+)\]\]/g, "").trim() === "";
+          if (!mediaOnly) break;
+          appendParagraph([candidate], children);
+          lastMediaIndex = cursor;
+          cursor += 1;
+        }
+        lineIndex = lastMediaIndex;
+      }
       chapter.blocks.push({ type: "callout", kind, title, section: section.title, children });
     } else if (chapter && line.trim() === "") {
       flushParagraph();
@@ -299,6 +316,56 @@ test("parseReview removes exactly one callout quote marker and preserves nested 
     text: "普通段落引用",
     section: originTitle,
   });
+});
+
+test("example callouts conservatively absorb only immediately following unquoted media", () => {
+  const markdown = `## ${originTitle}
+
+> [!NOTE] 示例（首尾帧）
+> ![[first.png]]
+
+![[last.png]]
+![[result.mp4]]
+
+普通正文
+![[outside.png]]
+
+> [!NOTE] 女孩的笑声
+> ![[silent.mp4]]
+
+![[unowned.png]]`;
+  const blocks = parseReview(markdown).chapters[0].blocks;
+  const example = blocks.find((block) => block.type === "callout" && block.title === "示例（首尾帧）");
+  const laughter = blocks.find((block) => block.type === "callout" && block.title === "女孩的笑声");
+
+  assert.deepEqual(example.children.map((block) => block.rawRef), ["first.png", "last.png", "result.mp4"]);
+  assert.equal(blocks.some((block) => ["last.png", "result.mp4"].includes(block.rawRef)), false);
+  assert.deepEqual(laughter.children.map((block) => block.rawRef), ["silent.mp4"]);
+  assert.ok(blocks.some((block) => block.rawRef === "unowned.png"));
+  assert.ok(blocks.some((block) => block.rawRef === "outside.png"));
+});
+
+test("real example callouts own typo-unquoted sentinel media without duplicating outer blocks", () => {
+  const review = parseReview(fs.readFileSync(reviewPath, "utf8"));
+  const blocks = review.chapters.flatMap((chapter) => chapter.blocks);
+  const callouts = blocks.filter((block) => block.type === "callout");
+  const expected = [
+    ["61251164-f605-4c01-b1f7-0df5ea0d272a 1.png", "示例（图①+图②=图③）"],
+    ["Pasted image 20260716151430.png", "示例"],
+    ["fe0efbc4-3df0-4491-9fd4-e0059b5cceee 3.png", "示例 「相近元素」"],
+    ["653e01ee-1abc-459f-8317-f8aa77b17530.png", "示例「动作」"],
+    ["屏幕录制 2026-06-25 213400.mp4", "示例"],
+  ];
+
+  for (const [rawRef, title] of expected) {
+    assert.ok(callouts.some((callout) => callout.title === title
+      && callout.children.some((child) => child.rawRef === rawRef)), `${rawRef} belongs to ${title}`);
+    assert.equal(blocks.some((block) => block.rawRef === rawRef), false, `${rawRef} is not repeated outside`);
+  }
+  const laughter = callouts.find((callout) => callout.title === "女孩的笑声");
+  assert.equal(laughter.children.some((child) => child.rawRef === "Pasted image 20260716153618.png"), false);
+  assert.ok(blocks.some((block) => block.rawRef === "Pasted image 20260716153618.png"));
+  assert.equal(mediaBlocks(review).length, 51);
 });
 
 test("committed review JSON preserves every independently parsed authored block and page occurrence", () => {
@@ -563,7 +630,7 @@ test("paginateBlocks keeps earlier results stable across different limits and le
   assert.deepEqual(blocks, snapshot);
 });
 
-test("parseReview marks the two authored oversized callouts as internally scrollable", () => {
+test("parseReview marks every authored oversized callout as internally scrollable", () => {
   const review = parseReview(fs.readFileSync(reviewPath, "utf8"));
   const sourceCallouts = review.chapters.flatMap((chapter) => chapter.blocks)
     .filter((block) => block.type === "callout");
@@ -571,7 +638,7 @@ test("parseReview marks the two authored oversized callouts as internally scroll
     .filter((block) => block.type === "callout");
   const oversized = pagedCallouts.filter((block) => block.oversized || block.scrollable);
 
-  assert.equal(oversized.length, 2);
+  assert.equal(oversized.length, 4);
   assert.ok(oversized.every((block) => block.oversized === true && block.scrollable === true));
   assert.ok(oversized.every((block) => review.chapters.some((chapter) =>
     chapter.pages.some((page) => page.length === 1 && page[0] === block))));
