@@ -4,10 +4,47 @@ import { readFile } from 'node:fs/promises';
 import { probeMp3 } from '../scripts/mp3-metadata.mjs';
 import {
   BGM_PREFERENCE_KEY,
+  BGM_SOURCE,
   BGM_VOLUME,
   createAudioManager,
   createVolumeFade,
 } from '../src/audio-manager.js';
+
+test('uses the selected piano and strings soundtrack for the default audio player', () => {
+  const originalAudio = globalThis.Audio;
+  let receivedSource;
+  try {
+    globalThis.Audio = class FakeAudio {
+      constructor(source) {
+        receivedSource = source;
+        this.paused = true;
+        this.volume = 1;
+      }
+      pause() {}
+    };
+    const manager = createAudioManager({ storage: createFakeStorage() });
+    assert.equal(BGM_SOURCE, 'assets/audio/emotional-piano-and-strings.mp3');
+    assert.equal(receivedSource, BGM_SOURCE);
+    manager.destroy();
+  } finally {
+    if (originalAudio === undefined) delete globalThis.Audio;
+    else globalThis.Audio = originalAudio;
+  }
+});
+
+test('defaults BGM off and only restores it for an explicit true preference', () => {
+  const defaultManager = createAudioManager({
+    audio: createFakeAudio(),
+    storage: createFakeStorage({}),
+  });
+  const enabledManager = createAudioManager({
+    audio: createFakeAudio(),
+    storage: createFakeStorage({ [BGM_PREFERENCE_KEY]: 'true' }),
+  });
+
+  assert.equal(defaultManager.state().enabled, false);
+  assert.equal(enabledManager.state().enabled, true);
+});
 
 function createFakeAudio({ playResult = Promise.resolve() } = {}) {
   return {
@@ -28,7 +65,7 @@ function createFakeAudio({ playResult = Promise.resolve() } = {}) {
   };
 }
 
-function createFakeStorage(initial = {}) {
+function createFakeStorage(initial = { [BGM_PREFERENCE_KEY]: 'true' }) {
   const values = new Map(Object.entries(initial));
   return {
     getItem(key) { return values.get(key) ?? null; },
@@ -582,7 +619,7 @@ test('an obsolete play success preserves a newer pending BGM attempt', async () 
   assert.equal(audio.volume, BGM_VOLUME);
 });
 
-test('storage read and write failures do not prevent BGM state transitions', async () => {
+test('storage failures preserve the safe default-off state and allow user toggles', async () => {
   const audio = createFakeAudio();
   const storage = {
     getItem() { throw new Error('storage read blocked'); },
@@ -590,16 +627,16 @@ test('storage read and write failures do not prevent BGM state transitions', asy
   };
   const manager = createAudioManager({ audio, storage, fade: immediateFade(audio) });
 
-  assert.equal(manager.state().enabled, true);
-  assert.equal(await manager.startFromGesture(), true);
-  assert.equal(await manager.toggle(), false);
   assert.equal(manager.state().enabled, false);
+  assert.equal(await manager.startFromGesture(), false);
   assert.equal(await manager.toggle(), true);
   assert.equal(manager.state().enabled, true);
-  assert.equal(audio.playCalls, 2);
+  assert.equal(await manager.toggle(), false);
+  assert.equal(manager.state().enabled, false);
+  assert.equal(audio.playCalls, 1);
 });
 
-test('a throwing global localStorage getter falls back to enabled BGM', () => {
+test('a throwing global localStorage getter falls back to disabled BGM', () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   const audio = createFakeAudio();
   try {
@@ -608,7 +645,7 @@ test('a throwing global localStorage getter falls back to enabled BGM', () => {
       get() { throw new Error('storage access blocked'); },
     });
     const manager = createAudioManager({ audio, fade: immediateFade(audio) });
-    assert.equal(manager.state().enabled, true);
+    assert.equal(manager.state().enabled, false);
   } finally {
     if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor);
     else delete globalThis.localStorage;

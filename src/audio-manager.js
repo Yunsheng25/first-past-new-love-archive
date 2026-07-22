@@ -1,4 +1,5 @@
 export const BGM_PREFERENCE_KEY = 'bgm:enabled';
+export const BGM_SOURCE = 'assets/audio/emotional-piano-and-strings.mp3';
 export const BGM_VOLUME = 0.14;
 
 export function createVolumeFade({ schedule = setTimeout, cancel = clearTimeout, now = Date.now } = {}) {
@@ -54,7 +55,7 @@ export function createVolumeFade({ schedule = setTimeout, cancel = clearTimeout,
 }
 
 export function createAudioManager({ audio, storage, fade } = {}) {
-  const player = audio ?? (typeof Audio === 'function' ? new Audio('assets/audio/memory-piano.wav') : null);
+  const player = audio ?? (typeof Audio === 'function' ? new Audio(BGM_SOURCE) : null);
   let preferenceStore = storage;
   if (preferenceStore === undefined) {
     try {
@@ -64,11 +65,11 @@ export function createAudioManager({ audio, storage, fade } = {}) {
     }
   }
   const volumeFade = fade ?? createVolumeFade();
-  let enabled = true;
+  let enabled = false;
   try {
-    enabled = preferenceStore?.getItem(BGM_PREFERENCE_KEY) !== 'false';
+    enabled = preferenceStore?.getItem(BGM_PREFERENCE_KEY) === 'true';
   } catch {
-    enabled = true;
+    enabled = false;
   }
   let gestureReceived = false;
   let filmActive = false;
