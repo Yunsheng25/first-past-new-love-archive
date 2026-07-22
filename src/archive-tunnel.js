@@ -2,12 +2,12 @@ import {
   APPROVED_TUNNEL_CAMERA_END,
   APPROVED_TUNNEL_CAMERA_START,
   TUNNEL_MAX_INDEX,
-  approvedTunnelPose,
+  APPROVED_TUNNEL_DEPTH_STEP,
+  approvedTunnelPoseInto,
+  approvedTunnelVisibleRange,
   flattenArchiveOccurrences,
 } from "./archive-tunnel-data.js";
 import { createTunnelState } from "./archive-tunnel-state.js";
-
-const SURFACE_CLASS = "archive-tunnel-surface";
 
 function safe(callback) { try { return callback?.(); } catch (_error) { return undefined; } }
 function sizeOf(root) {
@@ -43,10 +43,11 @@ export function mountArchiveTunnel(root, data, options = {}) {
   } catch (_error) { return fallback("initialization-failed"); }
   if (!documentRef?.createElement || typeof requestFrame !== "function" || typeof cancelFrame !== "function") return fallback("dom-unavailable");
 
-  const registry = { destroyed: false, appended: false, classAdded: false, frame: null, frameToken: 0, listeners: [], activePointer: null };
+  const registry = { destroyed: false, appended: false, frame: null, frameToken: 0, listeners: [], activePointer: null };
   let state;
   let layer;
   const cards = [];
+  let activeRange = null;
   let previousTime = null;
   let endedAnnounced = false;
   let drag = null;
@@ -76,13 +77,25 @@ export function mountArchiveTunnel(root, data, options = {}) {
     if (!viewport) return false;
     const snapshot = state.snapshot();
     const camera = { ...viewport, position: cameraPosition(snapshot.progress) };
-    cards.forEach(({ card }, index) => {
-      const pose = approvedTunnelPose(index, camera);
-      card.hidden = !pose.visible;
-      card.style.opacity = pose.visible ? String(pose.opacity) : "0";
-      card.style.zIndex = String(pose.zIndex);
-      card.style.transform = `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale})`;
-    });
+    const nextRange = approvedTunnelVisibleRange(camera.position, cards.length);
+    if (activeRange) {
+      for (let index = activeRange.start; index <= activeRange.end; index += 1) {
+        if (index >= nextRange.start && index <= nextRange.end) continue;
+        const entry = cards[index];
+        if (entry.visible) { entry.card.hidden = true; entry.visible = false; }
+      }
+    }
+    for (let index = nextRange.start; index <= nextRange.end; index += 1) {
+      const entry = cards[index];
+      const pose = approvedTunnelPoseInto(index, camera, entry.pose);
+      if (!pose.visible) continue;
+      if (!entry.visible) { entry.card.hidden = false; entry.visible = true; }
+      const opacity = String(pose.opacity);
+      const transform = `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale})`;
+      if (opacity !== entry.opacity) { entry.card.style.opacity = opacity; entry.opacity = opacity; }
+      if (transform !== entry.transform) { entry.card.style.transform = transform; entry.transform = transform; }
+    }
+    activeRange = nextRange;
     safe(() => options.onProgress?.(snapshot));
     return true;
   }
@@ -144,11 +157,20 @@ export function mountArchiveTunnel(root, data, options = {}) {
     const stepY = event.clientY - drag.lastY;
     if (stepY) { nudge(-stepY * 0.05); drag.lastY = event.clientY; }
   }
-  function release(event) {
+  function pointerUp(event) {
     if (registry.destroyed || event.pointerId !== registry.activePointer) return;
-    safe(() => root.releasePointerCapture?.(event.pointerId));
     registry.activePointer = null;
     drag = null;
+    safe(() => root.releasePointerCapture?.(event.pointerId));
+  }
+  function pointerCancel(event) {
+    if (registry.destroyed || event.pointerId !== registry.activePointer) return;
+    registry.activePointer = null; drag = null; dragged = false;
+    safe(() => root.releasePointerCapture?.(event.pointerId));
+  }
+  function lostPointerCapture(event) {
+    if (registry.destroyed || event.pointerId !== registry.activePointer) return;
+    registry.activePointer = null; drag = null; dragged = false;
   }
   function clearDragSuppression() { if (dragged) dragged = false; }
   function resize() { if (!registry.destroyed) { try { render(); } catch (_error) { cleanup(); } } }
@@ -166,7 +188,6 @@ export function mountArchiveTunnel(root, data, options = {}) {
     registry.activePointer = null;
     cards.forEach(({ image }) => safe(() => { image.src = ""; }));
     if (registry.appended) safe(() => layer?.remove?.() ?? layer?.parentNode?.removeChild?.(layer));
-    if (registry.classAdded) safe(() => root.classList?.remove(SURFACE_CLASS));
     return true;
   }
 
@@ -200,7 +221,9 @@ export function mountArchiveTunnel(root, data, options = {}) {
         card.append(badge);
       }
       layer.append(card);
-      cards.push({ card, image, occurrence, click: null });
+      card.hidden = true;
+      card.style.zIndex = String(10000 - index * APPROVED_TUNNEL_DEPTH_STEP);
+      cards.push({ card, image, occurrence, click: null, pose: {}, visible: false, opacity: null, transform: null });
     });
     cards.forEach((entry) => {
       entry.click = () => {
@@ -212,11 +235,11 @@ export function mountArchiveTunnel(root, data, options = {}) {
     on(root, "wheel", wheel, { passive: false });
     on(root, "pointerdown", down);
     on(root, "pointermove", move);
-    on(root, "pointerup", release);
-    on(root, "pointercancel", release);
+    on(root, "pointerup", pointerUp);
+    on(root, "pointercancel", pointerCancel);
+    on(root, "lostpointercapture", lostPointerCapture);
     on(root, "click", clearDragSuppression);
     on(windowRef, "resize", resize);
-    if (!root.classList?.contains?.(SURFACE_CLASS)) { root.classList?.add(SURFACE_CLASS); registry.classAdded = true; }
     registry.appended = true;
     root.append(layer);
     render(); schedule();

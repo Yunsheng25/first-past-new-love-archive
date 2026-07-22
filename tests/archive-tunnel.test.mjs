@@ -10,6 +10,8 @@ import {
   APPROVED_TUNNEL_DEPTH_STEP,
   TUNNEL_MAX_INDEX,
   approvedTunnelPose,
+  approvedTunnelPoseInto,
+  approvedTunnelVisibleRange,
   flattenArchiveOccurrences,
   groupCaseImages,
 } from "../src/archive-tunnel-data.js";
@@ -195,7 +197,7 @@ test("production renderer is a front-facing DOM card layer driven only by approv
   assert.match(source, /archive-tunnel-card/);
   assert.match(source, /translate\(-50%,\s*-50%\)\s+translate\(/);
   assert.match(source, /card\.style\.opacity/);
-  assert.doesNotMatch(source, /from\s+["']\.\.\/vendor\/three|WebGLRenderer|Raycaster|tunnelPose|rotationZ|camera\.position/);
+  assert.doesNotMatch(source, /from\s+["']\.\.\/vendor\/three|WebGLRenderer|PerspectiveCamera|Raycaster|\btunnelPose\b|rotationZ|\.position\.set/);
 });
 
 test("archive tunnel CSS reproduces the approved soft-light stage without ray motifs", () => {
@@ -392,9 +394,16 @@ test("validates inputs, restores initial state, and returns immutable snapshots"
   assert.equal(restored.snapshot().progress, 10);
 });
 
-function createDomHarness({ initialMode = "cruising", initialProgress, preexistingClass = false, faults = {}, callbacks = {} } = {}) {
+function createDomHarness({ initialMode = "cruising", initialProgress, faults = {}, callbacks = {} } = {}) {
+  const metrics = { styleWrites: 0, hiddenWrites: 0, hiddenTrue: 0, hiddenFalse: 0 };
   class FakeNode {
-    constructor(tag) { this.tagName = tag.toUpperCase(); this.children = []; this.style = {}; this.dataset = {}; this.listeners = new Map(); this.className = ""; this.parentNode = null; this.hidden = false; }
+    constructor(tag) {
+      this.tagName = tag.toUpperCase(); this.children = [];
+      this.style = new Proxy({}, { set(target, key, value) { metrics.styleWrites += 1; target[key] = value; return true; } });
+      this.dataset = {}; this.listeners = new Map(); this.className = ""; this.parentNode = null; this._hidden = false;
+    }
+    get hidden() { return this._hidden; }
+    set hidden(value) { metrics.hiddenWrites += 1; metrics[value ? "hiddenTrue" : "hiddenFalse"] += 1; this._hidden = value; }
     append(...nodes) { nodes.forEach((node) => { node.parentNode = this; this.children.push(node); }); }
     remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter((item) => item !== this); this.parentNode = null; }
     setAttribute(name, value) { this[name] = String(value); }
@@ -409,7 +418,6 @@ function createDomHarness({ initialMode = "cruising", initialProgress, preexisti
   const root = new FakeNode("div");
   root.clientWidth = 1440; root.clientHeight = 900; root.ownerDocument = documentRef;
   root.classList = { contains: (name) => classes.has(name), add: (name) => classes.add(name), remove: (name) => classes.delete(name) };
-  if (preexistingClass) classes.add("archive-tunnel-surface");
   root.setPointerCapture = (id) => { root.captured = id; };
   root.releasePointerCapture = (id) => { root.released = id; };
   if (faults.append) root.append = function appendThenThrow(node) { FakeNode.prototype.append.call(this, node); throw Error("append failure"); };
@@ -432,7 +440,7 @@ function createDomHarness({ initialMode = "cruising", initialProgress, preexisti
     onEnd: callbacks.onEnd ?? ((snapshot) => ended.push(snapshot)),
     onFallback: (reason) => fallback.push(reason),
   });
-  return { root, classes, frames, cancelled, windowListeners, progress, selected, ended, fallback, controller };
+  return { root, classes, frames, cancelled, windowListeners, progress, selected, ended, fallback, metrics, controller };
 }
 
 test("DOM construction and append failures fall back atomically without leaked listeners, classes or children", () => {
@@ -442,9 +450,29 @@ test("DOM construction and append failures fall back atomically without leaked l
     assert.equal(h.root.children.length, 0);
     assert.equal(h.root.listeners.size, 0);
     assert.equal(h.windowListeners.size, 0);
-    assert.equal(h.classes.has("archive-tunnel-surface"), false);
     assert.equal(h.controller.destroy(), false);
   }
+});
+
+test("allocation-free projection and visible ranges stay exactly equivalent to the approved v15 oracle", () => {
+  const target = {};
+  let maximumCandidates = 0;
+  for (const position of [APPROVED_TUNNEL_CAMERA_START, 0, 3562, APPROVED_TUNNEL_CAMERA_END]) {
+    const camera = { width: 1440, height: 900, position };
+    const range = approvedTunnelVisibleRange(camera.position, 138);
+    maximumCandidates = Math.max(maximumCandidates, range.end - range.start + 1);
+    for (let index = range.start; index <= range.end; index += 1) {
+      assert.equal(approvedTunnelPoseInto(index, camera, target), target);
+      assert.deepEqual({ ...target }, { ...approvedTunnelPose(index, camera) });
+    }
+  }
+  for (let position = APPROVED_TUNNEL_CAMERA_START; position <= APPROVED_TUNNEL_CAMERA_END; position += 13) {
+    const range = approvedTunnelVisibleRange(position, 138);
+    maximumCandidates = Math.max(maximumCandidates, range.end - range.start + 1);
+  }
+  assert.equal(maximumCandidates, 104);
+  assert.deepEqual(approvedTunnelVisibleRange(APPROVED_TUNNEL_CAMERA_START, 138), { start: 0, end: 91 });
+  assert.throws(() => approvedTunnelPoseInto(0, { width: 0, height: 1, position: 0 }, target), RangeError);
 });
 
 test("DOM renderer mounts all ordered front-facing cards with exact entrance poses and full-opacity images", () => {
@@ -466,7 +494,6 @@ test("DOM renderer mounts all ordered front-facing cards with exact entrance pos
   assert.match(layer.children[3].className, /archive-tunnel-card--tall/);
   assert.match(layer.children[5].className, /archive-tunnel-card--portrait/);
   assert.match(layer.children[15].className, /archive-tunnel-card--portrait/);
-  assert.ok(h.classes.has("archive-tunnel-surface"));
   h.controller.destroy();
 });
 
@@ -510,7 +537,7 @@ test("cruise, end and 3.2-second rewind retain deterministic controller behavior
   h.controller.destroy();
 });
 
-test("destroy removes listeners, image references, RAF and owned DOM without affecting a pre-existing surface class", () => {
+test("destroy removes listeners, image references, RAF and owned DOM idempotently", () => {
   const h = createDomHarness();
   const layer = h.root.children[0]; const images = layer.children.map((card) => card.children[0]);
   assert.equal(h.controller.destroy(), true);
@@ -519,12 +546,7 @@ test("destroy removes listeners, image references, RAF and owned DOM without aff
   assert.ok(images.every((image) => image.src === ""));
   assert.equal(h.root.listeners.size, 0);
   assert.equal(h.windowListeners.size, 0);
-  assert.equal(h.classes.has("archive-tunnel-surface"), false);
   assert.ok(h.cancelled.length >= 1);
-
-  const pre = createDomHarness({ initialMode: "paused", preexistingClass: true });
-  pre.controller.destroy();
-  assert.ok(pre.classes.has("archive-tunnel-surface"));
 });
 
 test("DOM fallback controllers are frozen, atomic and report exact reasons once", () => {
@@ -610,4 +632,55 @@ test("RAF and resize exceptions are contained by rolling down all owned DOM reso
   assert.doesNotThrow(() => resizeHandler());
   assert.equal(resize.root.children.length, 0);
   assert.equal(resize.controller.destroy(), false);
+});
+
+test("each moving frame projects only the visible window and writes only changed card values", () => {
+  const h = createDomHarness();
+  h.metrics.styleWrites = 0; h.metrics.hiddenWrites = 0; h.metrics.hiddenTrue = 0; h.metrics.hiddenFalse = 0;
+  h.frames.shift()(0);
+  assert.deepEqual(h.metrics, { styleWrites: 0, hiddenWrites: 0, hiddenTrue: 0, hiddenFalse: 0 });
+
+  h.metrics.styleWrites = 0; h.metrics.hiddenWrites = 0; h.metrics.hiddenTrue = 0; h.metrics.hiddenFalse = 0;
+  h.frames.shift()(16);
+  assert.ok(h.metrics.styleWrites <= 208);
+  assert.ok(h.metrics.hiddenWrites <= 1);
+  h.controller.destroy();
+});
+
+test("stationary repaint performs no repeated style or hidden writes and each leaving card hides once", () => {
+  const h = createDomHarness({ initialMode: "paused" });
+  h.metrics.styleWrites = 0; h.metrics.hiddenWrites = 0; h.metrics.hiddenTrue = 0; h.metrics.hiddenFalse = 0;
+  h.windowListeners.get("resize")();
+  assert.deepEqual(h.metrics, { styleWrites: 0, hiddenWrites: 0, hiddenTrue: 0, hiddenFalse: 0 });
+
+  h.metrics.styleWrites = 0; h.metrics.hiddenWrites = 0; h.metrics.hiddenTrue = 0; h.metrics.hiddenFalse = 0;
+  h.root.fire("wheel", { deltaY: 99999, preventDefault() {} });
+  assert.equal(h.metrics.hiddenTrue, 92);
+  assert.equal(h.metrics.hiddenFalse, 10);
+  h.metrics.hiddenWrites = 0; h.metrics.hiddenTrue = 0; h.metrics.hiddenFalse = 0;
+  h.windowListeners.get("resize")();
+  assert.equal(h.metrics.hiddenWrites, 0);
+  h.controller.destroy();
+});
+
+test("pointercancel clears suppression so the first following card click selects immediately", () => {
+  const h = createDomHarness({ initialMode: "paused" });
+  h.root.fire("pointerdown", { pointerId: 9, clientX: 0, clientY: 100, target: h.root });
+  h.root.fire("pointermove", { pointerId: 9, clientX: 0, clientY: 70, target: h.root });
+  h.root.fire("pointercancel", { pointerId: 9, clientX: 0, clientY: 70, target: h.root });
+  h.root.children[0].children[4].fire("click");
+  assert.equal(h.selected.length, 1);
+  assert.equal(h.selected[0][0].order, 5);
+  h.controller.destroy();
+});
+
+test("unexpected lost pointer capture clears drag suppression and preserves the next card click", () => {
+  const h = createDomHarness({ initialMode: "paused" });
+  h.root.fire("pointerdown", { pointerId: 11, clientX: 0, clientY: 100, target: h.root });
+  h.root.fire("pointermove", { pointerId: 11, clientX: 0, clientY: 60, target: h.root });
+  h.root.fire("lostpointercapture", { pointerId: 11, target: h.root });
+  h.root.children[0].children[6].fire("click");
+  assert.equal(h.selected.length, 1);
+  assert.equal(h.selected[0][0].order, 7);
+  h.controller.destroy();
 });

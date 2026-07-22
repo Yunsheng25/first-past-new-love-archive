@@ -65,6 +65,11 @@ export function groupCaseImages(data, caseId) {
  * cards always face the viewer in this model.
  */
 export function approvedTunnelPose(index, camera) {
+  return Object.freeze(approvedTunnelPoseInto(index, camera, {}));
+}
+
+/** Writes the approved projection into a caller-owned object for hot render loops. */
+export function approvedTunnelPoseInto(index, camera, target) {
   if (!Number.isInteger(index) || index < 0 || index > TUNNEL_MAX_INDEX) {
     throw new RangeError(`Tunnel pose index must be an integer from 0 to ${TUNNEL_MAX_INDEX}`);
   }
@@ -87,12 +92,22 @@ export function approvedTunnelPose(index, camera) {
   const fadeIn = Math.min(1, (APPROVED_VISIBLE_FAR - z) / APPROVED_FADE_IN_DISTANCE);
   const fadeBehind = Math.min(1, (z - APPROVED_VISIBLE_NEAR) / APPROVED_FADE_BEHIND_DISTANCE);
 
-  return Object.freeze({
-    x: Math.cos(angle) * radiusX * scale,
-    y: Math.sin(angle) * radiusY * scale,
-    scale,
-    opacity: Math.max(0.1, Math.min(fadeIn, fadeBehind, 0.3 + scale * 0.9)),
-    visible: z >= APPROVED_VISIBLE_NEAR && z <= APPROVED_VISIBLE_FAR,
-    zIndex: Math.round(10000 - z),
-  });
+  const output = target && typeof target === "object" ? target : {};
+  output.x = Math.cos(angle) * radiusX * scale;
+  output.y = Math.sin(angle) * radiusY * scale;
+  output.scale = scale;
+  output.opacity = Math.max(0.1, Math.min(fadeIn, fadeBehind, 0.3 + scale * 0.9));
+  output.visible = z >= APPROVED_VISIBLE_NEAR && z <= APPROVED_VISIBLE_FAR;
+  output.zIndex = Math.round(10000 - z);
+  return output;
+}
+
+/** Returns only indexes that can intersect the approved z visibility window. */
+export function approvedTunnelVisibleRange(cameraPosition, count) {
+  if (!Number.isFinite(cameraPosition) || !Number.isInteger(count) || count < 1 || count > TUNNEL_MAX_INDEX + 1) {
+    throw new RangeError("Approved tunnel range needs a finite camera position and supported positive count");
+  }
+  const start = Math.max(0, Math.ceil((cameraPosition + APPROVED_VISIBLE_NEAR) / APPROVED_TUNNEL_DEPTH_STEP));
+  const end = Math.min(count - 1, Math.floor((cameraPosition + APPROVED_VISIBLE_FAR) / APPROVED_TUNNEL_DEPTH_STEP));
+  return Object.freeze({ start, end });
 }
