@@ -87,19 +87,14 @@ function blockSize(block) {
 
 export function paginateBlocks(blocks, limit = 900) {
   if (!Array.isArray(blocks) || blocks.length === 0) return [];
-  for (const block of blocks) {
-    if (block.type !== "callout") continue;
-    delete block.contextHeading;
-    const oversized = blockSize(block) > limit;
-    if (oversized) {
-      block.oversized = true;
-      block.scrollable = true;
-    } else {
-      delete block.oversized;
-      delete block.scrollable;
-    }
-  }
-  const units = semanticUnits(blocks);
+  const decoratedBlocks = blocks.map((block) => {
+    if (block.type !== "callout") return block;
+    const { oversized: _oversized, scrollable: _scrollable, contextHeading: _contextHeading, ...source } = block;
+    return blockSize(block) > limit
+      ? { ...source, oversized: true, scrollable: true }
+      : source;
+  });
+  const units = semanticUnits(decoratedBlocks);
   const pages = [];
   let page = [];
   let pageSize = 0;
