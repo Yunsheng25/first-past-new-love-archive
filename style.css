@@ -2118,6 +2118,14 @@ button.archive-filter-chip {
   transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
 }
 
+.archive-card.is-error {
+  border-color: rgba(190, 76, 70, 0.5);
+}
+
+.archive-card.is-error:hover {
+  border-color: rgba(217, 103, 94, 0.72);
+}
+
 .archive-card:hover {
   transform: translateY(-3px);
   border-color: rgba(212, 177, 160, 0.38);
@@ -2135,6 +2143,7 @@ button.archive-filter-chip {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 1;
   filter: saturate(0.72) contrast(0.98);
   transition: transform 320ms ease, filter 320ms ease;
 }
@@ -2187,6 +2196,20 @@ button.archive-filter-chip {
 
 .archive-card-eyebrow i {
   font-style: normal;
+}
+
+.archive-error-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  border: 1px solid rgba(217, 91, 82, 0.68);
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: #e9a09a;
+  background: rgba(112, 28, 25, 0.16);
+  font: 600 8px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
 }
 
 .archive-card-copy > strong {
@@ -2665,7 +2688,8 @@ button.archive-filter-chip {
 
 .archive-tunnel-stage { position: absolute; inset: 0; }
 .archive-tunnel-stage canvas { display: block; width: 100%; height: 100%; }
-.archive-tunnel-count { position: absolute; z-index: 4; right: clamp(22px, 4vw, 62px); bottom: 30px; letter-spacing: .16em; }
+.archive-tunnel-count { position: absolute; z-index: 4; right: clamp(22px, 4vw, 62px); bottom: 30px; display: flex; align-items: center; gap: 10px; letter-spacing: .16em; }
+.archive-tunnel-error-badge { margin-right: 4px; }
 .archive-rewind { position: absolute; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 16px 28px; }
 .archive-tunnel-view > .archive-return-after { z-index: 5; left: clamp(22px, 4vw, 62px); bottom: 30px; }
 
@@ -2698,6 +2722,26 @@ button.archive-filter-chip {
 .archive-case-modal > header { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; }
 .archive-case-modal > header h2 { margin: 0; text-align: center; font-weight: 400; }
 .archive-case-modal-controls { display: flex; flex-wrap: wrap; gap: 9px; margin: 18px 0; }
+.archive-case-error-state,
+.archive-error-state {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: baseline;
+  gap: 8px 12px;
+  margin: 16px 0;
+  border: 1px solid rgba(205, 82, 73, .46);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(104, 25, 22, .12);
+}
+.archive-case-error-state strong,
+.archive-error-state strong { color: #f0aaa4; letter-spacing: .1em; }
+.archive-case-error-state span,
+.archive-error-state span { color: rgba(244, 236, 229, .5); font-size: 10px; letter-spacing: .12em; }
+.archive-case-error-state p,
+.archive-error-state p { margin: 0; color: rgba(244, 236, 229, .88); }
+.archive-case-error-state small,
+.archive-error-state small { grid-column: 2 / -1; color: rgba(244, 236, 229, .56); }
 .archive-case-gallery { display: grid; gap: 14px; }
 .archive-case-gallery[data-case-gallery="one"] { grid-template-columns: minmax(0, 1fr); }
 .archive-case-modal .archive-case-gallery[data-case-gallery="two"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; }
@@ -2713,6 +2757,12 @@ button.archive-filter-chip {
   .archive-tunnel-actions button { min-width: 0; padding: 9px 14px; }
   .archive-case-modal-backdrop { align-items: end; padding: 10px; }
   .archive-case-modal { width: 100%; max-height: 88dvh; }
+  .archive-case-error-state,
+  .archive-error-state { grid-template-columns: auto 1fr; }
+  .archive-case-error-state p,
+  .archive-error-state p,
+  .archive-case-error-state small,
+  .archive-error-state small { grid-column: 1 / -1; }
   .archive-case-gallery,
   .archive-case-gallery[data-case-gallery="many"] { grid-template-columns: minmax(0, 1fr); }
 }

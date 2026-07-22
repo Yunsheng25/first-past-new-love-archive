@@ -36,6 +36,9 @@ test("flattens every authored archive image into its immutable tunnel occurrence
     title: archiveData.cases[0].title,
     role: archiveData.cases[0].images[0].role,
     src: archiveData.cases[0].images[0].src,
+    status: "error",
+    errorGroup: archiveData.cases[0].errorGroup,
+    errorReason: archiveData.cases[0].errorReason,
   });
   assert.deepEqual(items.at(-1), {
     order: 138,
@@ -45,11 +48,27 @@ test("flattens every authored archive image into its immutable tunnel occurrence
     title: archiveData.cases.at(-1).title,
     role: archiveData.cases.at(-1).images[0].role,
     src: archiveData.cases.at(-1).images[0].src,
+    status: "normal",
+    errorGroup: null,
+    errorReason: null,
   });
   assert.equal(
     crypto.createHash("sha256").update(JSON.stringify(flatSignature(items))).digest("hex"),
     "196ef58e605fa5de25c68cbf6e4bf285d924dde18d8d515f93f1032948e14bd8",
   );
+});
+
+test("carries authored error semantics into every tunnel occurrence without changing order", () => {
+  const items = flattenArchiveOccurrences(archiveData);
+  const firstError = items.find((item) => item.caseId === "case-01");
+  const firstNormal = items.find((item) => item.caseId === "case-04");
+
+  assert.equal(firstError.status, "error");
+  assert.equal(firstError.errorGroup, "出现人脸");
+  assert.equal(firstNormal.status, "normal");
+  assert.equal(firstNormal.errorGroup, null);
+  assert.deepEqual(items.map((item) => item.order), Array.from({ length: 138 }, (_, index) => index + 1));
+  assert.ok(Object.isFrozen(firstError));
 });
 
 test("flattening retains duplicate sources at their authored occurrences without retaining source references", () => {

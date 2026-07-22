@@ -57,9 +57,15 @@ export function buildArchiveCaseModal(caseItem, occurrence = null, { totalCases 
   </figure>`).join('');
   const position = Number.isFinite(caseItem.index) ? caseItem.index : '';
   const total = Number.isFinite(totalCases) && totalCases > 0 ? totalCases : '';
+  const isError = caseItem.status === 'error';
+  const errorReason = caseItem.errorReason ?? caseItem.errorGroup ?? '未标注原因';
+  const errorState = isError ? `<aside class="archive-case-error-state" data-case-error-state>
+        <strong>错误尝试</strong><span>失败原因</span><p>${escapeHtml(errorReason)}</p>${caseItem.errorReason && caseItem.errorGroup && caseItem.errorReason !== caseItem.errorGroup ? `<small>白板分组：${escapeHtml(caseItem.errorGroup)}</small>` : ''}
+      </aside>` : '';
   return `<div class="archive-case-modal-backdrop" data-case-modal-backdrop>
     <section class="archive-case-modal" data-case-modal role="dialog" aria-modal="true" aria-labelledby="${headingId}" tabindex="-1">
       <header><p data-case-modal-index>${escapeHtml(position)}${total ? ` / ${escapeHtml(total)}` : ''}</p><h2 id="${headingId}">${escapeHtml(caseItem.title)}</h2><button type="button" data-case-modal-close aria-label="关闭案例">×</button></header>
+      ${errorState}
       <div class="archive-case-modal-controls"><button type="button" data-case-modal-previous${position === 1 ? ' disabled aria-disabled="true"' : ''}>上一案例</button><button type="button" data-case-modal-next${total && position === total ? ' disabled aria-disabled="true"' : ''}>下一案例</button><button type="button" data-case-modal-copy${String(caseItem.prompt ?? '') ? '' : ' disabled'}>复制提示词</button><span data-case-modal-copy-status aria-live="polite"></span></div>
       <div class="archive-case-gallery archive-case-gallery-${layout}" data-case-gallery="${layout}" data-case-gallery-layout="${layout}">${imageMarkup}</div>
       <p class="archive-case-prompt" data-case-modal-prompt>${promptMarkup(caseItem.prompt)}</p>

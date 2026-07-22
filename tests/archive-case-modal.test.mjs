@@ -73,6 +73,21 @@ test('escapes every modal interpolation without truncating line-broken prompts',
   assert.doesNotMatch(html, /Demo|preview-end/i);
 });
 
+test('error modal states the escaped failure reason while normal modal has no error UI', () => {
+  const error = { ...archive.cases[0], status: 'error', errorGroup: '出现人脸 <script>', errorReason: '人物失真 & 偏离' };
+  const errorHtml = buildArchiveCaseModal(error, occurrenceFor(error));
+  assert.match(errorHtml, /data-case-error-state/);
+  assert.match(errorHtml, /错误尝试/);
+  assert.match(errorHtml, /人物失真 &amp; 偏离/);
+  assert.match(errorHtml, /出现人脸 &lt;script&gt;/);
+  assert.doesNotMatch(errorHtml, /<script>/);
+  assert.equal((errorHtml.match(/<img /g) ?? []).length, error.images.length);
+  assert.ok(errorHtml.includes(error.prompt));
+
+  const normal = { ...archive.cases[3], status: 'normal', errorGroup: null };
+  assert.doesNotMatch(buildArchiveCaseModal(normal, occurrenceFor(normal)), /错误尝试|data-case-error-state/);
+});
+
 test('flattened role occurrences select their full shared authored case', () => {
   for (const occurrence of flattenArchiveOccurrences(archive)) {
     const item = resolveCaseFromOccurrence(archive, occurrence);

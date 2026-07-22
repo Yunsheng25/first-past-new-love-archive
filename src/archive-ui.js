@@ -1,5 +1,6 @@
 import { mountArchiveTunnel } from './archive-tunnel.js';
 import { mountArchiveCaseModal } from './archive-case-modal.js';
+import { flattenArchiveOccurrences } from './archive-tunnel-data.js';
 
 export const ARCHIVE_LAST_CASE_KEY = 'archive:lastCase';
 
@@ -74,10 +75,15 @@ function archiveCard(item) {
   const preview = firstImage
     ? `<img src="${escapeArchiveHtml(firstImage.src)}" alt="${escapeArchiveHtml(item.title)}案例预览" loading="lazy" decoding="async">`
     : `<span class="archive-card-placeholder" aria-label="白板未附图片"><b>${String(item.index).padStart(2, '0')}</b><small>NO IMAGE</small></span>`;
-  return `<a class="archive-card" href="#archive/${encodeURIComponent(item.id)}" data-archive-card="${escapeArchiveHtml(item.id)}">
+  const isError = item.status === 'error';
+  const errorGroup = isError ? String(item.errorGroup ?? item.errorReason ?? '未标注原因') : '';
+  const errorBadge = isError
+    ? `<span class="archive-error-badge" data-archive-error-badge role="status" aria-label="错误尝试：${escapeArchiveHtml(errorGroup)}">错误尝试</span>`
+    : '';
+  return `<a class="archive-card${isError ? ' is-error' : ''}" href="#archive/${encodeURIComponent(item.id)}" data-archive-card="${escapeArchiveHtml(item.id)}">
     <span class="archive-card-media">${preview}</span>
     <span class="archive-card-copy">
-      <span class="archive-card-eyebrow"><b>${String(item.index).padStart(2, '0')}</b><i>${escapeArchiveHtml(item.type)}</i><i>${escapeArchiveHtml(item.stage)}</i></span>
+      <span class="archive-card-eyebrow"><b>${String(item.index).padStart(2, '0')}</b>${errorBadge}<i>${escapeArchiveHtml(item.type)}</i><i>${escapeArchiveHtml(item.stage)}</i></span>
       <strong>${escapeArchiveHtml(item.title)}</strong>
       <span>${escapeArchiveHtml(shorten(item.prompt))}</span>
       <small>${item.images?.length ?? 0} 张图片</small>
@@ -129,7 +135,7 @@ export function buildArchiveIndexShell(summary = {}) {
       <div class="archive-tunnel-actions"><button type="button" data-archive-view="list">列表模式</button><button type="button" data-tunnel-cruise>暂停漫游</button></div>
     </header>
     <div class="archive-tunnel-stage" data-archive-tunnel aria-label="按制作顺序排列的图片隧道"></div>
-    <div class="archive-tunnel-count"><b data-tunnel-current>001</b> / ${String(total).padStart(3, '0')}</div>
+    <div class="archive-tunnel-count"><span class="archive-error-badge archive-tunnel-error-badge" data-tunnel-error-badge hidden>错误尝试</span><b data-tunnel-current>001</b> / ${String(total).padStart(3, '0')}</div>
     <button type="button" class="archive-rewind" data-tunnel-rewind hidden>↶ 快速回溯</button>
     <div data-archive-modal-host></div>
     <a class="archive-return-after" href="#after" data-return-after>← 返回片后</a>
@@ -183,6 +189,9 @@ export function buildArchiveDetail(data, id) {
   const uncertain = item.uncertain
     ? `<aside class="archive-uncertain"><strong>原始数据标记</strong>${(item.uncertainReasons ?? []).map((reason) => `<p>${escapeArchiveHtml(reason)}</p>`).join('')}</aside>`
     : '';
+  const errorState = item.status === 'error'
+    ? `<aside class="archive-error-state" data-archive-error-state><strong>错误尝试</strong><span>失败原因</span><p>${escapeArchiveHtml(item.errorReason ?? item.errorGroup ?? '未标注原因')}</p>${item.errorReason && item.errorGroup && item.errorReason !== item.errorGroup ? `<small>白板分组：${escapeArchiveHtml(item.errorGroup)}</small>` : ''}</aside>`
+    : '';
   const lightboxImages = (item.images ?? []).map((image) => ({ src: image.src, alt: `${item.title} · ${image.role}` }));
 
   return `<section class="archive-detail-view app-view" aria-labelledby="archive-detail-title" data-archive-case="${escapeArchiveHtml(item.id)}">
@@ -198,6 +207,7 @@ export function buildArchiveDetail(data, id) {
         <article class="archive-detail-copy">
           <p class="archive-kicker">${escapeArchiveHtml(item.type)} · ${escapeArchiveHtml(item.stage)}</p>
           <h1 id="archive-detail-title">${escapeArchiveHtml(item.title)}</h1>
+          ${errorState}
           <div class="archive-tags">${(item.tags ?? []).map((tag) => `<span>${escapeArchiveHtml(tag)}</span>`).join('')}</div>
           <dl class="archive-metadata">
             <div><dt>源节点</dt><dd>${escapeArchiveHtml(item.source?.nodeId)}</dd></div>
@@ -614,13 +624,22 @@ export function mountArchiveRoute(app, route, {
           const rewind = app.querySelector?.('[data-tunnel-rewind]');
           const cruise = app.querySelector?.('[data-tunnel-cruise]');
           const current = app.querySelector?.('[data-tunnel-current]');
+          const errorBadge = app.querySelector?.('[data-tunnel-error-badge]');
           const modalHost = app.querySelector?.('[data-archive-modal-host]');
+          const tunnelOccurrences = flattenArchiveOccurrences(data);
           let rewindActive = false;
           const mountedTunnel = mountTunnel(stage, data, {
             windowRef,
             initialProgress: savedProgress,
             onProgress(snapshot) {
               if (current) current.textContent = String(Math.round(snapshot.progress) + 1).padStart(3, '0');
+              if (errorBadge) {
+                const occurrence = tunnelOccurrences[Math.round(snapshot.progress)];
+                const isError = occurrence?.status === 'error';
+                errorBadge.hidden = !isError;
+                errorBadge.textContent = isError ? '错误尝试' : '';
+                errorBadge.setAttribute?.('aria-label', isError ? `错误尝试：${occurrence.errorGroup ?? occurrence.errorReason ?? '未标注原因'}` : '');
+              }
               if (cruise) cruise.textContent = snapshot.mode === 'cruising' ? '暂停漫游' : '继续漫游';
               if (rewindActive && snapshot.mode === 'paused' && snapshot.progress <= 0.001) {
                 rewindActive = false;

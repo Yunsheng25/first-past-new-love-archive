@@ -32,15 +32,29 @@ test('archive overview shell defaults to the complete 138-occurrence tunnel', ()
   assert.match(html, /001[\s\S]*138/);
   assert.match(html, /data-tunnel-rewind[^>]+hidden/);
   assert.match(html, /data-archive-modal-host/);
+  assert.match(html, /data-tunnel-error-badge[^>]+hidden/);
   assert.match(html, /href="#after"/);
   assert.doesNotMatch(html, /预览末尾|preview end|demo/i);
+});
+
+test('list cards mark only authored error attempts with visible escaped text', () => {
+  const fixture = { ...archive, cases: [
+    { ...archive.cases[0], status: 'error', errorGroup: '出现人脸 <script>' },
+    { ...archive.cases[3], status: 'normal', errorGroup: null },
+  ] };
+  const html = buildArchiveIndex(fixture);
+  assert.equal((html.match(/>错误尝试</g) ?? []).length, 1);
+  assert.match(html, /archive-card is-error/);
+  assert.match(html, /data-archive-error-badge/);
+  assert.match(html, /aria-label="错误尝试：出现人脸 &lt;script&gt;"/);
+  assert.doesNotMatch(html, /出现人脸 <script>/);
 });
 
 test('tunnel selection pauses for a complete modal, resumes in place, and end rewinds', async () => {
   const listeners = new Map();
   const nodes = {
     tunnel: { clientWidth: 800, clientHeight: 600 },
-    list: {}, cruise: { textContent: '' }, rewind: { hidden: true }, modal: {}, current: { textContent: '' },
+    list: {}, cruise: { textContent: '' }, rewind: { hidden: true }, modal: {}, current: { textContent: '' }, errorBadge: { hidden: true, textContent: '', ariaLabel: '' },
   };
   const app = {
     innerHTML: '', focus() {},
@@ -48,6 +62,7 @@ test('tunnel selection pauses for a complete modal, resumes in place, and end re
       '[data-archive-tunnel]': nodes.tunnel, '[data-archive-view="list"]': nodes.list,
       '[data-tunnel-cruise]': nodes.cruise, '[data-tunnel-rewind]': nodes.rewind,
       '[data-archive-modal-host]': nodes.modal, '[data-tunnel-current]': nodes.current,
+      '[data-tunnel-error-badge]': nodes.errorBadge,
     })[selector] ?? null; },
     addEventListener(type, handler) { listeners.set(type, handler); },
     removeEventListener(type, handler) { if (listeners.get(type) === handler) listeners.delete(type); },
@@ -63,6 +78,11 @@ test('tunnel selection pauses for a complete modal, resumes in place, and end re
     mountCaseModal(_host, options) { modalOptions = options; return { destroy() {} }; },
   });
   await new Promise((resolve) => setTimeout(resolve, 0));
+  tunnelOptions.onProgress({ progress: 0, mode: 'paused' });
+  assert.equal(nodes.errorBadge.hidden, false);
+  assert.equal(nodes.errorBadge.textContent, '错误尝试');
+  tunnelOptions.onProgress({ progress: 5, mode: 'paused' });
+  assert.equal(nodes.errorBadge.hidden, true);
   tunnelOptions.onSelect({ caseId: 'case-01', caseIndex: 0, imageIndex: 0, ...archive.cases[0].images[0] }, {});
   assert.equal(paused, 1);
   modalOptions.onClose();
