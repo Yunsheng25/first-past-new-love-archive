@@ -2,3 +2,4 @@
 .worktrees/
 preview-server.*.log
 node_modules/
+output/playwright/
