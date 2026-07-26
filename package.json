@@ -6,7 +6,7 @@
     "test": "node --test tests/*.test.mjs",
     "build:data": "node scripts/build-site-data.mjs",
     "vendor:three": "node scripts/vendor-three.mjs",
-    "preview": "python -m http.server 8080"
+    "preview": "node scripts/preview-server.mjs"
   },
   "devDependencies": {
     "three": "0.160.1"

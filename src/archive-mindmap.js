@@ -1,4 +1,9 @@
-import { buildMindmapGraph, getExpandableChildren } from './archive-mindmap-model.js';
+import {
+  buildCategorizedMindmapRecords,
+  buildMindmapGraph,
+  getExpandableChildren,
+  MINDMAP_CATEGORIES,
+} from './archive-mindmap-model.js';
 import { fitBounds, restoreReadingView } from './mindmap-camera.js';
 import { mountMindmapAmbient } from './mindmap-ambient.js';
 
@@ -37,6 +42,7 @@ export function buildMindmapShell(total = 72) {
       <div class="archive-mindmap-world" data-mindmap-world>
         <svg class="archive-mindmap-edges" data-mindmap-edges viewBox="0 0 ${WORLD_WIDTH} ${WORLD_HEIGHT}" aria-hidden="true"></svg>
         <button type="button" class="mindmap-root" data-mindmap-root><b>制作从这里开始</b><small>点击展开第一步</small><i></i></button>
+        <span class="sr-only">${MINDMAP_CATEGORIES.map((item) => item.title).join('、')}</span>
         <div data-mindmap-nodes></div>
         <div data-mindmap-ends></div>
       </div>
@@ -77,7 +83,7 @@ export function mountArchiveMindmap(root, {
   const count = root.querySelector('[data-mindmap-count]');
   if (!viewport || !world || !edges || !nodeHost || !rootButton) return () => {};
 
-  const records = connectMindmapCases(cases, canvasRecords);
+  const records = buildCategorizedMindmapRecords(cases);
   const graph = buildMindmapGraph(records);
   const visible = new Map();
   const positions = new Map([['root', ROOT_BOX]]);
@@ -159,11 +165,17 @@ export function mountArchiveMindmap(root, {
     positions.set(record.id, box);
     const firstImage = record.images?.[0];
     const article = nodeHost.ownerDocument.createElement('article');
-    article.className = `mindmap-node${record.status === 'error' ? ' is-error' : ''}`;
+    article.className = `mindmap-node${record.isCategory ? ' is-category' : ''}${record.status === 'error' ? ' is-error' : ''}`;
     article.dataset.mindmapNode = record.id;
     article.style.left = `${box.x}px`;
     article.style.top = `${box.y}px`;
-    article.innerHTML = `${firstImage ? `<img src="${escapeHtml(firstImage.src)}" alt="" loading="lazy" decoding="async">` : ''}
+    article.innerHTML = record.isCategory
+      ? `<div class="mindmap-category-copy">
+          <span>${String(MINDMAP_CATEGORIES.findIndex((item) => item.id === record.id) + 1).padStart(2, '0')}</span>
+          <strong>${escapeHtml(record.title)}</strong>
+          <small>${record.caseCount} 个案例 · 点击继续延伸</small>
+        </div><i class="mindmap-node-pulse"></i>`
+      : `${firstImage ? `<img src="${escapeHtml(firstImage.src)}" alt="" loading="lazy" decoding="async">` : ''}
       <div class="mindmap-node-copy">
         <p><span>${escapeHtml(record.stage)}</span><b>${String(record.index).padStart(2, '0')}</b></p>
         <strong>${escapeHtml(record.title)}</strong>
@@ -171,7 +183,7 @@ export function mountArchiveMindmap(root, {
         <div><span data-mindmap-expand-label>点击继续延伸 →</span><button type="button" data-mindmap-detail>查看内容</button></div>
       </div><i class="mindmap-node-pulse"></i>`;
     article.addEventListener('click', (event) => {
-      if (event.target.closest('[data-mindmap-detail]')) {
+      if (!record.isCategory && event.target.closest('[data-mindmap-detail]')) {
         event.stopPropagation();
         onSelectCase(record, event.target.closest('[data-mindmap-detail]'));
         return;
@@ -179,7 +191,8 @@ export function mountArchiveMindmap(root, {
       if (expanded.has(record.id)) return;
       expanded.add(record.id);
       article.classList.add('is-expanded');
-      article.querySelector('[data-mindmap-expand-label]').textContent = '已展开';
+      const expandLabel = article.querySelector('[data-mindmap-expand-label]');
+      if (expandLabel) expandLabel.textContent = '已展开';
       const children = getExpandableChildren(graph, record.id).filter((child) => !visible.has(child.id));
       if (!children.length) {
         createEnd(record);
@@ -195,17 +208,22 @@ export function mountArchiveMindmap(root, {
     });
     nodeHost.append(article);
     visible.set(record.id, article);
-    if (count) count.textContent = `${visible.size} / ${records.length}`;
+    if (count) {
+      const visibleCases = [...visible.keys()].filter((id) => !graph.byId.get(id)?.isCategory).length;
+      count.textContent = `${visibleCases} / ${cases.length}`;
+    }
   };
 
   const start = () => {
-    if (visible.size || !graph.ordered[0]) return;
-    const first = graph.ordered[0];
-    const box = { x: 760, y: 1595, width: 286, height: 186 };
-    createNode(first, box);
-    addEdge('root', first.id);
+    if (visible.size) return;
+    const categories = getExpandableChildren(graph, 'root');
+    categories.forEach((category, index) => {
+      const box = { x: 760, y: 1110 + index * 320, width: 286, height: 186 };
+      createNode(category, box);
+      addEdge('root', category.id, true);
+    });
     rootButton.classList.add('is-expanded');
-    focus(first);
+    overview();
   };
 
   const collapse = () => {
@@ -218,7 +236,7 @@ export function mountArchiveMindmap(root, {
     positions.set('root', ROOT_BOX);
     lastFocused = null;
     rootButton.classList.remove('is-expanded');
-    if (count) count.textContent = `0 / ${records.length}`;
+    if (count) count.textContent = `0 / ${cases.length}`;
     scale = 0.72;
     x = 80;
     y = viewport.clientHeight / 2 - 1690 * scale;

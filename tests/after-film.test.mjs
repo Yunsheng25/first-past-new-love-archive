@@ -577,3 +577,13 @@ test('after screen stays within one viewport and stacks choices on mobile and sh
   assert.match(script, /currentViewCleanup\(\)[\s\S]*route\.name === 'film'/);
   assert.match(script, /route\.name === 'film'[\s\S]*clearStoredLastFrame\(\)[\s\S]*bindFilmCompletion\(app/);
 });
+
+test('after screen mounts the same interactive particle field beneath its choices', async () => {
+  const [html, script] = await Promise.all([
+    Promise.resolve(buildAfterView()),
+    readFile(new URL('script.js', projectRoot), 'utf8'),
+  ]);
+  assert.match(html, /class="after-ambient"[^>]*data-mindmap-ambient/);
+  assert.match(script, /mountMindmapAmbient/);
+  assert.match(script, /route\.name === 'after'[\s\S]*mountMindmapAmbient/);
+});

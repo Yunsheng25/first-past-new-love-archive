@@ -1,6 +1,7 @@
 export function mountAfterCursor(
   root,
   {
+    cursor = root?.querySelector?.('[data-after-cursor]'),
     matchMedia = (query) => globalThis.matchMedia?.(query),
     requestFrame = (callback) => globalThis.requestAnimationFrame(callback),
     cancelFrame = (id) => globalThis.cancelAnimationFrame(id),
@@ -16,8 +17,7 @@ export function mountAfterCursor(
   }
   if (!finePointer) return () => {};
 
-  const view = root?.querySelector?.('.after-view');
-  const cursor = root?.querySelector?.('[data-after-cursor]');
+  const view = root?.querySelector?.('.after-view') ?? root;
   if (!view || !cursor) return () => {};
 
   let active = true;

@@ -15,9 +15,15 @@ import { buildAfterView, buildFilmView, buildIntroView, buildPendingView } from 
 import { createAudioManager } from './src/audio-manager.js';
 import { createBgmController } from './src/bgm-ui.js';
 import { mountCharacterMotion } from './src/text-motion.js';
+import { mountMindmapAmbient } from './src/mindmap-ambient.js';
 
 const app = document.querySelector('#app');
 const bgmToggle = document.querySelector('[data-bgm-toggle]');
+const sharedCursor = document.createElement('span');
+sharedCursor.className = 'after-cursor';
+sharedCursor.dataset.afterCursor = '';
+sharedCursor.setAttribute('aria-hidden', 'true');
+document.body.append(sharedCursor);
 const audioManager = createAudioManager();
 const bgmController = createBgmController({ document, button: bgmToggle, manager: audioManager });
 let ignoreNextFilmHashChange = false;
@@ -27,6 +33,14 @@ bgmController.bind();
 function currentRoute() {
   if (window.location.hash === '#about') return { name: 'about' };
   return parseRoute(window.location.hash);
+}
+
+function mountPostFilmCursor(routeCleanup = () => {}) {
+  const cursorCleanup = mountAfterCursor(app, { cursor: sharedCursor });
+  return () => {
+    cursorCleanup();
+    routeCleanup();
+  };
 }
 
 function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
@@ -63,6 +77,7 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
     bindIntroMedia(app, {
       reduceMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
     });
+    currentViewCleanup = mountPostFilmCursor();
     focusRenderedView(app);
     return;
   }
@@ -72,7 +87,11 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
     mountCharacterMotion(app);
     document.title = '影片已结束｜初恋 · 旧爱 · 新欢';
     applyStoredLastFrame(app);
-    currentViewCleanup = mountAfterCursor(app);
+    const ambientCleanup = mountMindmapAmbient(app.querySelector('.after-view'), {
+      count: 72,
+      reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+    });
+    currentViewCleanup = mountPostFilmCursor(ambientCleanup);
     focusRenderedView(app);
     return;
   }
@@ -81,7 +100,7 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
     document.title = route.name === 'review-index'
       ? '复盘手记｜初恋 · 旧爱 · 新欢'
       : '阅读复盘｜初恋 · 旧爱 · 新欢';
-    currentViewCleanup = mountReviewRoute(app, route);
+    currentViewCleanup = mountPostFilmCursor(mountReviewRoute(app, route));
     focusRenderedView(app);
     return;
   }
@@ -90,7 +109,7 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
     document.title = route.name === 'archive-index'
       ? '提示词和图片｜初恋 · 旧爱 · 新欢'
       : '制作案例｜初恋 · 旧爱 · 新欢';
-    currentViewCleanup = mountArchiveRoute(app, route);
+    currentViewCleanup = mountPostFilmCursor(mountArchiveRoute(app, route));
     focusRenderedView(app);
     return;
   }

@@ -17,9 +17,9 @@ assert.equal(await page.locator('[data-mindmap-root]').count(), 1);
 assert.equal(await page.locator('.mindmap-particle').count(), 72);
 
 await page.locator('[data-mindmap-root]').click();
-assert.equal(await page.locator('.mindmap-node').count(), 1);
-await page.locator('.mindmap-node').first().click();
-assert.ok(await page.locator('.mindmap-node').count() >= 2);
+assert.equal(await page.locator('.mindmap-node.is-category').count(), 4);
+await page.locator('.mindmap-node.is-category').first().click();
+assert.ok(await page.locator('.mindmap-node:not(.is-category)').count() >= 1);
 assert.ok(await page.locator('.mindmap-edge').count() >= 2);
 
 const viewport = page.locator('[data-mindmap-viewport]');
@@ -45,5 +45,14 @@ const restored = await page.locator('[data-mindmap-world]').evaluate((element) =
 assert.notEqual(restored, redragged);
 
 assert.deepEqual(errors, []);
+
+await page.goto('http://localhost:8080/', { waitUntil: 'networkidle' });
+const watchLine = page.locator('.watch-film [data-character-motion]');
+const characters = watchLine.locator('.motion-character');
+const firstCharacter = await characters.first().boundingBox();
+const lastCharacter = await characters.last().boundingBox();
+assert.ok(lastCharacter.x > firstCharacter.x + 30, 'watch-film Chinese label should read horizontally');
+assert.ok(Math.abs(lastCharacter.y - firstCharacter.y) < 5, 'watch-film characters should stay on one line');
+
 await browser.close();
 console.log('mindmap browser smoke passed');

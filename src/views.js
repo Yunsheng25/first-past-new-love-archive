@@ -45,7 +45,7 @@ export function buildIntroView() {
         <p class="hero-translation" data-character-motion data-cinematic-entry style="--entry-delay:1s">Like the first time, like the reunion, like what comes after.</p>
         <a href="#film" class="watch-film" data-play-film>
           <span class="play-disc" aria-hidden="true"><i></i></span>
-          <span data-character-motion>观看完整成片<small>WATCH THE FILM</small></span>
+          <span class="watch-film-copy"><span data-character-motion>观看完整成片</span><small>WATCH THE FILM</small></span>
         </a>
       </div>
 
@@ -84,7 +84,7 @@ export function buildAfterView() {
     <section class="after-view app-view" aria-labelledby="after-title">
       <div class="after-backdrop" aria-hidden="true"></div>
       <div class="after-shade" aria-hidden="true"></div>
-      <span class="after-cursor" data-after-cursor aria-hidden="true"></span>
+      <div class="after-ambient" data-mindmap-ambient aria-hidden="true"></div>
 
       <header class="after-header">
         <a class="wordmark" href="#" aria-label="返回片头" data-character-motion>初恋 · 旧爱 · 新欢<i aria-hidden="true"></i></a>

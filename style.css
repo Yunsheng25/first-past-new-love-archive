@@ -273,9 +273,13 @@ video:focus-visible {
   letter-spacing: 0.15em;
 }
 
-.watch-film > span:last-child {
+.watch-film-copy {
   display: grid;
   gap: 8px;
+}
+
+.watch-film-copy > [data-character-motion] {
+  white-space: nowrap;
 }
 
 .watch-film small {
@@ -419,6 +423,8 @@ video:focus-visible {
 }
 
 .after-view {
+  --mindmap-mouse-x: 50%;
+  --mindmap-mouse-y: 50%;
   position: relative;
   isolation: isolate;
   display: grid;
@@ -426,6 +432,25 @@ video:focus-visible {
   height: 100dvh;
   overflow: hidden;
   background: #08090a;
+}
+
+.after-ambient {
+  position: absolute;
+  z-index: 0;
+  inset: -30px;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(
+    520px circle at var(--mindmap-mouse-x) var(--mindmap-mouse-y),
+    rgba(190, 143, 86, .13),
+    transparent 68%
+  );
+  transition: transform .28s cubic-bezier(.2, .7, .2, 1);
+}
+
+.after-header,
+.after-content {
+  z-index: 2;
 }
 
 .after-backdrop,
@@ -441,8 +466,9 @@ video:focus-visible {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .after-view.cursor-ready,
-  .after-view.cursor-ready a {
+  #app.cursor-ready,
+  #app.cursor-ready a,
+  #app.cursor-ready button {
     cursor: none;
   }
 
@@ -3306,6 +3332,41 @@ button.archive-filter-chip {
   color: #fffaf1;
   text-shadow: 0 .12em .4em rgba(225, 186, 136, .55);
   filter: brightness(1.12);
+}
+
+.mindmap-node.is-category {
+  min-height: 186px;
+  display: grid;
+  align-items: center;
+  border-color: rgba(209, 179, 143, .5);
+  background:
+    radial-gradient(circle at 20% 15%, rgba(199, 153, 105, .16), transparent 45%),
+    rgba(20, 19, 20, .88);
+}
+
+.mindmap-category-copy {
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+}
+
+.mindmap-category-copy > span {
+  color: rgba(204, 180, 149, .74);
+  font: 10px/1 Arial, sans-serif;
+  letter-spacing: .32em;
+}
+
+.mindmap-category-copy > strong {
+  color: #eee5d8;
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: .14em;
+}
+
+.mindmap-category-copy > small {
+  color: rgba(211, 201, 188, .62);
+  font: 11px/1.5 Arial, sans-serif;
+  letter-spacing: .12em;
 }
 
 @media (prefers-reduced-motion: reduce) {

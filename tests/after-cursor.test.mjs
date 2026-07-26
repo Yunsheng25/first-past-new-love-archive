@@ -22,9 +22,9 @@ function target() {
   };
 }
 
-test('after view exposes the approved circular cursor and no splash canvas', () => {
+test('after view keeps no route-local cursor or splash canvas', () => {
   const html = buildAfterView();
-  assert.match(html, /<span class="after-cursor" data-after-cursor aria-hidden="true"><\/span>/);
+  assert.doesNotMatch(html, /data-after-cursor/);
   assert.doesNotMatch(html, /data-after-splash/);
 });
 
@@ -65,9 +65,34 @@ test('mount binds pointer tracking and cleanup removes listeners and frame', () 
   assert.equal(cancelled, 42);
 });
 
-test('route entry mounts the cursor and removes the splash integration', async () => {
+test('mount can bind the circular cursor to any post-film view', () => {
+  const view = target();
+  const cursor = target();
+  const cleanup = mountAfterCursor(view, {
+    cursor,
+    matchMedia: (query) => ({ matches: query.includes('pointer: fine') }),
+    requestFrame: () => 18,
+    cancelFrame() {},
+  });
+  assert.equal(view.listeners.has('pointermove'), true);
+  assert.equal(view.classList.contains('cursor-ready'), true);
+  cleanup();
+});
+
+test('every post-film route mounts the shared cursor and removes the splash integration', async () => {
   const source = await readFile(new URL('../script.js', import.meta.url), 'utf8');
   assert.match(source, /import \{ mountAfterCursor \} from '.\/src\/after-cursor\.js';/);
-  assert.match(source, /currentViewCleanup = mountAfterCursor\(app\);/);
+  assert.match(source, /mountPostFilmCursor/);
+  for (const route of ['after', 'review-index', 'review-page', 'archive-index', 'archive-detail']) {
+    assert.match(source, new RegExp(`'${route}'`));
+  }
   assert.doesNotMatch(source, /mountAfterSplash/);
+});
+
+test('the intro route mounts the same shared circular cursor while film playback keeps native controls', async () => {
+  const source = await readFile(new URL('../script.js', import.meta.url), 'utf8');
+  const introBlock = source.match(/if \(route\.name === 'intro'\) \{([\s\S]*?)\n  \}/)?.[1] ?? '';
+  const filmBlock = source.match(/if \(route\.name === 'film'\) \{([\s\S]*?)\n  \}/)?.[1] ?? '';
+  assert.match(introBlock, /mountPostFilmCursor\(\)/);
+  assert.doesNotMatch(filmBlock, /mountPostFilmCursor/);
 });
