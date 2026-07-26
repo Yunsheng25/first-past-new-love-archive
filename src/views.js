@@ -84,7 +84,7 @@ export function buildAfterView() {
     <section class="after-view app-view" aria-labelledby="after-title">
       <div class="after-backdrop" aria-hidden="true"></div>
       <div class="after-shade" aria-hidden="true"></div>
-      <canvas class="after-splash" data-after-splash aria-hidden="true"></canvas>
+      <span class="after-cursor" data-after-cursor aria-hidden="true"></span>
 
       <header class="after-header">
         <a class="wordmark" href="#" aria-label="返回片头">初恋 · 旧爱 · 新欢<i aria-hidden="true"></i></a>
