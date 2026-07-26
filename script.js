@@ -6,6 +6,7 @@ import {
   bindFilmFullscreen,
   clearStoredLastFrame,
 } from './src/after-film.js';
+import { mountAfterSplash } from './src/after-splash.js';
 import { bindFilmMedia, bindIntroMedia, focusRenderedView } from './src/media-ui.js';
 import { mountArchiveRoute } from './src/archive-ui.js';
 import { mountReviewRoute, peekReviewData } from './src/review-reader.js';
@@ -68,6 +69,7 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
     app.innerHTML = buildAfterView();
     document.title = '影片已结束｜初恋 · 旧爱 · 新欢';
     applyStoredLastFrame(app);
+    currentViewCleanup = mountAfterSplash(app);
     focusRenderedView(app);
     return;
   }
