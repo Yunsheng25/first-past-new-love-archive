@@ -219,7 +219,7 @@ test('an AbortError from the shared loader is a visible retryable failure while 
   assert.match(app.innerHTML, /data-archive-error/);
 });
 
-test('switching tunnel to list and back remounts at the live pre-destroy progress', async () => {
+test('switching tunnel to mindmap and back remounts at the live pre-destroy progress', async () => {
   const listeners = new Map();
   const add = (type, handler) => listeners.set(type, [...(listeners.get(type) ?? []), handler]);
   const remove = (type, handler) => listeners.set(type, (listeners.get(type) ?? []).filter((item) => item !== handler));
@@ -247,7 +247,7 @@ test('switching tunnel to list and back remounts at the live pre-destroy progres
   assert.equal(destroys, 2);
 });
 
-test('a synchronous tunnel fallback leaves only the live list interactions and route cleanup removes them', async () => {
+test('a synchronous tunnel fallback leaves only the live mindmap interaction and route cleanup removes it', async () => {
   const listeners = new Map();
   const app = {
     innerHTML: '', focus() {}, querySelector() { return null; },
@@ -261,15 +261,15 @@ test('a synchronous tunnel fallback leaves only the live list interactions and r
   });
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.match(app.innerHTML, /archive-index-view/);
-  assert.equal((listeners.get('input') ?? []).length, 1);
-  assert.equal((listeners.get('change') ?? []).length, 1);
-  assert.equal((listeners.get('click') ?? []).length, 2);
+  assert.equal((listeners.get('input') ?? []).length, 0);
+  assert.equal((listeners.get('change') ?? []).length, 0);
+  assert.equal((listeners.get('click') ?? []).length, 1);
   assert.equal(controllerDestroys, 1);
   cleanup();
   for (const handlers of listeners.values()) assert.equal(handlers.length, 0);
 });
 
-test('reduced motion enters the complete list without initializing WebGL', async () => {
+test('reduced motion enters the progressive mindmap without initializing the tunnel', async () => {
   const app = {
     innerHTML: '', focus() {}, querySelector() { return null; },
     addEventListener() {}, removeEventListener() {},
@@ -286,7 +286,8 @@ test('reduced motion enters the complete list without initializing WebGL', async
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(tunnelMounts, 0);
   assert.match(app.innerHTML, /archive-index-view/);
-  assert.equal((app.innerHTML.match(/data-archive-card=/g) ?? []).length, 72);
+  assert.match(app.innerHTML, /data-mindmap-root/);
+  assert.equal((app.innerHTML.match(/data-archive-card=/g) ?? []).length, 0);
 });
 
 function mappingSignature(data) {

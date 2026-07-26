@@ -1,0 +1,49 @@
+import assert from 'node:assert/strict';
+import { chromium } from 'playwright';
+
+const browser = await chromium.launch({
+  headless: true,
+  executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe',
+});
+const page = await browser.newPage({
+  viewport: { width: 1440, height: 900 },
+  reducedMotion: 'reduce',
+});
+const errors = [];
+page.on('pageerror', (error) => errors.push(error.message));
+
+await page.goto('http://localhost:8080/#archive', { waitUntil: 'networkidle' });
+assert.equal(await page.locator('[data-mindmap-root]').count(), 1);
+assert.equal(await page.locator('.mindmap-particle').count(), 72);
+
+await page.locator('[data-mindmap-root]').click();
+assert.equal(await page.locator('.mindmap-node').count(), 1);
+await page.locator('.mindmap-node').first().click();
+assert.ok(await page.locator('.mindmap-node').count() >= 2);
+assert.ok(await page.locator('.mindmap-edge').count() >= 2);
+
+const viewport = page.locator('[data-mindmap-viewport]');
+const box = await viewport.boundingBox();
+await page.mouse.move(box.x + 500, box.y + 350);
+await page.mouse.down();
+await page.mouse.move(box.x + 760, box.y + 530, { steps: 5 });
+await page.mouse.up();
+const dragged = await page.locator('[data-mindmap-world]').evaluate((element) => element.style.transform);
+await page.locator('[data-mindmap-action="overview"]').click();
+await page.waitForTimeout(100);
+const overview = await page.locator('[data-mindmap-world]').evaluate((element) => element.style.transform);
+assert.notEqual(overview, dragged);
+
+await page.mouse.move(box.x + 450, box.y + 320);
+await page.mouse.down();
+await page.mouse.move(box.x + 250, box.y + 180, { steps: 5 });
+await page.mouse.up();
+const redragged = await page.locator('[data-mindmap-world]').evaluate((element) => element.style.transform);
+await page.locator('[data-mindmap-action="restore"]').click();
+await page.waitForTimeout(100);
+const restored = await page.locator('[data-mindmap-world]').evaluate((element) => element.style.transform);
+assert.notEqual(restored, redragged);
+
+assert.deepEqual(errors, []);
+await browser.close();
+console.log('mindmap browser smoke passed');

@@ -14,6 +14,7 @@ import { createReviewTurnController } from './src/review-turn.js';
 import { buildAfterView, buildFilmView, buildIntroView, buildPendingView } from './src/views.js';
 import { createAudioManager } from './src/audio-manager.js';
 import { createBgmController } from './src/bgm-ui.js';
+import { mountCharacterMotion } from './src/text-motion.js';
 
 const app = document.querySelector('#app');
 const bgmToggle = document.querySelector('[data-bgm-toggle]');
@@ -57,6 +58,7 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
 
   if (route.name === 'intro') {
     app.innerHTML = buildIntroView();
+    mountCharacterMotion(app);
     document.title = '初恋 · 旧爱 · 新欢｜电影制作档案';
     bindIntroMedia(app, {
       reduceMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
@@ -67,6 +69,7 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
 
   if (route.name === 'after') {
     app.innerHTML = buildAfterView();
+    mountCharacterMotion(app);
     document.title = '影片已结束｜初恋 · 旧爱 · 新欢';
     applyStoredLastFrame(app);
     currentViewCleanup = mountAfterCursor(app);
@@ -93,6 +96,7 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
   }
 
   app.innerHTML = buildPendingView(route.name);
+  mountCharacterMotion(app);
   document.title = '内容整理中｜初恋 · 旧爱 · 新欢';
   focusRenderedView(app);
 }

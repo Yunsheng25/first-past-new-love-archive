@@ -1,6 +1,7 @@
 import { mountArchiveTunnel } from './archive-tunnel.js';
 import { mountArchiveCaseModal } from './archive-case-modal.js';
 import { flattenArchiveOccurrences } from './archive-tunnel-data.js';
+import { buildMindmapShell, mountArchiveMindmap } from './archive-mindmap.js';
 
 export const ARCHIVE_LAST_CASE_KEY = 'archive:lastCase';
 
@@ -132,7 +133,7 @@ export function buildArchiveIndexShell(summary = {}) {
   return `<section class="archive-tunnel-view app-view" aria-label="提示词和图片总览">
     <header class="archive-tunnel-header">
       <a class="archive-wordmark" href="#after">初恋 · 旧爱 · 新欢</a>
-      <div class="archive-tunnel-actions"><button type="button" data-archive-view="list">列表模式</button><button type="button" data-tunnel-cruise>暂停漫游</button></div>
+      <div class="archive-tunnel-actions"><button type="button" data-archive-view="list">思维导图</button><button type="button" data-tunnel-cruise>暂停漫游</button></div>
     </header>
     <div class="archive-tunnel-stage" data-archive-tunnel aria-label="按制作顺序排列的图片隧道"></div>
     <div class="archive-tunnel-guide"><b>一条真正走得进去的影像长廊</b><span>滚轮 / 拖动控制前进速度</span></div>
@@ -601,19 +602,37 @@ export function mountArchiveRoute(app, route, {
         const prefersReducedMotion = safeCall(
           () => windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches,
         ) === true;
-        const renderList = () => {
+        const renderMindmap = () => {
           if (!active) return;
           const snapshot = safeCall(() => tunnel?.snapshot?.());
           if (Number.isFinite(snapshot?.progress)) savedProgress = snapshot.progress;
           interactionCleanup();
           safeCall(() => modal?.destroy?.()); modal = null;
           safeCall(() => tunnel?.destroy?.()); tunnel = null;
-          app.innerHTML = buildArchiveIndex(data, state, readArchiveLastCase(storage, data));
-          view = 'list';
-          const cleanupIndex = bindArchiveIndexInteractions(app, data, state, renderList);
+          app.innerHTML = buildMindmapShell(data.cases?.length ?? 0);
+          view = 'mindmap';
+          const occurrences = flattenArchiveOccurrences(data);
+          const cleanupMindmap = mountArchiveMindmap(app, {
+            cases: data.cases,
+            canvasRecords: windowRef.CANVAS_ARCHIVE_DATA?.records ?? globalThis.CANVAS_ARCHIVE_DATA?.records ?? [],
+            windowRef,
+            onSelectCase(item, trigger) {
+              const occurrence = occurrences.find((candidate) => candidate.caseId === item.id);
+              if (!occurrence) return;
+              safeCall(() => modal?.destroy?.());
+              modal = safeCall(() => mountCaseModal(
+                app.querySelector?.('[data-archive-modal-host]'),
+                { data, occurrence, trigger, documentRef, navigatorRef, onClose() { modal = null; } },
+              ));
+            },
+          });
           const switchView = (event) => { if (event.target?.closest?.('[data-archive-view="tunnel"]')) renderTunnel(); };
           app.addEventListener?.('click', switchView);
-          interactionCleanup = () => { cleanupIndex(); app.removeEventListener?.('click', switchView); };
+          interactionCleanup = () => {
+            cleanupMindmap();
+            safeCall(() => modal?.destroy?.()); modal = null;
+            app.removeEventListener?.('click', switchView);
+          };
         };
         const renderTunnel = () => {
           if (!active) return;
@@ -667,7 +686,7 @@ export function mountArchiveRoute(app, route, {
               if (!modal && resumeAfterClose) safeCall(() => tunnel?.resume?.());
             },
             onEnd() { if (rewind) { rewind.disabled = false; rewind.classList?.remove?.('is-archive'); rewind.textContent = '↶ 快速回溯'; } },
-            onFallback() { if (active && view === 'tunnel') renderList(); },
+            onFallback() { if (active && view === 'tunnel') renderMindmap(); },
           });
           if (view !== 'tunnel' || app.querySelector?.('[data-archive-tunnel]') !== stage) {
             safeCall(() => mountedTunnel?.destroy?.());
@@ -675,7 +694,10 @@ export function mountArchiveRoute(app, route, {
           }
           tunnel = mountedTunnel;
           const click = (event) => {
-            if (event.target?.closest?.('[data-archive-view="list"]')) { renderList(); return; }
+            if (
+              event.target?.closest?.('[data-archive-view="list"]')
+              || event.target?.closest?.('[data-archive-view="mindmap"]')
+            ) { renderMindmap(); return; }
             if (event.target?.closest?.('[data-tunnel-cruise]')) {
               const snapshot = safeCall(() => tunnel?.snapshot?.());
               if (snapshot?.mode === 'cruising') {
@@ -706,7 +728,7 @@ export function mountArchiveRoute(app, route, {
             safeCall(() => tunnel?.destroy?.()); tunnel = null;
           };
         };
-        if (prefersReducedMotion) renderList();
+        if (prefersReducedMotion) renderMindmap();
         else renderTunnel();
       } else {
         const resolved = resolveArchiveCase(data, route.id);
