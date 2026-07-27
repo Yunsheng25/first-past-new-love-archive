@@ -8,19 +8,21 @@ import {
   preloadPhase,
 } from '../src/preloader-ui.js';
 
-test('preloader markup contains one film roll, real progress fields, retry and pointer layers', () => {
+test('preloader markup contains projector iris, glass reveal and real progress controls', () => {
   const markup = buildPreloaderMarkup([
     { path: 'assets/a.png', bytes: 1 },
     { path: 'assets/b.mp4', bytes: 2 },
   ]);
-  assert.equal((markup.match(/data-preload-film/g) ?? []).length, 1);
+  assert.match(markup, /data-preload-iris/);
+  assert.match(markup, /preload-lens-reveal/);
+  assert.match(markup, /preload-lens/);
   assert.match(markup, /data-preload-percent/);
   assert.match(markup, /data-preload-bytes/);
   assert.match(markup, /data-preload-files/);
   assert.match(markup, /data-preload-retry/);
   assert.match(markup, /data-preload-skip/);
-  assert.match(markup, /preload-ripple/);
-  assert.match(markup, /assets\/a\.png/);
+  assert.doesNotMatch(markup, /data-preload-film/);
+  assert.doesNotMatch(markup, /preload-card/);
 });
 
 test('progress helpers map completed assets to cards and readable phases', () => {
@@ -32,16 +34,15 @@ test('progress helpers map completed assets to cards and readable phases', () =>
   assert.equal(preloadPhase('assets/video/full-film.mp4'), '正在整理 · 完整成片');
 });
 
-test('formal stylesheet defines developed darkroom cards, pointer ripple and reduced motion', async () => {
+test('formal stylesheet defines projector iris, glass reveal and reduced motion', async () => {
   const css = await readFile(new URL('../style.css', import.meta.url), 'utf8');
-  assert.match(css, /\.preload-card\.is-developed/);
-  assert.match(css, /\.preload-ripple/);
-  assert.match(css, /--preload-pointer-x/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce[\s\S]*preload-film/);
-  const film = css.match(/\.preload-film\s*\{([\s\S]*?)\}/)?.[1] ?? '';
-  assert.match(film, /top:\s*50%/);
-  assert.match(film, /calc\(-50% \+ var\(--preload-parallax-y\)\)/);
-  assert.match(film, /rotate\(-4deg\)/);
+  assert.match(css, /\.preload-iris-wrap/);
+  assert.match(css, /\.preload-iris-core/);
+  assert.match(css, /\.preload-lens-reveal/);
+  assert.match(css, /clip-path:\s*circle/);
+  assert.match(css, /\.preload-lens/);
+  assert.match(css, /prefers-reduced-motion:\s*reduce[\s\S]*preload-iris/);
+  assert.doesNotMatch(css, /\.preload-film\s*\{/);
 });
 
 test('HTML paints a loader skeleton before module scripts execute', async () => {

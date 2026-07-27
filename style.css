@@ -3905,15 +3905,13 @@ button.archive-filter-chip {
 .site-preloader {
   --preload-pointer-x: 50vw;
   --preload-pointer-y: 50vh;
-  --preload-parallax-x: 0px;
-  --preload-parallax-y: 0px;
   position: fixed;
   z-index: 1000;
   inset: 0;
   overflow: hidden;
   color: #eee3d5;
   background:
-    radial-gradient(circle at var(--preload-pointer-x) var(--preload-pointer-y), #493226 0, #1b130f 15%, #080706 52%),
+    radial-gradient(ellipse at 50% 50%, #342820 0, #17120f 28%, #080706 68%),
     #080706;
   cursor: none;
   user-select: none;
@@ -3973,138 +3971,171 @@ button.archive-filter-chip {
   letter-spacing: .28em;
 }
 
-.preload-film {
+.preload-iris-wrap {
   position: absolute;
-  left: -8%;
-  top: 50%;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  width: max-content;
-  height: 19rem;
-  transform: translate(var(--preload-parallax-x), calc(-50% + var(--preload-parallax-y))) rotate(-4deg);
-  animation: preload-film-travel 18s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-.preload-card {
-  --preload-image: linear-gradient(145deg, #6b4c37, #120e0b 70%);
-  position: relative;
-  flex: 0 0 auto;
-  width: 10rem;
-  height: 14.5rem;
-  padding: .38rem;
-  overflow: hidden;
-  border: 1px solid #755d42;
-  background: #120e0b;
-  box-shadow: 0 1.5rem 4rem #000;
-  opacity: .38;
-  filter: grayscale(.9) blur(2px) brightness(.7);
-  transition: opacity .7s ease, filter .7s ease, transform .25s ease, border-color .25s ease;
-}
-
-.preload-card:nth-child(3n) {
-  height: 17rem;
-}
-
-.preload-card::before {
-  content: "";
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: var(--preload-image) center / cover no-repeat;
-}
-
-.preload-card::after {
-  content: attr(data-frame);
-  position: absolute;
-  right: .7rem;
-  bottom: .6rem;
-  color: #ddc09b;
-  font: .48rem/1 sans-serif;
-  letter-spacing: .16em;
-}
-
-.preload-card.is-developed {
-  opacity: .86;
-  filter: grayscale(.12) blur(0) brightness(1);
-}
-
-.preload-card.is-near-pointer {
   z-index: 2;
-  opacity: 1;
-  filter: grayscale(0) blur(0) brightness(1.2);
-  transform: translateY(-1rem) scale(1.035);
-  border-color: #dfb97f;
-}
-
-.preload-ripple {
-  position: absolute;
-  z-index: 4;
-  left: var(--preload-pointer-x);
-  top: var(--preload-pointer-y);
-  width: 9rem;
+  left: 50%;
+  top: 50%;
+  width: clamp(13rem, 24vw, 19rem);
   aspect-ratio: 1;
-  border: 1px solid #ddb77e73;
+  border: 1px solid #b99d7230;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 4rem #d7a65f30, inset 0 0 2rem #d7a65f15;
   pointer-events: none;
 }
 
-.preload-cursor {
+.preload-iris-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid #b99d7240;
+  border-radius: 50%;
+  animation: preload-iris-pulse 4.6s ease-out infinite;
+}
+
+.preload-iris-ring {
+  position: absolute;
+  inset: 1.4rem;
+  border: 1px solid #ddc29488;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1.15rem #d0ab7424,
+    0 0 0 calc(1.15rem + 1px) #e2c48d2c,
+    0 0 7rem #a86e374b,
+    inset 0 0 3rem #d5ae6f15;
+  animation: preload-iris-breathe 3.4s ease-in-out infinite;
+}
+
+.preload-iris-ring::before {
+  content: "";
+  position: absolute;
+  inset: 1.8rem;
+  border: 1px solid #e2c6904d;
+  border-radius: 50%;
+  animation: preload-iris-inner 3.4s ease-in-out infinite;
+}
+
+.preload-iris-core {
+  position: absolute;
+  inset: 36%;
+  border-radius: 50%;
+  background: #e5c18b;
+  box-shadow: 0 0 3.2rem #e5b86c;
+  opacity: .78;
+}
+
+.preload-lens-reveal {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #f0dfc5;
+  background:
+    radial-gradient(circle 9rem at var(--preload-pointer-x) var(--preload-pointer-y), #70492c42, transparent 75%);
+  clip-path: circle(0 at var(--preload-pointer-x) var(--preload-pointer-y));
+  font-size: clamp(2.4rem, 7vw, 7.5rem);
+  letter-spacing: .2em;
+  white-space: nowrap;
+  text-shadow: 0 0 2.4rem #d6a45b42;
+  pointer-events: none;
+  transition: clip-path .16s ease-out;
+}
+
+.preload-lens {
+  display: none;
   position: absolute;
   z-index: 8;
   left: var(--preload-pointer-x);
   top: var(--preload-pointer-y);
-  width: 2.35rem;
+  width: 9.5rem;
   aspect-ratio: 1;
-  border: 1px solid #e1bd84;
+  border: 1px solid #e3c89866;
   border-radius: 50%;
+  background: #e5b66c08;
+  box-shadow:
+    inset 0 0 2.4rem #e5b66c15,
+    0 0 2rem #0009;
   transform: translate(-50%, -50%);
   pointer-events: none;
+}
+
+.preload-lens::after {
+  content: "";
+  position: absolute;
+  right: 1.1rem;
+  top: 1.25rem;
+  width: 1.35rem;
+  height: .55rem;
+  border-radius: 50%;
+  background: #fff7df24;
+  transform: rotate(-35deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-preloader:hover .preload-lens-reveal {
+    clip-path: circle(4.75rem at var(--preload-pointer-x) var(--preload-pointer-y));
+  }
+
+  .preload-lens {
+    display: block;
+  }
 }
 
 .preload-center {
   position: absolute;
   z-index: 6;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  width: min(29rem, 72vw);
+  left: 50%;
+  top: 50%;
+  width: min(29rem, 76vw);
+  height: min(26rem, 74vh);
   margin: auto;
+  transform: translate(-50%, -50%);
   text-align: center;
   pointer-events: none;
-  background: radial-gradient(circle, #090706d9 0 19%, #0907068f 36%, transparent 61%);
+  background: none;
 }
 
 .preload-phase,
 .preload-status,
 .preload-meta {
+  position: absolute;
+  left: 0;
+  width: 100%;
   margin: 0;
   color: #a99881;
   font: .62rem/1.6 sans-serif;
   letter-spacing: .26em;
 }
 
+.preload-phase {
+  top: 2.8rem;
+}
+
 .preload-number {
-  margin: .8rem 0 0;
-  font: 300 clamp(4.2rem, 9vw, 8rem)/.9 sans-serif;
-  letter-spacing: -.06em;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  font: 400 1.1rem/1 sans-serif;
+  letter-spacing: .1em;
 }
 
 .preload-number small {
-  margin-left: .6rem;
+  margin-left: .25rem;
   color: #bca78b;
-  font-size: .18em;
+  font-size: .62em;
   letter-spacing: .15em;
 }
 
 .preload-track {
-  position: relative;
+  position: absolute;
+  left: 0;
+  bottom: 4.4rem;
   width: 100%;
   height: 1px;
-  margin: 1.8rem 0 1rem;
+  margin: 0;
   overflow: visible;
   background: #514232;
 }
@@ -4130,19 +4161,27 @@ button.archive-filter-chip {
   box-shadow: 0 0 1rem #d8a85f;
 }
 
+.preload-status {
+  bottom: 2.65rem;
+}
+
 .preload-meta {
+  bottom: 1rem;
   display: flex;
   justify-content: center;
   gap: 1.2rem;
-  margin-top: .65rem;
   color: #706458;
   letter-spacing: .12em;
 }
 
 .preload-actions {
+  position: absolute;
+  left: 0;
+  bottom: -3.25rem;
   display: flex;
   justify-content: center;
   gap: .7rem;
+  width: 100%;
 }
 
 .preload-retry,
@@ -4178,8 +4217,37 @@ button.archive-filter-chip {
   animation: preload-leave .8s cubic-bezier(.65, 0, .35, 1) forwards;
 }
 
-@keyframes preload-film-travel {
-  to { transform: translate(calc(var(--preload-parallax-x) - 12rem), calc(-50% + var(--preload-parallax-y))) rotate(-4deg); }
+@keyframes preload-iris-breathe {
+  50% {
+    inset: .5rem;
+    opacity: .62;
+    box-shadow:
+      0 0 0 .45rem #d0ab741a,
+      0 0 0 calc(.45rem + 1px) #e2c48d40,
+      0 0 8.5rem #c186425e,
+      inset 0 0 4rem #e0b97820;
+  }
+}
+
+@keyframes preload-iris-inner {
+  50% {
+    inset: 1rem;
+    opacity: .42;
+  }
+}
+
+@keyframes preload-iris-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(.74);
+    opacity: 0;
+  }
+  28% {
+    opacity: .7;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.18);
+    opacity: 0;
+  }
 }
 
 @keyframes preload-breathe {
@@ -4197,15 +4265,29 @@ button.archive-filter-chip {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .preload-film,
+  .preload-iris-wrap,
+  .preload-iris-wrap::before,
+  .preload-iris-ring,
+  .preload-iris-ring::before,
   .preload-grain,
   .preload-skeleton-mark {
     animation: none;
   }
 
-  .preload-card,
+  .preload-lens-reveal,
   .preload-track i {
     transition: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .site-preloader {
+    cursor: auto;
+  }
+
+  .preload-lens,
+  .preload-lens-reveal {
+    display: none;
   }
 }
 
@@ -4214,20 +4296,16 @@ button.archive-filter-chip {
     font-size: .5rem;
   }
 
-  .preload-film {
-    height: 14rem;
-  }
-
-  .preload-card {
-    width: 7rem;
-    height: 10.5rem;
-  }
-
-  .preload-card:nth-child(3n) {
-    height: 12rem;
+  .preload-iris-wrap {
+    width: min(16rem, 68vw);
   }
 
   .preload-center {
     width: min(22rem, 78vw);
+    height: min(23rem, 72vh);
+  }
+
+  .preload-phase {
+    top: 2.4rem;
   }
 }

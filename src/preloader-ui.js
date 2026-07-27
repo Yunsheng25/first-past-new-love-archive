@@ -1,14 +1,4 @@
 const CARD_COUNT = 28;
-const IMAGE_PATTERN = /\.(?:avif|gif|jpe?g|png|webp)$/i;
-
-function escapeAttribute(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
-}
-
 export function formatBytes(bytes) {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 MB';
   return `${(bytes / 1_000_000).toFixed(1)} MB`;
@@ -32,20 +22,17 @@ export function preloadPhase(path = '') {
 }
 
 export function buildPreloaderMarkup(assets = []) {
-  const images = assets.filter((asset) => IMAGE_PATTERN.test(asset.path));
-  const cards = Array.from({ length: CARD_COUNT }, (_, index) => {
-    const source = images[index % Math.max(1, images.length)]?.path ?? '';
-    const style = source ? ` style="--preload-image:url(&quot;${escapeAttribute(source)}&quot;)"` : '';
-    return `<i class="preload-card" data-preload-card data-frame="${String(index + 1).padStart(3, '0')}"${style}></i>`;
-  }).join('');
   return `
     <div class="preload-grain" aria-hidden="true"></div>
-    <div class="preload-ripple" aria-hidden="true"></div>
-    <div class="preload-cursor" aria-hidden="true"></div>
     <header class="preload-header" aria-hidden="true">
       <span>初恋 · 旧爱 · 新欢</span><span>A FILM ARCHIVE · 2026</span>
     </header>
-    <div class="preload-film" data-preload-film aria-hidden="true">${cards}</div>
+    <div class="preload-iris-wrap" data-preload-iris aria-hidden="true">
+      <i class="preload-iris-ring"></i>
+      <i class="preload-iris-core"></i>
+    </div>
+    <div class="preload-lens-reveal" aria-hidden="true">初恋 · 旧爱 · 新欢</div>
+    <i class="preload-lens" aria-hidden="true"></i>
     <div class="preload-center">
       <p class="preload-phase" data-preload-phase>正在装订 · 完整影像档案</p>
       <p class="preload-number"><strong data-preload-percent>0</strong><small>%</small></p>
@@ -57,7 +44,7 @@ export function buildPreloaderMarkup(assets = []) {
         <button class="preload-skip" type="button" data-preload-skip hidden>直接进入</button>
       </div>
     </div>
-    <p class="preload-hint" aria-hidden="true">移动鼠标 · 让影像在暗房中显现</p>
+    <p class="preload-hint" aria-hidden="true">移动镜片 · 显影一段记忆</p>
   `;
 }
 
@@ -68,7 +55,6 @@ export function mountPreloaderUI(
   const root = documentRef.querySelector('#site-preloader');
   if (!root) throw new Error('Missing #site-preloader');
   root.innerHTML = buildPreloaderMarkup(assets);
-  const cards = [...root.querySelectorAll('[data-preload-card]')];
   const retry = root.querySelector('[data-preload-retry]');
   const skip = root.querySelector('[data-preload-skip]');
   let destroyed = false;
@@ -79,13 +65,6 @@ export function mountPreloaderUI(
     const y = event.clientY;
     root.style.setProperty('--preload-pointer-x', `${x}px`);
     root.style.setProperty('--preload-pointer-y', `${y}px`);
-    root.style.setProperty('--preload-parallax-x', `${(x / innerWidth - 0.5) * -28}px`);
-    root.style.setProperty('--preload-parallax-y', `${(y / innerHeight - 0.5) * -18}px`);
-    cards.forEach((card) => {
-      const bounds = card.getBoundingClientRect();
-      const distance = Math.hypot(x - (bounds.left + bounds.width / 2), y - (bounds.top + bounds.height / 2));
-      card.classList.toggle('is-near-pointer', distance < 160);
-    });
   }
 
   function update(state) {
@@ -97,8 +76,6 @@ export function mountPreloaderUI(
     root.querySelector('[data-preload-files]').textContent =
       `${state.completedFiles} / ${state.totalFiles}`;
     root.querySelector('[data-preload-phase]').textContent = preloadPhase(state.currentPath);
-    const developed = developedCardCount(state, cards.length);
-    cards.forEach((card, index) => card.classList.toggle('is-developed', index < developed));
   }
 
   function fail(error) {
