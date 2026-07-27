@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { buildMindmapShell, symmetricChildBoxes } from '../src/archive-mindmap.js';
+
+const archiveMindmapSource = await readFile(new URL('../src/archive-mindmap.js', import.meta.url), 'utf8');
 
 test('mindmap shell exposes every required control', () => {
   const html = buildMindmapShell();
@@ -26,4 +29,8 @@ test('two process branches are centered equally above and below their parent', (
     parentCenter - (boxes[0].y + boxes[0].height / 2),
     (boxes[1].y + boxes[1].height / 2) - parentCenter,
   );
+});
+
+test('archive canvas dragging ignores non-primary mouse buttons', () => {
+  assert.match(archiveMindmapSource, /event\.button !== undefined && event\.button !== 0/);
 });

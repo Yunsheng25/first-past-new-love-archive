@@ -193,6 +193,7 @@ export function mountReviewLiveMaps(root, { documentRef = document } = {}) {
   };
 
   const onPointerDown = (event) => {
+    if (event.button !== undefined && event.button !== 0) return;
     if (!overlay || event.target.closest('button,.review-map-detail')) return;
     dragging = true;
     pointerX = event.clientX;

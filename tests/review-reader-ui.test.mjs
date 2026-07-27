@@ -1017,3 +1017,21 @@ test('review turn CSS uses physical directional sheet motion and disables it for
   assert.match(css, /review-turn-previous-old[\s\S]*rotateY\(180deg\)/);
   assert.match(css, /prefers-reduced-motion:\s*reduce[\s\S]*\.review-paper\s*\{\s*view-transition-name:\s*none/);
 });
+
+test('review rail has a wide fluid target with informative nearest-item feedback', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  assert.match(css, /\.review-rail\s*\{[\s\S]*width:\s*150px/);
+  assert.match(css, /\.review-rail\s*\{[\s\S]*user-select:\s*none/);
+  assert.match(css, /\.review-rail::after[\s\S]*var\(--review-rail-y/);
+  assert.match(css, /\.review-rail-tick\.is-active[\s\S]*width:\s*52px/);
+  assert.match(css, /\.review-rail-tick\.is-near[\s\S]*translateX\(3px\)/);
+  assert.match(css, /\.review-rail-tick\.is-active \.review-rail-tip[\s\S]*opacity:\s*1/);
+});
+
+test('interactive map surfaces prevent selection while the circular cursor stays visible above fixed controls', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  assert.match(css, /\.archive-mindmap-viewport,[\s\S]*\.review-live-node[\s\S]*user-select:\s*none/);
+  assert.match(css, /\.after-cursor\s*\{[\s\S]*z-index:\s*40/);
+  assert.match(css, /\.after-cursor\s*\{[\s\S]*pointer-events:\s*none/);
+  assert.match(css, /\.review-return-after\s*\{[\s\S]*z-index:\s*30/);
+});

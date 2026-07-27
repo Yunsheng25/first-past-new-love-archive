@@ -265,6 +265,7 @@ export function mountArchiveMindmap(root, {
     if (action === 'collapse') collapse();
   };
   const onPointerDown = (event) => {
+    if (event.button !== undefined && event.button !== 0) return;
     if (event.target.closest('.mindmap-node,.mindmap-root,.mindmap-end,.archive-mindmap-actions')) return;
     dragging = true;
     pointerX = event.clientX;

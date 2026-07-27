@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { REVIEW_LIVE_MAPS, resolveReviewMap, visibleReviewMapNodes } from '../src/review-live-map-model.js';
+
+const reviewLiveMapSource = await readFile(new URL('../src/review-live-map.js', import.meta.url), 'utf8');
 
 test('only real authored summary images resolve to independent live maps', () => {
   assert.equal(resolveReviewMap('Pasted image 20260620133330.png').id, 'image-generation');
@@ -31,4 +34,8 @@ test('every map child resolves to a real node and every media path stays in revi
       for (const src of node.media ?? []) assert.match(src, /^assets\/review-media\//);
     }
   }
+});
+
+test('review live-map dragging ignores non-primary mouse buttons', () => {
+  assert.match(reviewLiveMapSource, /event\.button !== undefined && event\.button !== 0/);
 });
