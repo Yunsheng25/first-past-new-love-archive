@@ -3,8 +3,12 @@ export const REVIEW_LIVE_MAPS = Object.freeze({
     id: 'image-generation',
     title: '生图流程拆解',
     summaryRef: 'Pasted image 20260620133330.png',
-    roots: ['style-master', 'specific-frame'],
+    roots: ['image-process'],
     nodes: Object.freeze({
+      'image-process': {
+        title: '生图过程拆解',
+        children: ['style-master', 'specific-frame'],
+      },
       'style-master': {
         title: '确定风格母图',
         children: ['visual-language'],

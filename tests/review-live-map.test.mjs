@@ -8,12 +8,19 @@ test('only real authored summary images resolve to independent live maps', () =>
   assert.equal(resolveReviewMap('Pasted image 20260620160734.png'), null);
 });
 
-test('image generation map expands progressively from its authored top-level split', () => {
+test('image generation map keeps one process trunk before its authored top-level split', () => {
   const map = REVIEW_LIVE_MAPS['image-generation'];
-  assert.deepEqual(visibleReviewMapNodes(map), ['style-master', 'specific-frame']);
+  assert.deepEqual(map.roots, ['image-process']);
+  assert.equal(map.nodes['image-process'].title, '生图过程拆解');
+  assert.deepEqual(map.nodes['image-process'].children, ['style-master', 'specific-frame']);
+  assert.deepEqual(visibleReviewMapNodes(map), ['image-process']);
   assert.deepEqual(
-    visibleReviewMapNodes(map, new Set(['specific-frame', 'spatial-logic'])),
-    ['style-master', 'specific-frame', 'spatial-logic', 'text-prompt', 'visual-reference', 'reset-camera'],
+    visibleReviewMapNodes(map, new Set(['image-process'])),
+    ['image-process', 'style-master', 'specific-frame'],
+  );
+  assert.deepEqual(
+    visibleReviewMapNodes(map, new Set(['image-process', 'specific-frame', 'spatial-logic'])),
+    ['image-process', 'style-master', 'specific-frame', 'spatial-logic', 'text-prompt', 'visual-reference', 'reset-camera'],
   );
 });
 
