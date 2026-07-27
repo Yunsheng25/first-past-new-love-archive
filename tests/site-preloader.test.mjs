@@ -1,6 +1,39 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { preloadAssets } from '../src/site-preloader.js';
+import {
+  preloadAssets,
+  preloadInBackground,
+  selectCriticalAssets,
+} from '../src/site-preloader.js';
+
+test('selects only route-critical media instead of blocking on the 510 MB archive', () => {
+  const assets = [
+    { path: 'assets/video/intro-background.mp4', bytes: 12 },
+    { path: 'assets/video/full-film.mp4', bytes: 65 },
+    { path: 'assets/canvas-images/a.png', bytes: 3 },
+  ];
+  assert.deepEqual(selectCriticalAssets(assets, 'intro'), [assets[0]]);
+  assert.deepEqual(selectCriticalAssets(assets, 'film'), [assets[1]]);
+  assert.deepEqual(selectCriticalAssets(assets, 'archive-index'), []);
+});
+
+test('background preload uses low concurrency and never rejects the visible site', async () => {
+  let active = 0;
+  let highest = 0;
+  const result = await preloadInBackground({
+    assets: Array.from({ length: 5 }, (_, index) => ({ path: `${index}.png`, bytes: 1 })),
+    fetchImpl: async (path) => {
+      active += 1;
+      highest = Math.max(highest, active);
+      await Promise.resolve();
+      active -= 1;
+      return path === '3.png' ? new Response('', { status: 500 }) : new Response('x');
+    },
+  });
+  assert.equal(highest, 2);
+  assert.equal(result.status, 'partial');
+  assert.equal(result.failedPath, '3.png');
+});
 
 test('preloads every asset and reports immutable monotonic real progress', async () => {
   const states = [];

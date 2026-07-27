@@ -3975,15 +3975,15 @@ button.archive-filter-chip {
 
 .preload-film {
   position: absolute;
-  left: -20%;
+  left: -8%;
   top: 50%;
   display: flex;
   align-items: center;
   gap: 1rem;
   width: max-content;
   height: 19rem;
-  transform: translate(var(--preload-parallax-x), calc(-50% + var(--preload-parallax-y))) rotate(-7deg);
-  animation: preload-film-travel 28s linear infinite;
+  transform: translate(var(--preload-parallax-x), calc(-50% + var(--preload-parallax-y))) rotate(-4deg);
+  animation: preload-film-travel 18s ease-in-out infinite alternate;
   will-change: transform;
 }
 
@@ -3998,8 +3998,8 @@ button.archive-filter-chip {
   border: 1px solid #755d42;
   background: #120e0b;
   box-shadow: 0 1.5rem 4rem #000;
-  opacity: .24;
-  filter: grayscale(1) blur(3px) brightness(.55);
+  opacity: .38;
+  filter: grayscale(.9) blur(2px) brightness(.7);
   transition: opacity .7s ease, filter .7s ease, transform .25s ease, border-color .25s ease;
 }
 
@@ -4026,8 +4026,8 @@ button.archive-filter-chip {
 }
 
 .preload-card.is-developed {
-  opacity: .72;
-  filter: grayscale(.25) blur(0) brightness(.9);
+  opacity: .86;
+  filter: grayscale(.12) blur(0) brightness(1);
 }
 
 .preload-card.is-near-pointer {
@@ -4075,7 +4075,7 @@ button.archive-filter-chip {
   margin: auto;
   text-align: center;
   pointer-events: none;
-  background: radial-gradient(circle, #090706f3 0 24%, #090706c7 41%, transparent 69%);
+  background: radial-gradient(circle, #090706d9 0 19%, #0907068f 36%, transparent 61%);
 }
 
 .preload-phase,
@@ -4139,7 +4139,14 @@ button.archive-filter-chip {
   letter-spacing: .12em;
 }
 
-.preload-retry {
+.preload-actions {
+  display: flex;
+  justify-content: center;
+  gap: .7rem;
+}
+
+.preload-retry,
+.preload-skip {
   margin-top: 1.2rem;
   padding: .7rem 1.1rem;
   border: 1px solid #b69468;
@@ -4149,6 +4156,11 @@ button.archive-filter-chip {
   letter-spacing: .15em;
   pointer-events: auto;
   cursor: pointer;
+}
+
+.preload-skip {
+  border-color: #6e6254;
+  color: #b8aa97;
 }
 
 .preload-hint {
@@ -4167,7 +4179,7 @@ button.archive-filter-chip {
 }
 
 @keyframes preload-film-travel {
-  to { transform: translate(calc(var(--preload-parallax-x) - 48rem), calc(-50% + var(--preload-parallax-y))) rotate(-7deg); }
+  to { transform: translate(calc(var(--preload-parallax-x) - 12rem), calc(-50% + var(--preload-parallax-y))) rotate(-4deg); }
 }
 
 @keyframes preload-breathe {

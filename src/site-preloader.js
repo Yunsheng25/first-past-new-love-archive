@@ -9,6 +9,37 @@ function assetError(path, error) {
   return wrapped;
 }
 
+export function selectCriticalAssets(assets = [], routeName = 'intro') {
+  const target = routeName === 'film'
+    ? 'assets/video/full-film.mp4'
+    : routeName === 'intro'
+      ? 'assets/video/intro-background.mp4'
+      : '';
+  return target ? assets.filter((asset) => asset.path === target) : [];
+}
+
+export async function preloadInBackground({
+  assets = [],
+  fetchImpl = globalThis.fetch,
+  signal,
+} = {}) {
+  try {
+    await preloadAssets({
+      assets,
+      fetchImpl,
+      signal,
+      concurrency: 2,
+      retries: 0,
+    });
+    return Object.freeze({ status: 'complete', failedPath: '' });
+  } catch (error) {
+    return Object.freeze({
+      status: signal?.aborted ? 'aborted' : 'partial',
+      failedPath: error?.assetPath ?? '',
+    });
+  }
+}
+
 export async function preloadAssets({
   assets = [],
   fetchImpl = globalThis.fetch,

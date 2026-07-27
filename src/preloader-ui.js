@@ -52,18 +52,25 @@ export function buildPreloaderMarkup(assets = []) {
       <div class="preload-track"><i data-preload-track></i><b aria-hidden="true"></b></div>
       <p class="preload-status" data-preload-status>正在准备全部项目素材</p>
       <p class="preload-meta"><span data-preload-bytes>0 MB / 0 MB</span><span data-preload-files>0 / 0</span></p>
-      <button class="preload-retry" type="button" data-preload-retry hidden>重新加载缺失素材</button>
+      <div class="preload-actions">
+        <button class="preload-retry" type="button" data-preload-retry hidden>重新加载</button>
+        <button class="preload-skip" type="button" data-preload-skip hidden>直接进入</button>
+      </div>
     </div>
     <p class="preload-hint" aria-hidden="true">移动鼠标 · 让影像在暗房中显现</p>
   `;
 }
 
-export function mountPreloaderUI(documentRef, { assets = [], onRetry = () => {} } = {}) {
+export function mountPreloaderUI(
+  documentRef,
+  { assets = [], onRetry = () => {}, onSkip = () => {} } = {},
+) {
   const root = documentRef.querySelector('#site-preloader');
   if (!root) throw new Error('Missing #site-preloader');
   root.innerHTML = buildPreloaderMarkup(assets);
   const cards = [...root.querySelectorAll('[data-preload-card]')];
   const retry = root.querySelector('[data-preload-retry]');
+  const skip = root.querySelector('[data-preload-skip]');
   let destroyed = false;
 
   function pointerMove(event) {
@@ -100,11 +107,13 @@ export function mountPreloaderUI(documentRef, { assets = [], onRetry = () => {} 
     root.querySelector('[data-preload-status]').textContent =
       `素材加载中断：${error?.assetPath?.split('/').at(-1) ?? '网络连接异常'}`;
     retry.hidden = false;
+    skip.hidden = false;
   }
 
   function retryClick() {
     root.classList.remove('has-failed');
     retry.hidden = true;
+    skip.hidden = true;
     root.querySelector('[data-preload-status]').textContent = '正在重新连接项目档案';
     onRetry();
   }
@@ -124,6 +133,7 @@ export function mountPreloaderUI(documentRef, { assets = [], onRetry = () => {} 
   }
 
   retry.addEventListener('click', retryClick);
+  skip.addEventListener('click', onSkip);
   root.addEventListener('pointermove', pointerMove);
   return {
     update,
@@ -132,6 +142,7 @@ export function mountPreloaderUI(documentRef, { assets = [], onRetry = () => {} 
     destroy() {
       destroyed = true;
       retry.removeEventListener('click', retryClick);
+      skip.removeEventListener('click', onSkip);
       root.removeEventListener('pointermove', pointerMove);
     },
   };

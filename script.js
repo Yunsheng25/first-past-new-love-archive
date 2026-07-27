@@ -17,7 +17,11 @@ import { createBgmController } from './src/bgm-ui.js';
 import { mountCharacterMotion } from './src/text-motion.js';
 import { mountMindmapAmbient } from './src/mindmap-ambient.js';
 import { PRELOAD_ASSETS } from './preload-manifest.js';
-import { preloadAssets } from './src/site-preloader.js';
+import {
+  preloadAssets,
+  preloadInBackground,
+  selectCriticalAssets,
+} from './src/site-preloader.js';
 import { mountPreloaderUI } from './src/preloader-ui.js';
 
 const app = document.querySelector('#app');
@@ -38,6 +42,7 @@ bgmController.bind();
 const preloaderUI = mountPreloaderUI(document, {
   assets: PRELOAD_ASSETS,
   onRetry: () => void bootSite(),
+  onSkip: () => void revealSite(),
 });
 
 function currentRoute() {
@@ -164,9 +169,10 @@ window.addEventListener('hashchange', () => {
 
 function runFullSitePreload() {
   if (preloadAttempt) return preloadAttempt;
+  const criticalAssets = selectCriticalAssets(PRELOAD_ASSETS, currentRoute().name);
   preloadAttempt = preloadAssets({
-    assets: PRELOAD_ASSETS,
-    concurrency: 4,
+    assets: criticalAssets,
+    concurrency: 2,
     retries: 2,
     onProgress: preloaderUI.update,
   }).finally(() => {
@@ -175,15 +181,25 @@ function runFullSitePreload() {
   return preloadAttempt;
 }
 
+async function revealSite() {
+  if (siteReady) return;
+  siteReady = true;
+  reviewTurnController.renderInitial(currentRoute());
+  await preloaderUI.dismiss();
+  preloaderUI.destroy();
+  const criticalPaths = new Set(
+    selectCriticalAssets(PRELOAD_ASSETS, currentRoute().name).map((asset) => asset.path),
+  );
+  void preloadInBackground({
+    assets: PRELOAD_ASSETS.filter((asset) => !criticalPaths.has(asset.path)),
+  });
+}
+
 async function bootSite() {
   if (siteReady) return;
   try {
     await runFullSitePreload();
-    if (siteReady) return;
-    siteReady = true;
-    reviewTurnController.renderInitial(currentRoute());
-    await preloaderUI.dismiss();
-    preloaderUI.destroy();
+    await revealSite();
   } catch (error) {
     preloaderUI.fail(error);
   }

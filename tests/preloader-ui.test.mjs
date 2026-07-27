@@ -18,6 +18,7 @@ test('preloader markup contains one film roll, real progress fields, retry and p
   assert.match(markup, /data-preload-bytes/);
   assert.match(markup, /data-preload-files/);
   assert.match(markup, /data-preload-retry/);
+  assert.match(markup, /data-preload-skip/);
   assert.match(markup, /preload-ripple/);
   assert.match(markup, /assets\/a\.png/);
 });
@@ -37,6 +38,10 @@ test('formal stylesheet defines developed darkroom cards, pointer ripple and red
   assert.match(css, /\.preload-ripple/);
   assert.match(css, /--preload-pointer-x/);
   assert.match(css, /prefers-reduced-motion:\s*reduce[\s\S]*preload-film/);
+  const film = css.match(/\.preload-film\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+  assert.match(film, /top:\s*50%/);
+  assert.match(film, /calc\(-50% \+ var\(--preload-parallax-y\)\)/);
+  assert.match(film, /rotate\(-4deg\)/);
 });
 
 test('HTML paints a loader skeleton before module scripts execute', async () => {
