@@ -24,10 +24,11 @@ const projectRoot = new URL('../', import.meta.url);
 const reviewData = JSON.parse(await readFile(new URL('data/review.json', projectRoot), 'utf8'));
 
 function cssRule(css, selector) {
-  const start = css.indexOf(`${selector} {`);
+  const normalized = css.replaceAll('\r\n', '\n');
+  const start = normalized.indexOf(`${selector} {`);
   assert.notEqual(start, -1, `missing CSS rule for ${selector}`);
   const bodyStart = start + selector.length + 2;
-  return css.slice(bodyStart, css.indexOf('}', bodyStart));
+  return normalized.slice(bodyStart, normalized.indexOf('}', bodyStart));
 }
 
 function expectedSignature(chapter, pageIndex) {

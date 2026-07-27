@@ -149,7 +149,7 @@ test("offline archive tunnel pins and vendors the Three.js r160 module with MIT 
   assert.equal(lockfile.packages["node_modules/three"].resolved, "https://registry.npmjs.org/three/-/three-0.160.1.tgz");
   assert.equal(lockfile.packages["node_modules/three"].integrity, "sha512-Bgl2wPJypDOZ1stAxwfWAcJ0WQf7QzlptsxkjYiURPz+n5k4RBDLsq+6f9Y75TYxn6aHLcWz+JNmwTOXWrQTBQ==");
   assert.equal(lockfile.packages["node_modules/three"].dev, true);
-  assert.match(gitignore, /(?:^|\n)node_modules\/(?:\n|$)/);
+  assert.match(gitignore, /(?:^|\r?\n)node_modules\/(?:\r?\n|$)/);
   assert.match(vendorScript, /import\.meta\.url/);
   assert.match(vendorScript, /"node_modules", "three", "build", "three\.module\.min\.js"/);
   assert.match(vendorScript, /"node_modules", "three", "package\.json"/);
@@ -162,8 +162,9 @@ test("offline archive tunnel pins and vendors the Three.js r160 module with MIT 
   assert.equal(three.REVISION, "160");
   assert.match(vendor, /export\s*\{/);
   assert.ok(Object.keys(three).length > 0, "the vendored build must expose ESM exports");
-  assert.equal(Buffer.byteLength(vendor), 670_681);
-  assert.equal(crypto.createHash("sha256").update(vendor).digest("hex"), "3e690ac7d180b0aadf0891bea39eec643e29e2d3e75c99b18689518665f69ba6");
+  const normalizedVendor = vendor.replaceAll("\r\n", "\n");
+  assert.equal(Buffer.byteLength(normalizedVendor), 670_681);
+  assert.equal(crypto.createHash("sha256").update(normalizedVendor).digest("hex"), "3e690ac7d180b0aadf0891bea39eec643e29e2d3e75c99b18689518665f69ba6");
   assert.match(notices, /Three\.js[\s\S]*0\.160\.1/);
   assert.match(notices, /The MIT License[\s\S]*Copyright © 2010-2023 three\.js authors[\s\S]*Permission is hereby granted, free of charge/);
   assert.match(notices, /FranzLy\/TimeChannel/);
