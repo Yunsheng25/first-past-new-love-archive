@@ -11,6 +11,22 @@ const WORLD_WIDTH = 42000;
 const WORLD_HEIGHT = 5000;
 const ROOT_BOX = Object.freeze({ x: 350, y: 1580, width: 220, height: 220 });
 
+export function symmetricChildBoxes(parentBox, children = []) {
+  const step = 300;
+  const center = parentBox.y + parentBox.height / 2;
+  const horizontalGap = parentBox.width === ROOT_BOX.width ? 190 : 144;
+  return children.map((child, index) => {
+    const offset = (index - (children.length - 1) / 2) * step;
+    return {
+      id: child.id,
+      x: parentBox.x + parentBox.width + horizontalGap,
+      y: center + offset - 93,
+      width: 286,
+      height: 186,
+    };
+  });
+}
+
 function escapeHtml(value = '') {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -193,9 +209,9 @@ export function mountArchiveMindmap(root, {
         createEnd(record);
         return;
       }
+      const childBoxes = symmetricChildBoxes(box, children);
       children.forEach((child, index) => {
-        const spread = (index - (children.length - 1) / 2) * 260;
-        const childBox = { x: box.x + 430, y: box.y + spread, width: 286, height: 186 };
+        const { id: _id, ...childBox } = childBoxes[index];
         createNode(child, childBox);
         addEdge(record.id, child.id, edgeKind(graph, record.id, child.id) !== 'main');
       });
@@ -212,8 +228,9 @@ export function mountArchiveMindmap(root, {
   const start = () => {
     if (visible.size) return;
     const categories = getExpandableChildren(graph, 'root');
+    const categoryBoxes = symmetricChildBoxes(ROOT_BOX, categories);
     categories.forEach((category, index) => {
-      const box = { x: 760, y: 1110 + index * 320, width: 286, height: 186 };
+      const { id: _id, ...box } = categoryBoxes[index];
       createNode(category, box);
       addEdge('root', category.id, true);
     });

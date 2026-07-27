@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMindmapShell } from '../src/archive-mindmap.js';
+import { buildMindmapShell, symmetricChildBoxes } from '../src/archive-mindmap.js';
 
 test('mindmap shell exposes every required control', () => {
   const html = buildMindmapShell();
@@ -14,4 +14,16 @@ test('mindmap shell exposes every required control', () => {
   for (const label of ['视觉方向探索', '人物与场景', '错误案例与修正', '首尾帧与动态']) {
     assert.doesNotMatch(html, new RegExp(label));
   }
+});
+
+test('two process branches are centered equally above and below their parent', () => {
+  const parent = { x: 350, y: 1580, width: 220, height: 220 };
+  const boxes = symmetricChildBoxes(parent, [{ id: 'main' }, { id: 'error' }]);
+  const parentCenter = parent.y + parent.height / 2;
+  assert.equal(boxes.length, 2);
+  assert.equal(boxes[0].x, boxes[1].x);
+  assert.equal(
+    parentCenter - (boxes[0].y + boxes[0].height / 2),
+    (boxes[1].y + boxes[1].height / 2) - parentCenter,
+  );
 });
