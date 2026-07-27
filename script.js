@@ -16,6 +16,9 @@ import { createAudioManager } from './src/audio-manager.js';
 import { createBgmController } from './src/bgm-ui.js';
 import { mountCharacterMotion } from './src/text-motion.js';
 import { mountMindmapAmbient } from './src/mindmap-ambient.js';
+import { PRELOAD_ASSETS } from './preload-manifest.js';
+import { preloadAssets } from './src/site-preloader.js';
+import { mountPreloaderUI } from './src/preloader-ui.js';
 
 const app = document.querySelector('#app');
 const bgmToggle = document.querySelector('[data-bgm-toggle]');
@@ -28,7 +31,14 @@ const audioManager = createAudioManager();
 const bgmController = createBgmController({ document, button: bgmToggle, manager: audioManager });
 let ignoreNextFilmHashChange = false;
 let currentViewCleanup = () => {};
+let siteReady = false;
+let preloadAttempt = null;
 bgmController.bind();
+
+const preloaderUI = mountPreloaderUI(document, {
+  assets: PRELOAD_ASSETS,
+  onRetry: () => void bootSite(),
+});
 
 function currentRoute() {
   if (window.location.hash === '#about') return { name: 'about' };
@@ -130,6 +140,7 @@ const reviewTurnController = createReviewTurnController({
 });
 
 document.addEventListener('click', (event) => {
+  if (!siteReady) return;
   reviewTurnController.recordIntent(event);
   const playLink = event.target.closest('[data-play-film]');
   if (!playLink) return;
@@ -142,6 +153,7 @@ document.addEventListener('click', (event) => {
 });
 
 window.addEventListener('hashchange', () => {
+  if (!siteReady) return;
   if (ignoreNextFilmHashChange && window.location.hash === '#film') {
     ignoreNextFilmHashChange = false;
     return;
@@ -150,4 +162,31 @@ window.addEventListener('hashchange', () => {
   reviewTurnController.handleHashChange();
 });
 
-reviewTurnController.renderInitial(currentRoute());
+function runFullSitePreload() {
+  if (preloadAttempt) return preloadAttempt;
+  preloadAttempt = preloadAssets({
+    assets: PRELOAD_ASSETS,
+    concurrency: 4,
+    retries: 2,
+    onProgress: preloaderUI.update,
+  }).finally(() => {
+    preloadAttempt = null;
+  });
+  return preloadAttempt;
+}
+
+async function bootSite() {
+  if (siteReady) return;
+  try {
+    await runFullSitePreload();
+    if (siteReady) return;
+    siteReady = true;
+    reviewTurnController.renderInitial(currentRoute());
+    await preloaderUI.dismiss();
+    preloaderUI.destroy();
+  } catch (error) {
+    preloaderUI.fail(error);
+  }
+}
+
+void bootSite();

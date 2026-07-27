@@ -3982,7 +3982,7 @@ button.archive-filter-chip {
   gap: 1rem;
   width: max-content;
   height: 19rem;
-  transform: translate(var(--preload-parallax-x), var(--preload-parallax-y)) rotate(-7deg);
+  transform: translate(var(--preload-parallax-x), calc(-50% + var(--preload-parallax-y))) rotate(-7deg);
   animation: preload-film-travel 28s linear infinite;
   will-change: transform;
 }
@@ -4167,7 +4167,7 @@ button.archive-filter-chip {
 }
 
 @keyframes preload-film-travel {
-  to { transform: translate(calc(var(--preload-parallax-x) - 48rem), var(--preload-parallax-y)) rotate(-7deg); }
+  to { transform: translate(calc(var(--preload-parallax-x) - 48rem), calc(-50% + var(--preload-parallax-y))) rotate(-7deg); }
 }
 
 @keyframes preload-breathe {
