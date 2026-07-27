@@ -1,4 +1,6 @@
 import { buildReviewRail, reviewRailMarkup } from './review-rail.js';
+import { resolveReviewMap } from './review-live-map-model.js';
+import { mountReviewLiveMaps } from './review-live-map.js';
 
 export const REVIEW_PROGRESS_KEY = 'review:progress';
 
@@ -206,6 +208,15 @@ function blockMarkup(block, blockIndex, chapterSlug, page, { sectionTitle = fals
   if (block.type === 'image') {
     const source = escapeHtml(block.src);
     const alt = escapeHtml(block.ref || block.rawRef || '复盘案例图片');
+    const liveMap = resolveReviewMap(block.ref || block.rawRef);
+    if (liveMap) {
+      return `<figure class="review-block review-media review-image review-map-summary" ${common} data-source="${source}" data-occurrence="${occurrence}">
+        <button type="button" class="review-map-cover" data-review-live-map="${escapeHtml(liveMap.id)}" aria-label="进入${escapeHtml(liveMap.title)}交互拆解">
+          <img src="${source}" alt="${alt}" loading="lazy" decoding="async" data-lightbox-image data-occurrence="${occurrence}">
+          <span><b>进入交互拆解</b><small>拖动 · 缩放 · 逐层展开</small></span>
+        </button>
+      </figure>`;
+    }
     return `<figure class="review-block review-media review-image" ${common} data-source="${source}" data-occurrence="${occurrence}">
       <button type="button" class="review-image-button" data-lightbox-trigger data-lightbox-src="${source}" data-lightbox-alt="${alt}" aria-label="放大查看：${alt}">
         <img src="${source}" alt="${alt}" loading="lazy" decoding="async" data-lightbox-image data-occurrence="${occurrence}">
@@ -395,6 +406,7 @@ export function bindReviewInteractions(root, {
   let active = true;
   const drawerTrap = createFocusTrap(drawer, { documentRef });
   const lightboxTrap = createFocusTrap(lightbox, { documentRef });
+  const cleanupLiveMaps = mountReviewLiveMaps(root, { documentRef, windowRef });
 
   const setDrawer = (open, { moveFocus = false, restoreFocus = false } = {}) => {
     if (!drawer || !drawerToggle) return;
@@ -473,6 +485,7 @@ export function bindReviewInteractions(root, {
     root.removeEventListener?.('click', onClick);
     documentRef.removeEventListener?.('keydown', onKeydown);
     lightboxTrap.deactivate({ restoreFocus: false });
+    cleanupLiveMaps();
     setDrawer(false);
     root.querySelectorAll?.('.review-media-video').forEach((video) => video.pause());
   };
