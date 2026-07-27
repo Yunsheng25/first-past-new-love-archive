@@ -1,4 +1,5 @@
 import { buildReviewRail, reviewRailMarkup } from './review-rail.js';
+import { mountReviewRail } from './review-rail-interaction.js';
 import { resolveReviewMap } from './review-live-map-model.js';
 import { mountReviewLiveMaps } from './review-live-map.js';
 
@@ -407,6 +408,7 @@ export function bindReviewInteractions(root, {
   const drawerTrap = createFocusTrap(drawer, { documentRef });
   const lightboxTrap = createFocusTrap(lightbox, { documentRef });
   const cleanupLiveMaps = mountReviewLiveMaps(root, { documentRef, windowRef });
+  const cleanupRail = mountReviewRail(root);
 
   const setDrawer = (open, { moveFocus = false, restoreFocus = false } = {}) => {
     if (!drawer || !drawerToggle) return;
@@ -486,6 +488,7 @@ export function bindReviewInteractions(root, {
     documentRef.removeEventListener?.('keydown', onKeydown);
     lightboxTrap.deactivate({ restoreFocus: false });
     cleanupLiveMaps();
+    cleanupRail();
     setDrawer(false);
     root.querySelectorAll?.('.review-media-video').forEach((video) => video.pause());
   };

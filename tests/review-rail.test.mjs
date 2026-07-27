@@ -13,8 +13,11 @@ test('rail emits chapter, case and page ticks in source order with one current i
   const items = buildReviewRail(data, { chapter: data.chapters[0], pageIndex: 1 });
   assert.deepEqual(items.map((item) => item.kind), ['chapter', 'case', 'chapter', 'page']);
   assert.deepEqual(items.map((item) => item.order), [0, 1, 2, 3]);
+  assert.deepEqual(items.map((item) => item.sequence), [1, 2, 3, 4]);
   assert.equal(items.filter((item) => item.current).length, 1);
   assert.equal(items[1].href, '#review/one/2');
+  assert.equal(items[1].title, '案例');
+  assert.equal(items[1].meta, '第 02 项 · 第 2 页');
 });
 
 test('rail markup exposes quiet ticks, hover labels and current page semantics', () => {
@@ -22,5 +25,8 @@ test('rail markup exposes quiet ticks, hover labels and current page semantics',
   assert.match(html, /data-review-rail/);
   assert.match(html, /is-case/);
   assert.match(html, /is-current[^"]*"[^>]*aria-current="page"/);
-  assert.match(html, />第二章<\/span>/);
+  assert.match(html, />第二章<\/b>/);
+  assert.match(html, /data-review-rail-tick/);
+  assert.match(html, /review-rail-tip/);
+  assert.match(html, /第 03 项 · 章节起点/);
 });
