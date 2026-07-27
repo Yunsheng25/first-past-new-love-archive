@@ -3,44 +3,47 @@ import assert from 'node:assert/strict';
 import {
   buildCategorizedMindmapRecords,
   buildMindmapGraph,
+  buildProcessGraph,
+  edgeKind,
   getExpandableChildren,
-  MINDMAP_CATEGORIES,
 } from '../src/archive-mindmap-model.js';
 
-test('keeps real outgoing branches and falls back to sequential order', () => {
-  const records = [
-    { id: 'a', index: 1, connections: [{ direction: '出线', toNode: 'b' }, { direction: '出线', toNode: 'c' }] },
-    { id: 'b', index: 2, connections: [] },
-    { id: 'c', index: 3, connections: [] },
-  ];
-  const graph = buildMindmapGraph(records);
-  assert.deepEqual(getExpandableChildren(graph, 'a').map((item) => item.id), ['b', 'c']);
-  assert.deepEqual(getExpandableChildren(graph, 'b').map((item) => item.id), ['c']);
+test('leading error run branches from root and rejoins the first valid case', () => {
+  const graph = buildProcessGraph([
+    { id: 'e1', index: 1, status: 'error' },
+    { id: 'e2', index: 2, status: 'error' },
+    { id: 'ok', index: 3, status: 'normal' },
+  ]);
+  assert.deepEqual(graph.edges, [
+    { from: 'root', to: 'ok', kind: 'main' },
+    { from: 'root', to: 'e1', kind: 'error' },
+    { from: 'e1', to: 'e2', kind: 'error' },
+    { from: 'e2', to: 'ok', kind: 'return' },
+  ]);
 });
 
-test('restores the original four first-level categories in their approved order', () => {
-  assert.deepEqual(
-    MINDMAP_CATEGORIES.map((item) => item.title),
-    ['视觉方向探索', '人物与场景', '错误案例与修正', '首尾帧与动态'],
-  );
+test('later errors leave the mainline and explicitly return to the next valid case', () => {
+  const graph = buildProcessGraph([
+    { id: 'a', index: 1, status: 'normal' },
+    { id: 'e', index: 2, status: 'error' },
+    { id: 'b', index: 3, status: 'normal' },
+  ]);
+  assert.deepEqual(graph.mainline.map((item) => item.id), ['a', 'b']);
+  assert.deepEqual(graph.edges.slice(1), [
+    { from: 'a', to: 'b', kind: 'main' },
+    { from: 'a', to: 'e', kind: 'error' },
+    { from: 'e', to: 'b', kind: 'return' },
+  ]);
 });
 
-test('classifies every case once and expands categories before their ordered cases', () => {
-  const cases = [
-    { id: 'image', index: 1, type: '生图', status: 'normal' },
-    { id: 'person', index: 2, type: '图生视频', status: 'normal' },
-    { id: 'error', index: 3, type: '首尾帧', status: 'error' },
-    { id: 'frames', index: 4, type: '首尾帧', status: 'normal' },
-  ];
-  const records = buildCategorizedMindmapRecords(cases);
+test('public adapter expands process children without any category nodes', () => {
+  const records = buildCategorizedMindmapRecords([
+    { id: 'e', index: 1, status: 'error' },
+    { id: 'a', index: 2, status: 'normal' },
+    { id: 'b', index: 3, status: 'normal' },
+  ]);
   const graph = buildMindmapGraph(records);
-  assert.deepEqual(
-    getExpandableChildren(graph, 'root').map((item) => item.title),
-    ['视觉方向探索', '人物与场景', '错误案例与修正', '首尾帧与动态'],
-  );
-  assert.deepEqual(getExpandableChildren(graph, 'category-visual').map((item) => item.id), ['image']);
-  assert.deepEqual(getExpandableChildren(graph, 'category-people').map((item) => item.id), ['person']);
-  assert.deepEqual(getExpandableChildren(graph, 'category-errors').map((item) => item.id), ['error']);
-  assert.deepEqual(getExpandableChildren(graph, 'category-motion').map((item) => item.id), ['frames']);
-  assert.equal(records.filter((item) => !item.isCategory).length, cases.length);
+  assert.deepEqual(getExpandableChildren(graph, 'root').map((item) => item.id), ['a', 'e']);
+  assert.equal(records.some((item) => item.isCategory), false);
+  assert.equal(edgeKind(graph, 'e', 'a'), 'return');
 });

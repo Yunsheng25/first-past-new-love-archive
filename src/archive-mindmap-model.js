@@ -1,55 +1,63 @@
-export const MINDMAP_CATEGORIES = Object.freeze([
-  Object.freeze({ id: 'category-visual', title: '视觉方向探索', types: ['生图', '剪辑参考'] }),
-  Object.freeze({ id: 'category-people', title: '人物与场景', types: ['图生视频'] }),
-  Object.freeze({ id: 'category-errors', title: '错误案例与修正', error: true }),
-  Object.freeze({ id: 'category-motion', title: '首尾帧与动态', types: ['首尾帧', '转场'] }),
-]);
+export const MINDMAP_CATEGORIES = Object.freeze([]);
 
-function categoryFor(record) {
-  if (record.status === 'error') return MINDMAP_CATEGORIES[2];
-  return MINDMAP_CATEGORIES.find((category) => category.types?.includes(record.type))
-    ?? MINDMAP_CATEGORIES[1];
+export function buildProcessGraph(records = []) {
+  const ordered = [...records].sort((a, b) => a.index - b.index);
+  const mainline = ordered.filter((record) => record.status !== 'error');
+  const edges = [];
+  let cursor = 0;
+  let anchor = 'root';
+
+  while (cursor < ordered.length) {
+    const errors = [];
+    while (ordered[cursor]?.status === 'error') errors.push(ordered[cursor++]);
+    const next = ordered[cursor];
+
+    if (next) edges.push({ from: anchor, to: next.id, kind: 'main' });
+    if (errors.length) {
+      edges.push({ from: anchor, to: errors[0].id, kind: 'error' });
+      errors.slice(1).forEach((item, index) => {
+        edges.push({ from: errors[index].id, to: item.id, kind: 'error' });
+      });
+      if (next) edges.push({ from: errors.at(-1).id, to: next.id, kind: 'return' });
+    }
+
+    if (!next) break;
+    anchor = next.id;
+    cursor += 1;
+  }
+
+  return { nodes: ordered, mainline, edges };
 }
 
+// Kept as the public adapter used by archive-mindmap.js. It now returns a
+// process graph rather than invented category nodes.
 export function buildCategorizedMindmapRecords(records = []) {
-  const orderedCases = [...records].sort((a, b) => a.index - b.index);
-  const groups = new Map(MINDMAP_CATEGORIES.map((category) => [category.id, []]));
-  orderedCases.forEach((record) => groups.get(categoryFor(record).id).push(record));
-
-  const categories = MINDMAP_CATEGORIES.map((category, index) => {
-    const children = groups.get(category.id);
-    return {
-      ...category,
-      index: -(MINDMAP_CATEGORIES.length - index),
-      isCategory: true,
-      connections: children[0] ? [{ direction: '出线', toNode: children[0].id }] : [],
-      caseCount: children.length,
-    };
-  });
-  const cases = MINDMAP_CATEGORIES.flatMap((category) => {
-    const children = groups.get(category.id);
-    return children.map((record, index) => ({
-      ...record,
-      connections: children[index + 1]
-        ? [{ direction: '出线', toNode: children[index + 1].id }]
-        : [],
-    }));
+  const process = buildProcessGraph(records);
+  const connections = new Map([['root', []]]);
+  process.nodes.forEach((record) => connections.set(record.id, []));
+  process.edges.forEach((edge) => {
+    connections.get(edge.from)?.push({
+      direction: '出线',
+      toNode: edge.to,
+      kind: edge.kind,
+    });
   });
   return [
     {
       id: 'root',
-      index: -5,
-      isCategory: true,
+      index: 0,
       isRoot: true,
-      connections: categories.map((category) => ({ direction: '出线', toNode: category.id })),
+      connections: connections.get('root'),
     },
-    ...categories,
-    ...cases,
+    ...process.nodes.map((record) => ({
+      ...record,
+      connections: connections.get(record.id),
+    })),
   ];
 }
 
 export function buildMindmapGraph(records = []) {
-  const ordered = [...records].sort((a, b) => a.index - b.index);
+  const ordered = [...records];
   return {
     ordered,
     byId: new Map(ordered.map((record) => [record.id, record])),
@@ -64,6 +72,11 @@ export function getExpandableChildren(graph, id) {
     .map((connection) => graph.byId.get(connection.toNode))
     .filter(Boolean);
   if (linked.length) return [...new Map(linked.map((item) => [item.id, item])).values()];
-  const sequential = graph.ordered[record.index];
-  return sequential ? [sequential] : [];
+  const index = graph.ordered.findIndex((item) => item.id === id);
+  return index >= 0 && graph.ordered[index + 1] ? [graph.ordered[index + 1]] : [];
+}
+
+export function edgeKind(graph, fromId, toId) {
+  return graph.byId.get(fromId)?.connections
+    ?.find((connection) => connection.toNode === toId)?.kind ?? 'main';
 }

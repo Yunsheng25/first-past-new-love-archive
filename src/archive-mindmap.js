@@ -2,7 +2,7 @@ import {
   buildCategorizedMindmapRecords,
   buildMindmapGraph,
   getExpandableChildren,
-  MINDMAP_CATEGORIES,
+  edgeKind,
 } from './archive-mindmap-model.js';
 import { fitBounds, restoreReadingView } from './mindmap-camera.js';
 import { mountMindmapAmbient } from './mindmap-ambient.js';
@@ -26,10 +26,10 @@ function summary(value, length = 68) {
 }
 
 export function buildMindmapShell(total = 72) {
-  return `<section class="archive-mindmap-view archive-index-view app-view" aria-label="提示词和图片思维导图">
+  return `<section class="archive-mindmap-view archive-index-view app-view" aria-label="提示词和图片制作路径">
     <header class="archive-mindmap-header">
       <a class="archive-wordmark" href="#after">初恋 · 旧爱 · 新欢</a>
-      <div class="archive-mindmap-title"><b>提示词和图片</b><span>CLICK TO GROW · ${total} CASES</span></div>
+      <div class="archive-mindmap-title"><b>提示词和图片</b><span>按白板顺序展开 · ${total} CASES</span></div>
       <div class="archive-mindmap-actions">
         <button type="button" data-archive-view="tunnel">隧道漫游</button>
         <button type="button" data-mindmap-action="overview">当前总览</button>
@@ -41,12 +41,11 @@ export function buildMindmapShell(total = 72) {
       <div class="archive-mindmap-ambient" data-mindmap-ambient aria-hidden="true"></div>
       <div class="archive-mindmap-world" data-mindmap-world>
         <svg class="archive-mindmap-edges" data-mindmap-edges viewBox="0 0 ${WORLD_WIDTH} ${WORLD_HEIGHT}" aria-hidden="true"></svg>
-        <button type="button" class="mindmap-root" data-mindmap-root><b>制作从这里开始</b><small>点击展开第一步</small><i></i></button>
-        <span class="sr-only">${MINDMAP_CATEGORIES.map((item) => item.title).join('、')}</span>
+        <button type="button" class="mindmap-root" data-mindmap-root><b>制作从这里开始</b><small>点击展开真实路径</small><i></i></button>
         <div data-mindmap-nodes></div>
         <div data-mindmap-ends></div>
       </div>
-      <p class="archive-mindmap-hint">点击卡片继续延伸 · 查看内容打开完整案例 · 拖动 / 滚轮缩放</p>
+      <p class="archive-mindmap-hint">按真实顺序点击延伸 · 错误支线会回到主线 · 拖动 / 滚轮缩放</p>
       <p class="archive-mindmap-count"><b data-mindmap-count>0 / ${total}</b><span>当前已展开节点</span></p>
     </div>
     <div data-archive-modal-host></div>
@@ -170,11 +169,7 @@ export function mountArchiveMindmap(root, {
     article.style.left = `${box.x}px`;
     article.style.top = `${box.y}px`;
     article.innerHTML = record.isCategory
-      ? `<div class="mindmap-category-copy">
-          <span>${String(MINDMAP_CATEGORIES.findIndex((item) => item.id === record.id) + 1).padStart(2, '0')}</span>
-          <strong>${escapeHtml(record.title)}</strong>
-          <small>${record.caseCount} 个案例 · 点击继续延伸</small>
-        </div><i class="mindmap-node-pulse"></i>`
+      ? ''
       : `${firstImage ? `<img src="${escapeHtml(firstImage.src)}" alt="" loading="lazy" decoding="async">` : ''}
       <div class="mindmap-node-copy">
         <p><span>${escapeHtml(record.stage)}</span><b>${String(record.index).padStart(2, '0')}</b></p>
@@ -202,7 +197,7 @@ export function mountArchiveMindmap(root, {
         const spread = (index - (children.length - 1) / 2) * 260;
         const childBox = { x: box.x + 430, y: box.y + spread, width: 286, height: 186 };
         createNode(child, childBox);
-        addEdge(record.id, child.id, children.length > 1);
+        addEdge(record.id, child.id, edgeKind(graph, record.id, child.id) !== 'main');
       });
       focus(children[0]);
     });
