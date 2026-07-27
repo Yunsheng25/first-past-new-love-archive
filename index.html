@@ -8,7 +8,12 @@
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body>
+  <body class="site-is-preloading">
+    <section id="site-preloader" class="site-preloader" role="status" aria-live="polite" aria-label="正在加载完整项目档案">
+      <div class="preload-skeleton-mark" aria-hidden="true"></div>
+      <p class="preload-skeleton-title">初恋 · 旧爱 · 新欢</p>
+      <p class="preload-skeleton-status">正在打开影像档案…</p>
+    </section>
     <main id="app" tabindex="-1" aria-live="polite"></main>
     <button class="bgm-toggle" type="button" data-bgm-toggle aria-pressed="true" aria-label="关闭背景音乐">
       <span aria-hidden="true">♪</span><span>音乐</span>
