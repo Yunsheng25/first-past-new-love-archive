@@ -16,7 +16,7 @@ export function createReviewTurnController({
   reducedMotion = () => false,
   setTimeoutFn = setTimeout,
   clearTimeoutFn = clearTimeout,
-  timeoutMs = 850,
+  timeoutMs = 1550,
 } = {}) {
   let currentRenderedRoute = null;
   let intent = null;

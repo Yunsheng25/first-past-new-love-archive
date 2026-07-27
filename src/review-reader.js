@@ -1,3 +1,5 @@
+import { buildReviewRail, reviewRailMarkup } from './review-rail.js';
+
 export const REVIEW_PROGRESS_KEY = 'review:progress';
 
 function escapeHtml(value = '') {
@@ -260,6 +262,7 @@ export function buildReviewPage(data, target) {
         <span>REVIEW NOTES · ${String(chapterIndex + 1).padStart(2, '0')}</span>
       </header>
       <div class="review-reader-layout">
+        ${reviewRailMarkup(buildReviewRail(data, { ...target, chapter, pageIndex }))}
         <aside class="review-chapter-sidebar" aria-label="复盘章节">
           <div class="review-chapter-drawer-title"><span>章节目录</span></div>
           <nav>${chapterDirectory(data, chapter.slug)}</nav>

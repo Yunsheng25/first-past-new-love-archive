@@ -736,7 +736,7 @@ test('reader CSS keeps one route page inside a 100dvh shell with an internal scr
   assert.match(css, /@media\s*\(max-height:\s*650px\)[\s\S]*\.review-index-list/);
 });
 
-test('reader CSS uses the integrated warm-charcoal palette in scoped reading rules', async () => {
+test('reader CSS uses the approved ink-gray palette in scoped reading rules', async () => {
   const css = await readFile(new URL('style.css', projectRoot), 'utf8');
   const view = cssRule(css, '.review-reader-view');
   const paper = cssRule(css, '.review-paper');
@@ -745,9 +745,9 @@ test('reader CSS uses the integrated warm-charcoal palette in scoped reading rul
   const kicker = cssRule(css, '.review-paper-kicker');
 
   assert.match(view, /background:\s*#0d0c0b/);
-  assert.match(paper, /background:\s*#25211e/);
+  assert.match(paper, /background:\s*#151719/);
   assert.doesNotMatch(paper, /#(?:f[\da-f]{2}|fff(?:fff)?|e8e0d4)/i);
-  assert.match(copy, /color:\s*#c9beb2/);
+  assert.match(copy, /color:\s*#cdcdc9/);
   assert.match(title, /color:\s*#eee4d8/);
   assert.match(kicker, /color:\s*#aa8c77/);
 });
@@ -1009,11 +1009,11 @@ test('rapid review hash changes coalesce to the latest page after the active tur
   assert.deepEqual(harness.controller.currentRenderedRoute, reviewRoute(3));
 });
 
-test('review turn CSS uses restrained directional 620ms motion and disables it for reduced motion', async () => {
+test('review turn CSS uses physical directional sheet motion and disables it for reduced motion', async () => {
   const css = await readFile(new URL('style.css', projectRoot), 'utf8');
   assert.match(css, /\.review-paper\s*\{[\s\S]*view-transition-name:\s*review-paper/);
-  assert.match(css, /::view-transition-group\(review-paper\)[\s\S]*620ms[\s\S]*cubic-bezier\(\.52,\s*\.08,\s*\.28,\s*\.98\)[\s\S]*perspective:\s*1800px/);
-  assert.match(css, /review-turn-next-old[\s\S]*rotateY\(-82deg\)/);
-  assert.match(css, /review-turn-previous-old[\s\S]*rotateY\(82deg\)/);
+  assert.match(css, /::view-transition-group\(review-paper\)[\s\S]*1250ms[\s\S]*cubic-bezier\(\.32,\s*\.02,\s*\.18,\s*1\)[\s\S]*perspective:\s*2200px/);
+  assert.match(css, /review-turn-next-old[\s\S]*rotateY\(-180deg\)/);
+  assert.match(css, /review-turn-previous-old[\s\S]*rotateY\(180deg\)/);
   assert.match(css, /prefers-reduced-motion:\s*reduce[\s\S]*\.review-paper\s*\{\s*view-transition-name:\s*none/);
 });
