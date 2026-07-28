@@ -3502,20 +3502,16 @@ button.archive-filter-chip {
 
 .motion-character {
   display: inline-block;
+  transform:
+    translateY(var(--motion-lift, 0))
+    scale(var(--motion-scale, 1));
+  text-shadow:
+    0 .45rem 2rem
+    rgba(217, 158, 72, var(--motion-glow, 0));
   transition:
-    transform .42s cubic-bezier(.16, 1, .3, 1),
-    color .32s,
-    text-shadow .4s,
-    filter .4s;
-}
-
-.motion-character:hover {
-  position: relative;
-  z-index: 2;
-  transform: translateY(-.12em) scale(1.1);
-  color: #fffaf1;
-  text-shadow: 0 .12em .4em rgba(225, 186, 136, .55);
-  filter: brightness(1.12);
+    transform .2s cubic-bezier(.16, 1, .3, 1),
+    color .2s ease,
+    text-shadow .2s ease;
 }
 
 .mindmap-node.is-category {
@@ -3559,11 +3555,9 @@ button.archive-filter-chip {
   }
 
   .motion-character {
-    transition: color .2s;
-  }
-
-  .motion-character:hover {
     transform: none;
+    text-shadow: none;
+    transition: color .2s;
   }
 }
 
