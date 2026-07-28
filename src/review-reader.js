@@ -122,21 +122,12 @@ function chapterDirectory(data, activeSlug = '') {
   }).join('');
 }
 
-function chapterPreview(chapter, index) {
-  const firstImage = flattenReviewBlocks(chapter.pages.flat()).find((block) => block.type === 'image');
-  if (firstImage) {
-    return `<span class="review-index-preview"><img data-chapter-preview="${escapeHtml(chapter.slug)}" src="${escapeHtml(firstImage.src)}" alt="${escapeHtml(chapter.title)}章节预览" loading="lazy" decoding="async"></span>`;
-  }
-  return `<span class="review-index-preview review-index-placeholder" data-chapter-placeholder="${escapeHtml(chapter.slug)}" aria-label="${escapeHtml(chapter.title)}文字章节"><b>${String(index + 1).padStart(2, '0')}</b><i>TEXT CHAPTER</i></span>`;
-}
-
 export function buildReviewIndex(data, progress = null) {
   const continuation = validProgressTarget(data, progress);
   const totalPages = data.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0);
   const cards = data.chapters.map((chapter, index) => `
     <a class="review-index-card" href="${pageHref(chapter.slug, 1)}" data-review-chapter="${escapeHtml(chapter.slug)}">
       <span class="review-index-number">${String(index + 1).padStart(2, '0')}</span>
-      ${chapterPreview(chapter, index)}
       <span class="review-index-card-copy">
         <strong data-review-chapter-title>${escapeHtml(chapter.title)}</strong>
         <span>${escapeHtml(summaryFor(chapter))}</span>

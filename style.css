@@ -840,53 +840,13 @@ video:focus-visible {
 
 .review-index-card {
   display: grid;
-  grid-template-columns: 34px clamp(74px, 7vw, 108px) minmax(0, 1fr) auto;
+  grid-template-columns: clamp(58px, 6vw, 82px) minmax(0, 1fr) auto;
   gap: 18px;
   align-items: center;
   min-height: 115px;
   padding: 22px 8px;
   border-bottom: 1px solid rgba(238, 231, 220, 0.16);
   transition: background 180ms ease, padding 180ms ease;
-}
-
-.review-index-preview {
-  position: relative;
-  display: grid;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid rgba(238, 231, 220, 0.16);
-  background: #171615;
-}
-
-.review-index-preview img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: saturate(0.68) contrast(1.02);
-}
-
-.review-index-placeholder {
-  align-content: center;
-  gap: 6px;
-  background:
-    linear-gradient(135deg, rgba(157, 85, 76, 0.14), transparent 55%),
-    #151413;
-  color: rgba(238, 231, 220, 0.62);
-  text-align: center;
-}
-
-.review-index-placeholder b {
-  font: 400 clamp(17px, 1.8vw, 26px)/1 Georgia, serif;
-  letter-spacing: 0.12em;
-}
-
-.review-index-placeholder i {
-  color: rgba(238, 231, 220, 0.3);
-  font: 500 6px/1 Georgia, serif;
-  letter-spacing: 0.18em;
 }
 
 .review-index-card:hover {
@@ -896,9 +856,9 @@ video:focus-visible {
 }
 
 .review-index-number {
-  color: #9d554c;
-  font: 500 10px/1 Georgia, serif;
-  letter-spacing: 0.18em;
+  color: #a45f53;
+  font: 300 clamp(26px, 3vw, 42px)/1 Georgia, serif;
+  letter-spacing: .03em;
 }
 
 .review-index-card-copy {

@@ -296,25 +296,14 @@ test('review index estimates chapter reading time from that chapter text and hea
   expected.forEach((minutes) => assert.match(html, new RegExp(`约${minutes}分钟`)));
 });
 
-test('chapter previews use only their own first image and text placeholders otherwise', () => {
+test('review index uses one numbered directory rule without chapter previews', () => {
   const html = buildReviewIndex(reviewData, null);
-  const flatten = (blocks) => blocks.flatMap((block) => [block, ...flatten(block.children ?? [])]);
-  const ownFirstImages = new Map(reviewData.chapters.map((chapter) => [
-    chapter.slug,
-    flatten(chapter.pages.flat()).find((block) => block.type === 'image')?.src ?? null,
-  ]));
-  const previewImages = [...html.matchAll(/<img\b[^>]*data-chapter-preview="([^"]+)"[^>]*src="([^"]+)"/g)]
-    .map((match) => [match[1], match[2]]);
-  const placeholders = [...html.matchAll(/data-chapter-placeholder="([^"]+)"/g)].map((match) => match[1]);
-
-  assert.deepEqual(previewImages, reviewData.chapters
-    .filter((chapter) => ownFirstImages.get(chapter.slug))
-    .map((chapter) => [chapter.slug, ownFirstImages.get(chapter.slug)]));
-  assert.deepEqual(placeholders, reviewData.chapters
-    .filter((chapter) => !ownFirstImages.get(chapter.slug))
-    .map((chapter) => chapter.slug));
-  assert.equal(previewImages.every(([slug, src]) => src === ownFirstImages.get(slug)), true);
-  assert.doesNotMatch(html, /data-chapter-preview[^>]*data-occurrence|data-chapter-preview[^>]*data-block-type/);
+  const numbers = [...html.matchAll(/class="review-index-number">(\d{2})</g)]
+    .map((match) => match[1]);
+  assert.deepEqual(numbers, ['01', '02', '03', '04', '05']);
+  assert.doesNotMatch(html, /review-index-preview/);
+  assert.doesNotMatch(html, /data-chapter-preview|data-chapter-placeholder/);
+  assert.doesNotMatch(html, /<img\b[^>]*loading="lazy"/);
 });
 
 test('every rendered page has exactly the independent source block signature', () => {
@@ -730,7 +719,7 @@ test('reader CSS keeps one route page inside a 100dvh shell with an internal scr
   assert.match(css, /@media\s*\(max-width:\s*760px\)[\s\S]*\.review-chapter-drawer/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /\.review-return-after[\s\S]*position:\s*(?:fixed|sticky)/);
-  assert.match(css, /\.review-index-placeholder/);
+  assert.match(css, /\.review-index-number[\s\S]*font:\s*300\s+clamp/);
   assert.match(css, /\.review-index-main[\s\S]*overflow-y:\s*auto[\s\S]*overscroll-behavior:\s*contain/);
   assert.match(css, /\.review-index-list[\s\S]*min-height:\s*0[\s\S]*max-height:/);
   assert.match(css, /\.review-chapter-drawer[\s\S]*min-height:\s*0[\s\S]*overflow-y:\s*auto[\s\S]*overscroll-behavior:\s*contain/);
