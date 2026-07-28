@@ -79,20 +79,22 @@ test('mount can bind the circular cursor to any post-film view', () => {
   cleanup();
 });
 
-test('every post-film route mounts the shared cursor and removes the splash integration', async () => {
+test('every non-film route mounts the shared cursor and particle field', async () => {
   const source = await readFile(new URL('../script.js', import.meta.url), 'utf8');
   assert.match(source, /import \{ mountAfterCursor \} from '.\/src\/after-cursor\.js';/);
-  assert.match(source, /mountPostFilmCursor/);
+  assert.match(source, /import \{ mountGlobalParticles \} from '.\/src\/global-particles\.js';/);
+  assert.match(source, /function mountRouteInteractions/);
+  assert.match(source, /mountGlobalParticles\(app\)/);
   for (const route of ['after', 'review-index', 'review-page', 'archive-index', 'archive-detail']) {
     assert.match(source, new RegExp(`'${route}'`));
   }
   assert.doesNotMatch(source, /mountAfterSplash/);
 });
 
-test('the intro route mounts the same shared circular cursor while film playback keeps native controls', async () => {
+test('the intro route mounts shared interactions while film playback keeps native controls', async () => {
   const source = await readFile(new URL('../script.js', import.meta.url), 'utf8');
   const introBlock = source.match(/if \(route\.name === 'intro'\) \{([\s\S]*?)\n  \}/)?.[1] ?? '';
   const filmBlock = source.match(/if \(route\.name === 'film'\) \{([\s\S]*?)\n  \}/)?.[1] ?? '';
-  assert.match(introBlock, /mountPostFilmCursor\(\)/);
-  assert.doesNotMatch(filmBlock, /mountPostFilmCursor/);
+  assert.match(introBlock, /mountRouteInteractions\(textCleanup\)/);
+  assert.doesNotMatch(filmBlock, /mountRouteInteractions|mountGlobalParticles|mountAfterCursor/);
 });

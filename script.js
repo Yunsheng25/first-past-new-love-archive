@@ -16,6 +16,7 @@ import { createAudioManager } from './src/audio-manager.js';
 import { createBgmController } from './src/bgm-ui.js';
 import { mountCharacterMotion } from './src/text-motion.js';
 import { mountMindmapAmbient } from './src/mindmap-ambient.js';
+import { mountGlobalParticles } from './src/global-particles.js';
 import { PRELOAD_ASSETS } from './preload-manifest.js';
 import {
   preloadAssets,
@@ -50,11 +51,12 @@ function currentRoute() {
   return parseRoute(window.location.hash);
 }
 
-function mountPostFilmCursor(routeCleanup = () => {}) {
+function mountRouteInteractions(...routeCleanups) {
+  const particleCleanup = mountGlobalParticles(app);
   const cursorCleanup = mountAfterCursor(app, { cursor: sharedCursor });
+  const cleanups = [particleCleanup, cursorCleanup, ...routeCleanups];
   return () => {
-    cursorCleanup();
-    routeCleanup();
+    [...cleanups].reverse().forEach((cleanup) => cleanup?.());
   };
 }
 
@@ -87,26 +89,26 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
 
   if (route.name === 'intro') {
     app.innerHTML = buildIntroView();
-    mountCharacterMotion(app);
+    const textCleanup = mountCharacterMotion(app);
     document.title = '初恋 · 旧爱 · 新欢｜电影制作档案';
     bindIntroMedia(app, {
       reduceMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
     });
-    currentViewCleanup = mountPostFilmCursor();
+    currentViewCleanup = mountRouteInteractions(textCleanup);
     focusRenderedView(app);
     return;
   }
 
   if (route.name === 'after') {
     app.innerHTML = buildAfterView();
-    mountCharacterMotion(app);
+    const textCleanup = mountCharacterMotion(app);
     document.title = '影片已结束｜初恋 · 旧爱 · 新欢';
     applyStoredLastFrame(app);
     const ambientCleanup = mountMindmapAmbient(app.querySelector('.after-view'), {
       count: 72,
       reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
     });
-    currentViewCleanup = mountPostFilmCursor(ambientCleanup);
+    currentViewCleanup = mountRouteInteractions(textCleanup, ambientCleanup);
     focusRenderedView(app);
     return;
   }
@@ -115,7 +117,7 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
     document.title = route.name === 'review-index'
       ? '复盘手记｜初恋 · 旧爱 · 新欢'
       : '阅读复盘｜初恋 · 旧爱 · 新欢';
-    currentViewCleanup = mountPostFilmCursor(mountReviewRoute(app, route));
+    currentViewCleanup = mountRouteInteractions(mountReviewRoute(app, route));
     focusRenderedView(app);
     return;
   }
@@ -124,14 +126,15 @@ function renderRoute(route = currentRoute(), { playFilm = false } = {}) {
     document.title = route.name === 'archive-index'
       ? '提示词和图片｜初恋 · 旧爱 · 新欢'
       : '制作案例｜初恋 · 旧爱 · 新欢';
-    currentViewCleanup = mountPostFilmCursor(mountArchiveRoute(app, route));
+    currentViewCleanup = mountRouteInteractions(mountArchiveRoute(app, route));
     focusRenderedView(app);
     return;
   }
 
   app.innerHTML = buildPendingView(route.name);
-  mountCharacterMotion(app);
+  const textCleanup = mountCharacterMotion(app);
   document.title = '内容整理中｜初恋 · 旧爱 · 新欢';
+  currentViewCleanup = mountRouteInteractions(textCleanup);
   focusRenderedView(app);
 }
 

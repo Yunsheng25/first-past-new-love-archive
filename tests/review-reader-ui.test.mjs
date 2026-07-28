@@ -814,7 +814,7 @@ test('script routes both review destinations through cancellable review mounting
   assert.match(script, /mountReviewRoute/);
   assert.match(script, /route\.name === 'review-index'/);
   assert.match(script, /route\.name === 'review-page'/);
-  assert.match(script, /currentViewCleanup\s*=\s*mountPostFilmCursor\(mountReviewRoute/);
+  assert.match(script, /currentViewCleanup\s*=\s*mountRouteInteractions\(mountReviewRoute/);
   assert.match(script, /currentViewCleanup\(\)/);
   assert.match(script, /getRoute:\s*currentRoute/);
 });
