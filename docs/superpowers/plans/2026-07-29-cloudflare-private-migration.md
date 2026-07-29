@@ -4,7 +4,7 @@
 
 **Goal:** Publish the existing archive at `film.yunsheng.ccwu.cc` through a new Cloudflare Pages project, then disable GitHub Pages and make the source repository private without an outage.
 
-**Architecture:** Add a deterministic `dist/` builder that copies only runtime files. Cloudflare Pages connects to the repository’s `main` branch, runs that builder, and serves `dist/`; the custom subdomain is attached only after the temporary deployment passes acceptance. GitHub Pages and public repository visibility are removed only after the Cloudflare production URL is verified.
+**Architecture:** Add a deterministic `dist/` builder that copies only runtime files and excludes the 62.32 MiB full film, which exceeds Pages’ 25 MiB per-file limit. Serve the uncompressed film from a dedicated Cloudflare R2 bucket at `media-film.yunsheng.ccwu.cc`, while Cloudflare Pages serves `dist/` at `film.yunsheng.ccwu.cc`. GitHub Pages and public repository visibility are removed only after both Cloudflare services pass acceptance.
 
 **Tech Stack:** Static HTML/CSS/ES modules, Node.js 24, Node test runner, Cloudflare Pages, Cloudflare DNS, GitHub CLI/API
 
@@ -14,6 +14,9 @@
 
 - Create `scripts/build-cloudflare-site.mjs`: deterministic allow-list publisher for Cloudflare.
 - Create `tests/cloudflare-build.test.mjs`: proves required runtime files are copied and private project files are excluded.
+- Create `src/site-config.js`: selects local or R2 full-film URL from the current hostname.
+- Modify `src/views.js` and `script.js`: use the selected film URL and runtime preload URL.
+- Create `tests/site-config.test.mjs`: proves local previews stay local and hosted pages use R2.
 - Modify `package.json`: adds `build:cloudflare`.
 - Modify `.gitignore`: excludes generated `dist/`.
 - Create `wrangler.jsonc`: records the Pages project name and output directory for reproducible local/CLI builds.
@@ -36,9 +39,10 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { buildCloudflareSite } from '../scripts/build-cloudflare-site.mjs';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 test('Cloudflare artifact contains runtime files and excludes project internals', async () => {
   const temporary = await mkdtemp(path.join(tmpdir(), 'cloudflare-site-'));
@@ -55,7 +59,6 @@ test('Cloudflare artifact contains runtime files and excludes project internals'
     'data/review.json',
     'src/router.js',
     'vendor/three.module.min.js',
-    'assets/video/full-film.mp4',
   ]) {
     assert.equal((await stat(path.join(output, relative))).isFile(), true, relative);
   }
@@ -63,6 +66,11 @@ test('Cloudflare artifact contains runtime files and excludes project internals'
   for (const relative of ['tests', 'docs', '.git', 'package.json', 'scripts']) {
     await assert.rejects(stat(path.join(output, relative)), { code: 'ENOENT' });
   }
+
+  await assert.rejects(
+    stat(path.join(output, 'assets/video/full-film.mp4')),
+    { code: 'ENOENT' },
+  );
 
   assert.deepEqual(
     await readFile(path.join(output, 'index.html')),
@@ -128,6 +136,8 @@ export async function buildCloudflareSite({
     });
   }
 
+  await rm(path.join(outputRoot, 'assets/video/full-film.mp4'), { force: true });
+
   return measure(outputRoot);
 }
 
@@ -170,7 +180,43 @@ git add .gitignore package.json scripts/build-cloudflare-site.mjs tests/cloudfla
 git commit -m "build: add minimal Cloudflare Pages artifact"
 ```
 
-### Task 2: Record Reproducible Pages Configuration
+### Task 2: Select the Full-Film Source by Runtime
+
+**Files:**
+- Create: `src/site-config.js`
+- Create: `tests/site-config.test.mjs`
+- Modify: `src/views.js`
+- Modify: `script.js`
+
+- [ ] **Step 1: Add failing URL-selection tests**
+
+Test that:
+
+- localhost and file previews use `assets/video/full-film.mp4`;
+- `film.yunsheng.ccwu.cc` and `*.pages.dev` use `https://media-film.yunsheng.ccwu.cc/full-film.mp4`;
+- only the full-film entry changes in the preload manifest;
+- the hosted film element includes `crossorigin="anonymous"`.
+
+- [ ] **Step 2: Run the focused tests and verify RED**
+
+```powershell
+node --test tests/site-config.test.mjs
+```
+
+- [ ] **Step 3: Implement the runtime selector**
+
+Create pure helpers in `src/site-config.js`, pass the selected source into `buildFilmView`, and transform the preload list at runtime. Keep all unrelated asset paths unchanged.
+
+- [ ] **Step 4: Verify and commit**
+
+```powershell
+node --test tests/site-config.test.mjs
+npm.cmd test
+git add src/site-config.js src/views.js script.js tests/site-config.test.mjs
+git commit -m "feat: serve hosted film from Cloudflare R2"
+```
+
+### Task 3: Record Reproducible Pages Configuration
 
 **Files:**
 - Create: `wrangler.jsonc`
@@ -217,7 +263,52 @@ git add wrangler.jsonc tests/cloudflare-build.test.mjs
 git commit -m "build: record Cloudflare Pages configuration"
 ```
 
-### Task 3: Publish the Build Preparation to GitHub
+### Task 4: Create and Validate the R2 Media Origin
+
+**Files:**
+- External Cloudflare R2 and DNS configuration only
+
+- [ ] **Step 1: Create the media bucket**
+
+Create:
+
+```text
+Bucket: first-past-new-love-media
+Object: full-film.mp4
+Source: assets/video/full-film.mp4
+```
+
+- [ ] **Step 2: Configure browser access**
+
+Allow `GET` and range requests from:
+
+```text
+https://film.yunsheng.ccwu.cc
+https://first-past-new-love-archive.pages.dev
+```
+
+Expose the range and cache headers needed by the video player and final-frame capture.
+
+- [ ] **Step 3: Attach the media custom domain**
+
+Attach:
+
+```text
+media-film.yunsheng.ccwu.cc
+```
+
+- [ ] **Step 4: Prove the upload is unchanged and seekable**
+
+Compare the local byte size and SHA-256 with the downloaded R2 object, then request a small byte range.
+
+Expected:
+
+- the full request returns `200`;
+- the range request returns `206`;
+- `Content-Length`, `Content-Range`, and `Accept-Ranges` are valid;
+- the downloaded object is byte-identical to the original 62.32 MiB film.
+
+### Task 5: Publish the Build Preparation to GitHub
 
 **Files:**
 - No new files
@@ -249,7 +340,7 @@ git push origin master:main
 
 Expected: remote `main` advances to the local verified commit.
 
-### Task 4: Create the New Cloudflare Pages Project
+### Task 6: Create the New Cloudflare Pages Project
 
 **Files:**
 - External Cloudflare configuration only
@@ -296,7 +387,7 @@ first-past-new-love-archive.pages.dev
 
 If Cloudflare requires a one-time GitHub authorization, pause and let the user complete only that authentication prompt.
 
-### Task 5: Verify the Temporary Cloudflare Deployment
+### Task 7: Verify the Temporary Cloudflare Deployment
 
 **Files:**
 - No source changes
@@ -318,7 +409,7 @@ Expected: all return `200`.
 - [ ] **Step 2: Verify video range support**
 
 ```powershell
-curl.exe -sS -D - -o NUL -H "Range: bytes=0-1023" "$base/assets/video/full-film.mp4"
+curl.exe -sS -D - -o NUL -H "Range: bytes=0-1023" "https://media-film.yunsheng.ccwu.cc/full-film.mp4"
 ```
 
 Expected: HTTP `206`, `Accept-Ranges: bytes`, and a valid `Content-Range`.
@@ -337,7 +428,7 @@ Check these routes:
 
 Expected: homepage, film controls, after-film choices, review reader, archive tunnel, media, BGM, circular cursor, text motion, and particles match the current production site with no browser errors.
 
-### Task 6: Attach `film.yunsheng.ccwu.cc`
+### Task 8: Attach `film.yunsheng.ccwu.cc`
 
 **Files:**
 - External Cloudflare Pages and DNS configuration only
@@ -370,9 +461,9 @@ Set:
 $base='https://film.yunsheng.ccwu.cc'
 ```
 
-Repeat Task 5. All checks must pass before Task 7.
+Repeat Task 7. All checks must pass before Task 9.
 
-### Task 7: Retire GitHub Pages and Make the Repository Private
+### Task 9: Retire GitHub Pages and Make the Repository Private
 
 **Files:**
 - Delete: `.github/workflows/deploy-pages.yml`
@@ -430,7 +521,7 @@ gh repo view Yunsheng25/first-past-new-love-archive --json visibility,url
 
 Expected: `visibility` is `PRIVATE`; unauthenticated access to the repository and old GitHub Pages URL is unavailable.
 
-### Task 8: Prove Private-Repository Auto Deployment
+### Task 10: Prove Private-Repository Auto Deployment
 
 **Files:**
 - Modify: `README.md`
@@ -460,8 +551,7 @@ Expected: Cloudflare deployment status is Success and its commit SHA equals loca
 ```powershell
 $base='https://film.yunsheng.ccwu.cc'
 (Invoke-WebRequest -UseBasicParsing "$base/").StatusCode
-curl.exe -sS -D - -o NUL -H "Range: bytes=0-1023" "$base/assets/video/full-film.mp4"
+curl.exe -sS -D - -o NUL -H "Range: bytes=0-1023" "https://media-film.yunsheng.ccwu.cc/full-film.mp4"
 ```
 
 Expected: homepage returns `200`; video range returns `206`; browser acceptance still passes.
-
