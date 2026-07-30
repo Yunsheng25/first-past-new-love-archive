@@ -55,8 +55,7 @@ export function createVolumeFade({ schedule = setTimeout, cancel = clearTimeout,
 }
 
 export function createAudioManager({ audio, storage, fade } = {}) {
-  const ownsPlayer = !audio && typeof Audio === 'function';
-  const player = audio ?? (ownsPlayer ? new Audio() : null);
+  const player = audio ?? (typeof Audio === 'function' ? new Audio(BGM_SOURCE) : null);
   let preferenceStore = storage;
   if (preferenceStore === undefined) {
     try {
@@ -82,14 +81,10 @@ export function createAudioManager({ audio, storage, fade } = {}) {
   let playbackOwnerVersion = null;
 
   if (player) {
-    if (ownsPlayer) player.preload = 'none';
     player.loop = true;
     player.volume = 0;
   }
 
-  const ensureSource = () => {
-    if (ownsPlayer && !player.src) player.src = BGM_SOURCE;
-  };
   const isPlaying = () => Boolean(player && !player.paused);
   const pause = () => { player?.pause(); };
   const canResume = () => Boolean(
@@ -148,7 +143,6 @@ export function createAudioManager({ audio, storage, fade } = {}) {
     let browserPlay;
     let attempt;
     try {
-      ensureSource();
       browserPlay = Promise.resolve(player.play()).then(
         () => ({ played: true }),
         () => ({ failed: true }),

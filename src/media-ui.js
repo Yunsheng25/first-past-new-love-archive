@@ -41,27 +41,15 @@ export function bindIntroMedia(root, { reduceMotion = false } = {}) {
   const showLoadFailure = () => {
     setMediaStatus(status, message, '背景影片加载失败');
   };
-  const showReady = () => {
-    video.dataset.introFilmReady = 'true';
-    clearMediaStatus(status);
-  };
-  const hideFilm = () => {
-    video.dataset.introFilmReady = 'false';
-  };
   const play = () => attemptPlayback(video, () => clearMediaStatus(status), showAutoplayFailure);
 
-  video.addEventListener('loadeddata', showReady);
-  video.addEventListener('error', () => {
-    hideFilm();
-    showLoadFailure();
-  });
-  video.addEventListener('playing', showReady);
+  video.addEventListener('error', showLoadFailure);
+  video.addEventListener('playing', () => clearMediaStatus(status));
   retry.addEventListener('click', () => {
     if (video.error) video.load();
     play();
   });
 
-  if (video.readyState >= 2) showReady();
   if (reduceMotion) {
     video.pause();
   } else {
