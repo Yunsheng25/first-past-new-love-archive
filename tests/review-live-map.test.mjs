@@ -5,8 +5,9 @@ import { REVIEW_LIVE_MAPS, resolveReviewMap, visibleReviewMapNodes } from '../sr
 
 const reviewLiveMapSource = await readFile(new URL('../src/review-live-map.js', import.meta.url), 'utf8');
 
-test('only real authored summary images resolve to independent live maps', () => {
+test('all three real authored summary images resolve to independent live maps', () => {
   assert.equal(resolveReviewMap('Pasted image 20260620133330.png').id, 'image-generation');
+  assert.equal(resolveReviewMap('Pasted image 20260716151430.png').id, 'video-generation');
   assert.equal(resolveReviewMap('Pasted image 20260716153618.png').id, 'editing');
   assert.equal(resolveReviewMap('Pasted image 20260620160734.png'), null);
 });
@@ -24,6 +25,21 @@ test('image generation map keeps one process trunk before its authored top-level
   assert.deepEqual(
     visibleReviewMapNodes(map, new Set(['image-process', 'specific-frame', 'spatial-logic'])),
     ['image-process', 'style-master', 'specific-frame', 'spatial-logic', 'text-prompt', 'visual-reference', 'reset-camera'],
+  );
+});
+
+test('video map keeps the authored process trunk before its three ordered branches', () => {
+  const map = REVIEW_LIVE_MAPS['video-generation'];
+  assert.deepEqual(map.roots, ['video-process']);
+  assert.equal(map.nodes['video-process'].title, '视频流程拆解');
+  assert.deepEqual(
+    map.nodes['video-process'].children,
+    ['motion-design', 'video-prompt', 'frame-bridging'],
+  );
+  assert.deepEqual(visibleReviewMapNodes(map), ['video-process']);
+  assert.deepEqual(
+    visibleReviewMapNodes(map, new Set(['video-process'])),
+    ['video-process', 'motion-design', 'video-prompt', 'frame-bridging'],
   );
 });
 

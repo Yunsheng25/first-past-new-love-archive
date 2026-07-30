@@ -398,6 +398,20 @@ test("committed review JSON preserves every independently parsed authored block 
   assert.equal(new Set(media.map((block) => block.ref)).size, 49);
 });
 
+test("authored and committed review text never exposes an unmatched bold marker", () => {
+  const authored = parseReview(fs.readFileSync(reviewPath, "utf8"));
+  const committed = JSON.parse(fs.readFileSync(committedReviewPath, "utf8"));
+  const collectText = (blocks) => blocks.flatMap((block) => [
+    ...(block.type === "text" || block.type === "heading" ? [block.text] : []),
+    ...collectText(block.children ?? []),
+  ]);
+  const unmatched = (review) => review.chapters.flatMap((chapter) => collectText(chapter.blocks))
+    .filter((text) => (String(text).match(/\*\*/g) ?? []).length % 2 !== 0);
+
+  assert.deepEqual(unmatched(authored), []);
+  assert.deepEqual(unmatched(committed), []);
+});
+
 test("every committed review asset has the independently resolved source SHA-256 for its authored ref", () => {
   assertReviewAssetIntegrity(committedMediaDir);
 });

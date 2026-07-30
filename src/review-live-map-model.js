@@ -69,6 +69,120 @@ export const REVIEW_LIVE_MAPS = Object.freeze({
       },
     }),
   }),
+  'video-generation': Object.freeze({
+    id: 'video-generation',
+    title: '视频流程拆解',
+    summaryRef: 'Pasted image 20260716151430.png',
+    roots: ['video-process'],
+    nodes: Object.freeze({
+      'video-process': {
+        title: '视频流程拆解',
+        children: ['motion-design', 'video-prompt', 'frame-bridging'],
+      },
+      'motion-design': {
+        title: '选图与设计运动',
+        children: ['motion-from-image', 'high-precision-motion'],
+      },
+      'motion-from-image': {
+        title: '图片',
+        children: ['image-expectation'],
+      },
+      'image-expectation': {
+        title: '风格统一 · 视角成立 · 符合预期',
+        detail: '先判断静态画面能否承载运动：风格、视角和空间关系必须在动起来之前成立。',
+        media: ['assets/review-media/025-Pasted image 20260620175930.png'],
+      },
+      'high-precision-motion': {
+        title: '高精度动作设计',
+        children: ['high-generation-cost'],
+      },
+      'high-generation-cost': {
+        title: '预期高抽卡成本',
+        children: ['motion-necessity', 'rewrite-result', 'split-tasks', 'iterate-prompt'],
+      },
+      'motion-necessity': {
+        title: '判断动作是否真的需要被完整展示',
+        detail: '复杂动作不一定都要被完整呈现，先确认它是否真的服务叙事。',
+      },
+      'rewrite-result': {
+        title: '把动作过程改写为动作结果',
+        detail: '当过程难以稳定生成时，用清晰的结果状态代替冗长过程。',
+      },
+      'split-tasks': {
+        title: '拆掉镜头里的多重任务',
+        detail: '一个镜头只承担一个主要动作，降低模型同时处理多个目标的压力。',
+      },
+      'iterate-prompt': {
+        title: '调整提示词和继续生成',
+        detail: '把失败结果当作新的约束证据，逐步收窄动作描述。',
+      },
+      'video-prompt': {
+        title: '视频提示词、生成与筛选',
+        children: ['simple-motion', 'complex-motion'],
+      },
+      'simple-motion': {
+        title: '简单 / 平常',
+        children: ['positive-negative-prompt'],
+      },
+      'positive-negative-prompt': {
+        title: '正向描述 · 负向描述 · 避免过多抽象词汇',
+        detail: '正向描述画面怎样运动，反向描述保护人物、视角与空间关系。',
+        media: ['assets/review-media/013-Pasted image 20260620160734.png'],
+      },
+      'complex-motion': {
+        title: '复杂 / 反复不理想',
+        children: ['second-by-second-prompt'],
+      },
+      'second-by-second-prompt': {
+        title: '细致提示词：几秒～几秒承担动作',
+        detail: '把动作拆成时间段，写清稳定、开始、完成和最终停留状态。',
+        media: ['assets/review-media/014-Pasted image 20260620161558.png'],
+      },
+      'frame-bridging': {
+        title: '首尾帧衔接和过渡帧补充',
+        children: ['first-last-frame', 'transition-frame'],
+      },
+      'first-last-frame': {
+        title: '首尾帧',
+        children: ['separate-frame-motion', 'continue-last-frame'],
+      },
+      'separate-frame-motion': {
+        title: '分别做新图产生运动',
+        detail: '明确首帧与尾帧的目标画面，让模型在两张图之间生成运动。',
+        media: [
+          'assets/review-media/015-9c986860-16c4-44c2-89ed-797674a42c6f.png',
+          'assets/review-media/016-3789431f-f263-45d4-961e-9eeaf77d40cc 1.png',
+        ],
+      },
+      'continue-last-frame': {
+        title: '尾帧续写',
+        children: ['keep-video-texture'],
+      },
+      'keep-video-texture': {
+        title: '保持视频画面质感一致',
+        detail: '使用上一段视频的最后一帧作为下一段起点，避免回跳到原图质感。',
+        media: ['assets/review-media/018-屏幕录制 2026-06-20 165924.mp4'],
+      },
+      'transition-frame': {
+        title: '过渡帧',
+        children: ['split-large-change'],
+      },
+      'split-large-change': {
+        title: '把跨度太大的变化拆解',
+        children: ['transition-from-frames', 'nine-grid-transition'],
+      },
+      'transition-from-frames': {
+        title: '基于首尾帧图片生成过渡帧',
+        detail: '在跨度太大的两个状态之间补一张关键中间画面。',
+        media: ['assets/review-media/022-Pasted image 20260620172404.png'],
+      },
+      'nine-grid-transition': {
+        title: '基于场景生成九宫格逐帧变化图',
+        detail: '先把变化拆成连续阶段，再选择最合适的中间帧。',
+        media: ['assets/review-media/025-Pasted image 20260620175930.png'],
+      },
+    }),
+  }),
   editing: Object.freeze({
     id: 'editing',
     title: '剪辑流程拆解',
