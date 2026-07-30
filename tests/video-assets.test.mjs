@@ -12,7 +12,16 @@ import { parseFfmpegInfo, readVideoMetadata } from "../scripts/video-metadata.mj
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.dirname(HERE);
 const BUILD_SCRIPT = path.join(PROJECT_ROOT, "scripts", "build-video-assets.ps1");
-const FFMPEG = "C:\\Users\\chenx\\AppData\\Local\\JianyingPro\\Apps\\10.9.0.14199\\ffmpeg.exe";
+const JIANYING_APPS = path.join(
+  process.env.LOCALAPPDATA ?? "C:\\Users\\chenx\\AppData\\Local",
+  "JianyingPro",
+  "Apps",
+);
+const FFMPEG = readdirSync(JIANYING_APPS, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .sort((left, right) => right.name.localeCompare(left.name, undefined, { numeric: true }))
+  .map((entry) => path.join(JIANYING_APPS, entry.name, "ffmpeg.exe"))
+  .find(existsSync) ?? "ffmpeg.exe";
 const POWERSHELL = "powershell.exe";
 const FIXTURE_PARENT = mkdtempSync(path.join(tmpdir(), "first-love-video-assets-"));
 const VERSIONED_VIDEO_LIMIT = 100 * 1024 * 1024;

@@ -90,6 +90,29 @@ test('escapes every modal interpolation without truncating line-broken prompts',
   assert.doesNotMatch(html, /Demo|preview-end/i);
 });
 
+test('modal opens original media instead of the lightweight tunnel derivative', () => {
+  const item = {
+    id: 'case-01',
+    index: 1,
+    title: 'detail quality',
+    prompt: 'prompt',
+    images: [{
+      src: 'assets/original.png',
+      originalSrc: 'assets/original.png',
+      displaySrc: 'assets/display.webp',
+      role: '图片',
+    }],
+  };
+  const html = buildArchiveCaseModal(item, {
+    caseId: item.id,
+    imageIndex: 0,
+    src: item.images[0].src,
+    role: item.images[0].role,
+  });
+  assert.match(html, /src="assets\/original\.png"/);
+  assert.doesNotMatch(html, /src="assets\/display\.webp"/);
+});
+
 test('error modal states the escaped failure reason while normal modal has no error UI', () => {
   const error = { ...archive.cases[0], status: 'error', errorGroup: '出现人脸 <script>', errorReason: '人物失真 & 偏离' };
   const errorHtml = buildArchiveCaseModal(error, occurrenceFor(error));

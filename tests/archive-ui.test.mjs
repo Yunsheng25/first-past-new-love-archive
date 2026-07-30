@@ -208,6 +208,65 @@ test('a pending shared archive load survives its first mount cleanup and renders
   assert.match(second.innerHTML, /data-archive-case="case-01"/);
 });
 
+test('archive index keeps the approved loading view visible until every display image is prepared', async () => {
+  let resolvePreparation;
+  const preparation = new Promise((resolve) => { resolvePreparation = resolve; });
+  let preparedUrls = [];
+  let tunnelMounts = 0;
+  let loaderAborts = 0;
+  const app = {
+    innerHTML: '',
+    focus() {},
+    querySelector() { return null; },
+    addEventListener() {},
+    removeEventListener() {},
+    style: { setProperty() {} },
+  };
+
+  const cleanup = mountArchiveRoute(app, { name: 'archive-index' }, {
+    fetchImpl: async () => ({ ok: true, json: async () => archive }),
+    storage: null,
+    documentRef: {},
+    windowRef: {},
+    navigatorRef: {},
+    createMediaLoader({ onProgress }) {
+      return {
+        load(urls) {
+          preparedUrls = urls;
+          onProgress({ status: 'loading', ready: 0, failed: 0, total: urls.length });
+          return preparation;
+        },
+        retryFailed() { return preparation; },
+        abort() { loaderAborts += 1; },
+      };
+    },
+    mountTunnel() {
+      tunnelMounts += 1;
+      return { destroy() {} };
+    },
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.match(app.innerHTML, /data-route-loading-type/);
+  assert.doesNotMatch(app.innerHTML, /archive-tunnel-view/);
+  assert.equal(tunnelMounts, 0);
+  assert.equal(preparedUrls.length, 137);
+  assert.ok(preparedUrls.every((src) => src.startsWith('assets/archive-display/')));
+
+  resolvePreparation({
+    status: 'complete',
+    ready: preparedUrls.length,
+    failed: 0,
+    total: preparedUrls.length,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.match(app.innerHTML, /archive-tunnel-view/);
+  assert.equal(tunnelMounts, 1);
+
+  cleanup();
+  assert.equal(loaderAborts, 1);
+});
+
 test('an AbortError from the shared loader is a visible retryable failure while the mount is active', async () => {
   const retry = { addEventListener() {}, removeEventListener() {} };
   const app = { innerHTML: '', focus() {}, querySelector: (selector) => selector === '[data-retry-archive]' ? retry : null };
@@ -466,6 +525,28 @@ test('index renders ordered lazy cards, controls, fixed returns and clean empty 
   const empty = buildArchiveIndex(archive, { query: '不存在的检索词', types: [], stages: [] });
   assert.match(empty, /data-archive-empty/);
   assert.match(empty, /data-clear-archive-filters/);
+});
+
+test('archive overview uses lightweight derivatives while detail views retain original media', () => {
+  const sourceCase = structuredClone(archive.cases[0]);
+  sourceCase.images[0] = {
+    ...sourceCase.images[0],
+    src: 'assets/original.png',
+    originalSrc: 'assets/original.png',
+    displaySrc: 'assets/display.webp',
+  };
+  const fixture = {
+    summary: { cases: 1, uniqueImages: 1 },
+    cases: [sourceCase],
+  };
+
+  const overview = buildArchiveIndex(fixture);
+  assert.match(overview, /src="assets\/display\.webp"/);
+  assert.doesNotMatch(overview, /src="assets\/original\.png"/);
+
+  const detail = buildArchiveDetail(fixture, sourceCase.id);
+  assert.match(detail, /src="assets\/original\.png"/);
+  assert.doesNotMatch(detail, /src="assets\/display\.webp"/);
 });
 
 test('the independent all-types control only clears type selections and specific types make it inactive', () => {

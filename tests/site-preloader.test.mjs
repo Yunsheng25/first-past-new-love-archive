@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   preloadAssets,
   preloadInBackground,
+  selectBackgroundAssets,
   selectCriticalAssets,
 } from '../src/site-preloader.js';
 
@@ -15,6 +16,20 @@ test('selects only route-critical media instead of blocking on the 510 MB archiv
   assert.deepEqual(selectCriticalAssets(assets, 'intro'), [assets[0]]);
   assert.deepEqual(selectCriticalAssets(assets, 'film'), [assets[1]]);
   assert.deepEqual(selectCriticalAssets(assets, 'archive-index'), []);
+});
+
+test('background warming never competes with route-managed archive or review media', () => {
+  const assets = [
+    { path: 'assets/video/intro-background.mp4', bytes: 12 },
+    { path: 'assets/audio/theme.mp3', bytes: 4 },
+    { path: 'assets/canvas-images/a.png', bytes: 30 },
+    { path: 'assets/archive-display/a.webp', bytes: 3 },
+    { path: 'assets/review-media/case.mp4', bytes: 20 },
+  ];
+  assert.deepEqual(
+    selectBackgroundAssets(assets, new Set(['assets/video/intro-background.mp4'])),
+    [assets[1]],
+  );
 });
 
 test('background preload uses low concurrency and never rejects the visible site', async () => {

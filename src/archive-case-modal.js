@@ -52,7 +52,7 @@ export function buildArchiveCaseModal(caseItem, occurrence = null, { totalCases 
   const headingId = `archive-case-modal-title-${escapeHtml(caseItem.id ?? 'case')}`;
   const selectedIndex = Number.isInteger(occurrence?.imageIndex) ? occurrence.imageIndex : -1;
   const imageMarkup = images.map((image, index) => `<figure class="archive-case-image" data-case-image-role="${escapeHtml(image?.role)}" data-case-image-index="${index}"${index === selectedIndex ? ' data-case-image-selected="true"' : ''}>
-    <img src="${escapeHtml(image?.src)}" alt="${escapeHtml(`${caseItem.title ?? ''} · ${image?.role ?? ''}`)}" loading="lazy" decoding="async">
+    <img src="${escapeHtml(image?.originalSrc ?? image?.src)}" alt="${escapeHtml(`${caseItem.title ?? ''} · ${image?.role ?? ''}`)}" loading="lazy" decoding="async">
     <figcaption>${escapeHtml(image?.role)}</figcaption>
   </figure>`).join('');
   const position = Number.isFinite(caseItem.index) ? caseItem.index : '';

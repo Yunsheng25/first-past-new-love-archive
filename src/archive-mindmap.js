@@ -186,7 +186,7 @@ export function mountArchiveMindmap(root, {
     article.style.top = `${box.y}px`;
     article.innerHTML = record.isCategory
       ? ''
-      : `${firstImage ? `<img src="${escapeHtml(firstImage.src)}" alt="" loading="lazy" decoding="async">` : ''}
+      : `${firstImage ? `<img src="${escapeHtml(firstImage.displaySrc ?? firstImage.src)}" alt="" loading="lazy" decoding="async">` : ''}
       <div class="mindmap-node-copy">
         <p><span>${escapeHtml(record.stage)}</span><b>${String(record.index).padStart(2, '0')}</b></p>
         <strong>${escapeHtml(record.title)}</strong>

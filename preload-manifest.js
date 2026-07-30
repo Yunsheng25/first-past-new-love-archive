@@ -5,6 +5,554 @@ export const PRELOAD_ASSETS = Object.freeze([
     "bytes": 2521593
   },
   {
+    "path": "assets/archive-display/001-2.webp",
+    "bytes": 94148
+  },
+  {
+    "path": "assets/archive-display/002-3.webp",
+    "bytes": 112624
+  },
+  {
+    "path": "assets/archive-display/003-chatgpt-image-2026年5月1日-17-17-59.webp",
+    "bytes": 175946
+  },
+  {
+    "path": "assets/archive-display/004-1-1.webp",
+    "bytes": 84716
+  },
+  {
+    "path": "assets/archive-display/005-chatgpt-image-2026年5月1日-23-36-41-1.webp",
+    "bytes": 170298
+  },
+  {
+    "path": "assets/archive-display/006-chatgpt-image-2026年5月1日-09-52-56-2.webp",
+    "bytes": 181818
+  },
+  {
+    "path": "assets/archive-display/007-chatgpt-image-2026年5月1日-17-36-07.webp",
+    "bytes": 180026
+  },
+  {
+    "path": "assets/archive-display/008-pasted-image-20260609182142.webp",
+    "bytes": 69388
+  },
+  {
+    "path": "assets/archive-display/009-pasted-image-20260609182155.webp",
+    "bytes": 135736
+  },
+  {
+    "path": "assets/archive-display/010-pasted-image-20260609182234.webp",
+    "bytes": 69388
+  },
+  {
+    "path": "assets/archive-display/011-pasted-image-20260609182241.webp",
+    "bytes": 135736
+  },
+  {
+    "path": "assets/archive-display/012-pasted-image-20260609182304.webp",
+    "bytes": 135736
+  },
+  {
+    "path": "assets/archive-display/013-pasted-image-20260609182439.webp",
+    "bytes": 82644
+  },
+  {
+    "path": "assets/archive-display/014-pasted-image-20260609182358.webp",
+    "bytes": 161748
+  },
+  {
+    "path": "assets/archive-display/015-chatgpt-image-2026年5月8日-22-53-11.webp",
+    "bytes": 231186
+  },
+  {
+    "path": "assets/archive-display/016-4.webp",
+    "bytes": 92478
+  },
+  {
+    "path": "assets/archive-display/017-fe0efbc4-3df0-4491-9fd4-e0059b5cceee.webp",
+    "bytes": 173062
+  },
+  {
+    "path": "assets/archive-display/018-fe0efbc4-3df0-4491-9fd4-e0059b5cceee-1.webp",
+    "bytes": 173062
+  },
+  {
+    "path": "assets/archive-display/019-f996380c-1bad-47b8-95fd-dc920c9d9877.webp",
+    "bytes": 187414
+  },
+  {
+    "path": "assets/archive-display/020-6.webp",
+    "bytes": 87310
+  },
+  {
+    "path": "assets/archive-display/021-43ad8411-585b-47b1-83cb-122ae6d429b2.webp",
+    "bytes": 164606
+  },
+  {
+    "path": "assets/archive-display/022-7.webp",
+    "bytes": 99198
+  },
+  {
+    "path": "assets/archive-display/023-9.webp",
+    "bytes": 78848
+  },
+  {
+    "path": "assets/archive-display/024-8a407b6b-a1af-4dce-89c9-4906c7e76d90.webp",
+    "bytes": 142234
+  },
+  {
+    "path": "assets/archive-display/025-9-1.webp",
+    "bytes": 78848
+  },
+  {
+    "path": "assets/archive-display/026-11.webp",
+    "bytes": 106562
+  },
+  {
+    "path": "assets/archive-display/027-12.webp",
+    "bytes": 196932
+  },
+  {
+    "path": "assets/archive-display/028-13-1.webp",
+    "bytes": 105226
+  },
+  {
+    "path": "assets/archive-display/029-3789431f-f263-45d4-961e-9eeaf77d40cc.webp",
+    "bytes": 150422
+  },
+  {
+    "path": "assets/archive-display/030-12-2.webp",
+    "bytes": 196932
+  },
+  {
+    "path": "assets/archive-display/031-13.webp",
+    "bytes": 105226
+  },
+  {
+    "path": "assets/archive-display/032-e9bbd6d6-3c54-4c5c-babc-d0129f1230b9-1.webp",
+    "bytes": 152526
+  },
+  {
+    "path": "assets/archive-display/033-e0b89da6-6266-43e4-8186-4b97a747dbc1.webp",
+    "bytes": 164812
+  },
+  {
+    "path": "assets/archive-display/034-fe0efbc4-3df0-4491-9fd4-e0059b5cceee-2.webp",
+    "bytes": 173062
+  },
+  {
+    "path": "assets/archive-display/035-e9bbd6d6-3c54-4c5c-babc-d0129f1230b9.webp",
+    "bytes": 152526
+  },
+  {
+    "path": "assets/archive-display/036-16.webp",
+    "bytes": 155084
+  },
+  {
+    "path": "assets/archive-display/037-17.webp",
+    "bytes": 103346
+  },
+  {
+    "path": "assets/archive-display/038-18.webp",
+    "bytes": 169526
+  },
+  {
+    "path": "assets/archive-display/039-2b835cf1-678a-4fbb-9027-50d38d2659d9.webp",
+    "bytes": 170276
+  },
+  {
+    "path": "assets/archive-display/040-2b835cf1-678a-4fbb-9027-50d38d2659d9-1.webp",
+    "bytes": 170276
+  },
+  {
+    "path": "assets/archive-display/041-94a42591-1530-4c08-bcef-1bd978fa2609.webp",
+    "bytes": 129174
+  },
+  {
+    "path": "assets/archive-display/042-image.webp",
+    "bytes": 139542
+  },
+  {
+    "path": "assets/archive-display/043-pasted-image-20260519175115.webp",
+    "bytes": 147690
+  },
+  {
+    "path": "assets/archive-display/044-pasted-image-20260519175121.webp",
+    "bytes": 127794
+  },
+  {
+    "path": "assets/archive-display/045-pasted-image-20260519175009.webp",
+    "bytes": 64912
+  },
+  {
+    "path": "assets/archive-display/046-pasted-image-20260519175017.webp",
+    "bytes": 147690
+  },
+  {
+    "path": "assets/archive-display/047-image-2.webp",
+    "bytes": 169226
+  },
+  {
+    "path": "assets/archive-display/048-21-1.webp",
+    "bytes": 62720
+  },
+  {
+    "path": "assets/archive-display/049-0161f01a-6101-47ff-acc1-a1e688254a85.webp",
+    "bytes": 179460
+  },
+  {
+    "path": "assets/archive-display/050-20.webp",
+    "bytes": 55916
+  },
+  {
+    "path": "assets/archive-display/051-21.webp",
+    "bytes": 62720
+  },
+  {
+    "path": "assets/archive-display/052-pasted-image-20260519175224.webp",
+    "bytes": 127794
+  },
+  {
+    "path": "assets/archive-display/053-pasted-image-20260519175236.webp",
+    "bytes": 113788
+  },
+  {
+    "path": "assets/archive-display/054-pasted-image-20260519175326.webp",
+    "bytes": 61592
+  },
+  {
+    "path": "assets/archive-display/055-27.webp",
+    "bytes": 151168
+  },
+  {
+    "path": "assets/archive-display/056-pasted-image-20260523140721.webp",
+    "bytes": 54578
+  },
+  {
+    "path": "assets/archive-display/057-pasted-image-20260523140735.webp",
+    "bytes": 76830
+  },
+  {
+    "path": "assets/archive-display/058-pasted-image-20260523140905.webp",
+    "bytes": 76830
+  },
+  {
+    "path": "assets/archive-display/059-pasted-image-20260523140928.webp",
+    "bytes": 41742
+  },
+  {
+    "path": "assets/archive-display/060-pasted-image-20260523141012.webp",
+    "bytes": 41742
+  },
+  {
+    "path": "assets/archive-display/061-pasted-image-20260523141036.webp",
+    "bytes": 98382
+  },
+  {
+    "path": "assets/archive-display/062-pasted-image-20260524152155.webp",
+    "bytes": 83194
+  },
+  {
+    "path": "assets/archive-display/063-pasted-image-20260523141113.webp",
+    "bytes": 98382
+  },
+  {
+    "path": "assets/archive-display/064-pasted-image-20260523141127.webp",
+    "bytes": 156864
+  },
+  {
+    "path": "assets/archive-display/065-pasted-image-20260524152652.webp",
+    "bytes": 88064
+  },
+  {
+    "path": "assets/archive-display/066-pasted-image-20260524152658.webp",
+    "bytes": 102550
+  },
+  {
+    "path": "assets/archive-display/067-pasted-image-20260524152533.webp",
+    "bytes": 55324
+  },
+  {
+    "path": "assets/archive-display/068-pasted-image-20260524152543.webp",
+    "bytes": 88064
+  },
+  {
+    "path": "assets/archive-display/069-pasted-image-20260524152319.webp",
+    "bytes": 70848
+  },
+  {
+    "path": "assets/archive-display/070-pasted-image-20260524152413.webp",
+    "bytes": 104040
+  },
+  {
+    "path": "assets/archive-display/071-pasted-image-20260524152735.webp",
+    "bytes": 102550
+  },
+  {
+    "path": "assets/archive-display/072-pasted-image-20260524152741.webp",
+    "bytes": 85620
+  },
+  {
+    "path": "assets/archive-display/073-pasted-image-20260524152830.webp",
+    "bytes": 85620
+  },
+  {
+    "path": "assets/archive-display/074-pasted-image-20260524152838.webp",
+    "bytes": 108418
+  },
+  {
+    "path": "assets/archive-display/075-pasted-image-20260524152919.webp",
+    "bytes": 60180
+  },
+  {
+    "path": "assets/archive-display/076-pasted-image-20260524152926.webp",
+    "bytes": 206270
+  },
+  {
+    "path": "assets/archive-display/077-pasted-image-20260524154507.webp",
+    "bytes": 206270
+  },
+  {
+    "path": "assets/archive-display/078-pasted-image-20260524154517.webp",
+    "bytes": 206970
+  },
+  {
+    "path": "assets/archive-display/079-pasted-image-20260524222152.webp",
+    "bytes": 116494
+  },
+  {
+    "path": "assets/archive-display/080-pasted-image-20260524222200.webp",
+    "bytes": 159490
+  },
+  {
+    "path": "assets/archive-display/081-pasted-image-20260529183859.webp",
+    "bytes": 126234
+  },
+  {
+    "path": "assets/archive-display/082-3e40b3e5-88c6-4314-a7db-5b742fda4898.webp",
+    "bytes": 178712
+  },
+  {
+    "path": "assets/archive-display/083-96b3a407-bf74-4003-b9d0-dd4788c0559e.webp",
+    "bytes": 175206
+  },
+  {
+    "path": "assets/archive-display/084-97bd6f5f-bb4b-49a4-8e4e-1ef8a95c753a.webp",
+    "bytes": 201974
+  },
+  {
+    "path": "assets/archive-display/085-325bf83e-12ed-4975-a8bb-d0463e995bf5.webp",
+    "bytes": 182122
+  },
+  {
+    "path": "assets/archive-display/086-b46bf088-012a-4117-a694-0b4346e2f2d6.webp",
+    "bytes": 186314
+  },
+  {
+    "path": "assets/archive-display/087-bbfc4a23-44fe-4c9c-85a4-badb14ae6794.webp",
+    "bytes": 245526
+  },
+  {
+    "path": "assets/archive-display/088-c3836c92-f91f-48b8-9eff-53d90c52f7de.webp",
+    "bytes": 193110
+  },
+  {
+    "path": "assets/archive-display/089-da042f67-e168-4967-842a-2edfb9c9a028.webp",
+    "bytes": 193052
+  },
+  {
+    "path": "assets/archive-display/090-dce52d1d-d8a2-44de-ac7d-abd18d4588d1.webp",
+    "bytes": 178392
+  },
+  {
+    "path": "assets/archive-display/091-pasted-image-20260527230947.webp",
+    "bytes": 108576
+  },
+  {
+    "path": "assets/archive-display/092-pasted-image-20260527230954.webp",
+    "bytes": 151520
+  },
+  {
+    "path": "assets/archive-display/093-pasted-image-20260524223407.webp",
+    "bytes": 182644
+  },
+  {
+    "path": "assets/archive-display/094-pasted-image-20260524223415.webp",
+    "bytes": 156690
+  },
+  {
+    "path": "assets/archive-display/095-pasted-image-20260524223236.webp",
+    "bytes": 94758
+  },
+  {
+    "path": "assets/archive-display/096-pasted-image-20260524223247.webp",
+    "bytes": 182644
+  },
+  {
+    "path": "assets/archive-display/097-pasted-image-20260529183940.webp",
+    "bytes": 55482
+  },
+  {
+    "path": "assets/archive-display/098-pasted-image-20260529183947.webp",
+    "bytes": 146108
+  },
+  {
+    "path": "assets/archive-display/099-pasted-image-20260529184040.webp",
+    "bytes": 96382
+  },
+  {
+    "path": "assets/archive-display/100-pasted-image-20260529184046.webp",
+    "bytes": 63160
+  },
+  {
+    "path": "assets/archive-display/101-pasted-image-20260531134853.webp",
+    "bytes": 42348
+  },
+  {
+    "path": "assets/archive-display/102-pasted-image-20260531134947.webp",
+    "bytes": 39938
+  },
+  {
+    "path": "assets/archive-display/103-pasted-image-20260531134953.webp",
+    "bytes": 58892
+  },
+  {
+    "path": "assets/archive-display/104-pasted-image-20260531135028.webp",
+    "bytes": 58892
+  },
+  {
+    "path": "assets/archive-display/105-pasted-image-20260531135036.webp",
+    "bytes": 61092
+  },
+  {
+    "path": "assets/archive-display/106-pasted-image-20260531135402.webp",
+    "bytes": 137200
+  },
+  {
+    "path": "assets/archive-display/107-pasted-image-20260531135332.webp",
+    "bytes": 80432
+  },
+  {
+    "path": "assets/archive-display/108-pasted-image-20260531135248.webp",
+    "bytes": 65670
+  },
+  {
+    "path": "assets/archive-display/109-pasted-image-20260531135252.webp",
+    "bytes": 80432
+  },
+  {
+    "path": "assets/archive-display/110-pasted-image-20260531135206.webp",
+    "bytes": 61188
+  },
+  {
+    "path": "assets/archive-display/111-pasted-image-20260531135212.webp",
+    "bytes": 65670
+  },
+  {
+    "path": "assets/archive-display/112-pasted-image-20260531135115.webp",
+    "bytes": 61092
+  },
+  {
+    "path": "assets/archive-display/113-pasted-image-20260531135119.webp",
+    "bytes": 61188
+  },
+  {
+    "path": "assets/archive-display/114-pasted-image-20260531135427.webp",
+    "bytes": 178260
+  },
+  {
+    "path": "assets/archive-display/115-pasted-image-20260531135432.webp",
+    "bytes": 190846
+  },
+  {
+    "path": "assets/archive-display/116-pasted-image-20260608195352.webp",
+    "bytes": 68178
+  },
+  {
+    "path": "assets/archive-display/117-pasted-image-20260608195359.webp",
+    "bytes": 60168
+  },
+  {
+    "path": "assets/archive-display/118-pasted-image-20260608195440.webp",
+    "bytes": 45726
+  },
+  {
+    "path": "assets/archive-display/119-pasted-image-20260608195448.webp",
+    "bytes": 69216
+  },
+  {
+    "path": "assets/archive-display/120-pasted-image-20260608195541.webp",
+    "bytes": 64912
+  },
+  {
+    "path": "assets/archive-display/121-pasted-image-20260608195547.webp",
+    "bytes": 192610
+  },
+  {
+    "path": "assets/archive-display/122-pasted-image-20260609181105.webp",
+    "bytes": 69218
+  },
+  {
+    "path": "assets/archive-display/123-pasted-image-20260609181224.webp",
+    "bytes": 195048
+  },
+  {
+    "path": "assets/archive-display/124-pasted-image-20260609181231.webp",
+    "bytes": 187096
+  },
+  {
+    "path": "assets/archive-display/125-pasted-image-20260608195722.webp",
+    "bytes": 39342
+  },
+  {
+    "path": "assets/archive-display/126-pasted-image-20260608195731.webp",
+    "bytes": 85344
+  },
+  {
+    "path": "assets/archive-display/127-pasted-image-20260609181321.webp",
+    "bytes": 36354
+  },
+  {
+    "path": "assets/archive-display/128-pasted-image-20260609181330.webp",
+    "bytes": 56630
+  },
+  {
+    "path": "assets/archive-display/129-pasted-image-20260609181420.webp",
+    "bytes": 108088
+  },
+  {
+    "path": "assets/archive-display/130-pasted-image-20260609181426.webp",
+    "bytes": 88794
+  },
+  {
+    "path": "assets/archive-display/131-pasted-image-20260609181840.webp",
+    "bytes": 82344
+  },
+  {
+    "path": "assets/archive-display/132-pasted-image-20260609181846.webp",
+    "bytes": 157816
+  },
+  {
+    "path": "assets/archive-display/133-pasted-image-20260609181519.webp",
+    "bytes": 88794
+  },
+  {
+    "path": "assets/archive-display/134-pasted-image-20260609181525.webp",
+    "bytes": 91928
+  },
+  {
+    "path": "assets/archive-display/135-pasted-image-20260609181552.webp",
+    "bytes": 91928
+  },
+  {
+    "path": "assets/archive-display/136-pasted-image-20260609181602.webp",
+    "bytes": 222228
+  },
+  {
+    "path": "assets/archive-display/137-pasted-image-20260609181639.webp",
+    "bytes": 222228
+  },
+  {
     "path": "assets/audio/emotional-piano-and-strings.mp3",
     "bytes": 6633012
   },
@@ -817,4 +1365,4 @@ export const PRELOAD_ASSETS = Object.freeze([
     "bytes": 12401401
   }
 ]);
-export const PRELOAD_TOTAL_BYTES = 510270466;
+export const PRELOAD_TOTAL_BYTES = 526823636;

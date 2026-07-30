@@ -19,6 +19,10 @@ test('mindmap shell exposes every required control', () => {
   }
 });
 
+test('mindmap thumbnails use the prepared lightweight display images', () => {
+  assert.match(archiveMindmapSource, /firstImage\.displaySrc\s*\?\?\s*firstImage\.src/);
+});
+
 test('two process branches are centered equally above and below their parent', () => {
   const parent = { x: 350, y: 1580, width: 220, height: 220 };
   const boxes = symmetricChildBoxes(parent, [{ id: 'main' }, { id: 'error' }]);

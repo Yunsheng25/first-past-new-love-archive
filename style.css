@@ -3885,6 +3885,260 @@ button.archive-filter-chip {
   }
 }
 
+/* Route preparation — approved B “word awakening” motion. */
+.route-loading-type {
+  --route-pointer-x: 50vw;
+  --route-pointer-y: 50vh;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: #080808;
+  color: #eee8de;
+}
+
+.route-loading-grid,
+.route-loading-glow {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.route-loading-grid {
+  opacity: .34;
+  background-image:
+    linear-gradient(rgba(218, 196, 169, .07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(218, 196, 169, .07) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(circle at center, #000 12%, transparent 76%);
+}
+
+.route-loading-glow {
+  background:
+    radial-gradient(340px circle at var(--route-pointer-x) var(--route-pointer-y), rgba(181, 129, 83, .2), transparent 68%),
+    radial-gradient(760px ellipse at 50% 56%, rgba(101, 74, 53, .12), transparent 67%);
+  transition: background-position 180ms ease-out;
+}
+
+.route-loading-type > header {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 0 clamp(22px, 4vw, 64px);
+  border-bottom: 1px solid rgba(231, 219, 205, .09);
+  color: rgba(235, 225, 212, .46);
+  font: 10px/1 Georgia, serif;
+  letter-spacing: .24em;
+}
+
+.route-loading-center {
+  align-self: center;
+  justify-self: center;
+  display: grid;
+  justify-items: center;
+  width: min(86vw, 980px);
+  transform: translateY(1vh);
+}
+
+.route-loading-center h1 {
+  display: flex;
+  gap: clamp(12px, 2.2vw, 36px);
+  margin: 0 0 clamp(56px, 9vh, 96px);
+  font-size: clamp(64px, 10vw, 154px);
+  font-weight: 400;
+  line-height: .96;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+
+.route-loading-character {
+  display: inline-block;
+  opacity: .08;
+  transform: translateY(.9em);
+  filter: blur(8px);
+  color: rgba(238, 228, 214, .34);
+  text-shadow: 0 18px 42px rgba(0, 0, 0, .46);
+  transition:
+    transform 920ms cubic-bezier(.16, 1, .3, 1),
+    opacity 720ms ease,
+    filter 820ms ease,
+    color 720ms ease,
+    text-shadow 720ms ease;
+  transition-delay: calc(var(--character-index) * 55ms);
+}
+
+.route-loading-character.is-awake {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+  color: #eee6da;
+  text-shadow:
+    0 0 34px rgba(195, 151, 105, .14),
+    0 18px 42px rgba(0, 0, 0, .38);
+}
+
+.route-loading-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  width: min(100%, 760px);
+}
+
+.route-loading-progress progress {
+  width: 100%;
+  height: 2px;
+  appearance: none;
+  border: 0;
+  background: rgba(235, 224, 210, .13);
+}
+
+.route-loading-progress progress::-webkit-progress-bar {
+  background: rgba(235, 224, 210, .13);
+}
+
+.route-loading-progress progress::-webkit-progress-value {
+  background: linear-gradient(90deg, rgba(158, 112, 76, .6), #d9b78f);
+  box-shadow: 0 0 14px rgba(217, 183, 143, .28);
+  transition: width 360ms cubic-bezier(.16, 1, .3, 1);
+}
+
+.route-loading-progress progress::-moz-progress-bar {
+  background: linear-gradient(90deg, rgba(158, 112, 76, .6), #d9b78f);
+  box-shadow: 0 0 14px rgba(217, 183, 143, .28);
+}
+
+.route-loading-progress strong {
+  min-width: 104px;
+  color: rgba(238, 228, 214, .72);
+  font: 500 12px/1.1 Georgia, serif;
+  letter-spacing: .15em;
+  text-align: right;
+}
+
+.route-loading-center ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(100%, 760px);
+  margin: 25px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route-loading-center li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: rgba(235, 224, 210, .25);
+  font-size: 10px;
+  letter-spacing: .13em;
+  transition: color 420ms ease, transform 520ms cubic-bezier(.16, 1, .3, 1);
+}
+
+.route-loading-center li i {
+  width: 5px;
+  height: 5px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  transition: background 420ms ease, box-shadow 420ms ease;
+}
+
+.route-loading-center li.is-active {
+  color: rgba(235, 224, 210, .72);
+  transform: translateX(3px);
+}
+
+.route-loading-center li.is-active i {
+  background: #c8a47e;
+  box-shadow: 0 0 12px rgba(200, 164, 126, .42);
+}
+
+.route-loading-error {
+  margin: 25px 0 0;
+  color: #d7aa91;
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
+.route-loading-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.route-loading-actions button,
+.route-loading-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 9px 17px;
+  border: 1px solid rgba(230, 218, 202, .24);
+  border-radius: 999px;
+  background: rgba(18, 17, 16, .72);
+  color: rgba(239, 230, 218, .78);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+
+.route-loading-actions [hidden],
+.route-loading-error[hidden] {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .route-loading-type > header {
+    min-height: 60px;
+    padding: 0 16px;
+    font-size: 8px;
+  }
+  .route-loading-type > header span:last-child {
+    display: none;
+  }
+  .route-loading-center {
+    width: min(88vw, 520px);
+  }
+  .route-loading-center h1 {
+    gap: 8px;
+    margin-bottom: 52px;
+    font-size: clamp(48px, 17vw, 82px);
+  }
+  .route-loading-progress {
+    gap: 12px;
+  }
+  .route-loading-progress strong {
+    min-width: 92px;
+    font-size: 10px;
+  }
+  .route-loading-center ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-grid,
+  .route-loading-glow {
+    display: none;
+  }
+  .route-loading-character,
+  .route-loading-character.is-awake,
+  .route-loading-progress progress::-webkit-progress-value,
+  .route-loading-center li {
+    transition: none;
+  }
+}
+
 .archive-mindmap-world img,
 .review-live-map-world img {
   -webkit-user-drag: none;

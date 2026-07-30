@@ -18,6 +18,18 @@ export function selectCriticalAssets(assets = [], routeName = 'intro') {
   return target ? assets.filter((asset) => asset.path === target) : [];
 }
 
+const ROUTE_MANAGED_PREFIXES = Object.freeze([
+  'assets/canvas-images/',
+  'assets/archive-display/',
+  'assets/review-media/',
+]);
+
+export function selectBackgroundAssets(assets = [], criticalPaths = new Set()) {
+  return assets.filter((asset) =>
+    !criticalPaths.has(asset.path)
+    && !ROUTE_MANAGED_PREFIXES.some((prefix) => asset.path.startsWith(prefix)));
+}
+
 export async function preloadInBackground({
   assets = [],
   fetchImpl = globalThis.fetch,

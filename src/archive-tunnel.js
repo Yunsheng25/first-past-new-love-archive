@@ -76,7 +76,7 @@ export function mountArchiveTunnel(root, data, options = {}) {
     entry.card.dataset.paintReady = "pending";
     entry.image.loading = "eager";
     entry.image.fetchPriority = "high";
-    entry.image.src = entry.occurrence.src;
+    entry.image.src = entry.occurrence.displaySrc ?? entry.occurrence.src;
     if (entry.image.complete) {
       settleImage(entry, Number(entry.image.naturalWidth) > 0 ? "ready" : "failed");
       return;

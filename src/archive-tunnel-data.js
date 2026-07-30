@@ -39,6 +39,8 @@ export function flattenArchiveOccurrences(data) {
         title: item.title,
         role: image.role,
         src: image.src,
+        displaySrc: image.displaySrc ?? image.src,
+        originalSrc: image.originalSrc ?? image.src,
         status: item.status === "error" ? "error" : "normal",
         errorGroup: item.status === "error" ? (item.errorGroup ?? null) : null,
         errorReason: item.status === "error" ? (item.errorReason ?? null) : null,

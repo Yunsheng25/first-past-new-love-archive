@@ -4,6 +4,15 @@ import { resolveReviewMap } from './review-live-map-model.js';
 import { mountReviewLiveMaps } from './review-live-map.js';
 import { resolveReviewSpread } from './review-spread.js';
 import { mountReviewReaderInteractions } from './review-reader-interactions.js';
+import {
+  collectReviewSpreadMedia,
+  createReviewRouteMediaLoader,
+} from './review-route-media.js';
+import {
+  buildRouteLoadingType,
+  mountRouteLoadingType,
+  updateRouteLoadingType,
+} from './route-loading-type.js';
 
 export const REVIEW_PROGRESS_KEY = 'review:progress';
 
@@ -635,7 +644,32 @@ export function bindReviewInteractions(root, {
 }
 
 function loadingView() {
-  return `<section class="review-status-view app-view" data-review-loading><p>REVIEW NOTES</p><h1>正在打开复盘手记</h1><span>请稍候……</span></section>`;
+  return buildRouteLoadingType({ route: 'review', ready: 0, total: 0, stage: 0 });
+}
+
+function defaultCreateMediaLoader(options) {
+  if (
+    typeof globalThis.Image === 'function'
+    && typeof globalThis.document?.createElement === 'function'
+  ) {
+    return createReviewRouteMediaLoader(options);
+  }
+  return {
+    async load(resources = {}) {
+      const snapshot = {
+        status: 'complete',
+        ready: resources.total ?? 0,
+        failed: 0,
+        total: resources.total ?? 0,
+      };
+      options?.onProgress?.(snapshot);
+      return snapshot;
+    },
+    async retryFailed() {
+      return { status: 'complete', ready: 0, failed: 0, total: 0 };
+    },
+    abort() {},
+  };
 }
 
 let reviewDataCache = new WeakMap();
@@ -695,12 +729,15 @@ export function mountReviewRoute(app, route, {
   storage = globalThis.localStorage,
   documentRef = document,
   windowRef = window,
+  createMediaLoader = defaultCreateMediaLoader,
 } = {}) {
   let active = true;
   let interactionCleanup = () => {};
   let retryButton = null;
   let retryHandler = null;
   let loadVersion = 0;
+  let mediaLoader = null;
+  let loadingInteractionCleanup = () => {};
 
   const clearRetry = () => {
     retryButton?.removeEventListener?.('click', retryHandler);
@@ -708,7 +745,7 @@ export function mountReviewRoute(app, route, {
     retryHandler = null;
   };
 
-  const renderData = (data) => {
+  const renderData = async (data, version) => {
     interactionCleanup();
     clearRetry();
     if (route.name === 'review-index') {
@@ -718,6 +755,51 @@ export function mountReviewRoute(app, route, {
       if (!target) {
         app.innerHTML = missingChapterView();
       } else {
+        const resources = collectReviewSpreadMedia(data, target.chapter.slug, target.page);
+        if (resources.total > 0) {
+          app.innerHTML = buildRouteLoadingType({
+            route: 'review',
+            ready: 0,
+            total: resources.total,
+            stage: 1,
+          });
+          loadingInteractionCleanup = mountRouteLoadingType(app, {
+            reducedMotion: windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true,
+          });
+          mediaLoader = createMediaLoader({
+            onProgress(snapshot) {
+              if (!active || version !== loadVersion) return;
+              updateRouteLoadingType(app, {
+                route: 'review',
+                ready: snapshot.ready,
+                total: snapshot.total,
+                failed: snapshot.failed,
+                stage: snapshot.status === 'complete' ? 3 : snapshot.ready > 0 ? 2 : 1,
+              });
+            },
+          });
+          let preparation = await mediaLoader.load(resources);
+          while (active && version === loadVersion && preparation.failed > 0) {
+            preparation = await new Promise((resolve) => {
+              clearRetry();
+              retryButton = app.querySelector?.('[data-route-loading-retry]');
+              retryHandler = async () => {
+                clearRetry();
+                try {
+                  resolve(await mediaLoader.retryFailed());
+                } catch (error) {
+                  if (error?.name === 'AbortError') return;
+                  resolve({ ...preparation, failed: Math.max(1, preparation.failed) });
+                }
+              };
+              retryButton?.addEventListener?.('click', retryHandler);
+            });
+          }
+          if (!active || version !== loadVersion) return;
+          clearRetry();
+          loadingInteractionCleanup();
+          loadingInteractionCleanup = () => {};
+        }
         app.innerHTML = buildReviewSpread(data, target);
         writeReviewProgress(storage, { chapter: target.chapter.slug, page: target.page });
         const scrollRegion = app.querySelector?.('[data-review-scroll]');
@@ -729,6 +811,10 @@ export function mountReviewRoute(app, route, {
   };
 
   const renderError = () => {
+    mediaLoader?.abort?.();
+    mediaLoader = null;
+    loadingInteractionCleanup();
+    loadingInteractionCleanup = () => {};
     app.innerHTML = errorView();
     retryButton = app.querySelector?.('[data-retry-review]');
     retryHandler = () => load({ force: true });
@@ -739,18 +825,22 @@ export function mountReviewRoute(app, route, {
   const load = async ({ force = false } = {}) => {
     const version = ++loadVersion;
     interactionCleanup();
+    loadingInteractionCleanup();
+    loadingInteractionCleanup = () => {};
     clearRetry();
+    mediaLoader?.abort?.();
+    mediaLoader = null;
 
     try {
       const cached = !force && peekReviewData(fetchImpl);
       if (cached) {
-        if (active && version === loadVersion) renderData(cached);
+        if (active && version === loadVersion) await renderData(cached, version);
         return;
       }
       app.innerHTML = loadingView();
       const data = await loadReviewData(fetchImpl, { force });
       if (!active || version !== loadVersion) return;
-      renderData(data);
+      await renderData(data, version);
     } catch (error) {
       if (!active || version !== loadVersion) return;
       renderError();
@@ -762,6 +852,8 @@ export function mountReviewRoute(app, route, {
     active = false;
     loadVersion += 1;
     clearRetry();
+    mediaLoader?.abort?.();
+    loadingInteractionCleanup();
     interactionCleanup();
   };
 }

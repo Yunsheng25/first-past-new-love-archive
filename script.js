@@ -21,6 +21,7 @@ import { PRELOAD_ASSETS } from './preload-manifest.js';
 import {
   preloadAssets,
   preloadInBackground,
+  selectBackgroundAssets,
   selectCriticalAssets,
 } from './src/site-preloader.js';
 import { mountPreloaderUI } from './src/preloader-ui.js';
@@ -194,7 +195,7 @@ async function revealSite() {
     selectCriticalAssets(PRELOAD_ASSETS, currentRoute().name).map((asset) => asset.path),
   );
   void preloadInBackground({
-    assets: PRELOAD_ASSETS.filter((asset) => !criticalPaths.has(asset.path)),
+    assets: selectBackgroundAssets(PRELOAD_ASSETS, criticalPaths),
   });
 }
 

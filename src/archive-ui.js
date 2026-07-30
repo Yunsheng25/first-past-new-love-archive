@@ -2,6 +2,12 @@ import { mountArchiveTunnel } from './archive-tunnel.js';
 import { mountArchiveCaseModal } from './archive-case-modal.js';
 import { flattenArchiveOccurrences } from './archive-tunnel-data.js';
 import { buildMindmapShell, mountArchiveMindmap } from './archive-mindmap.js';
+import { createRouteMediaLoader } from './route-media-loader.js';
+import {
+  buildRouteLoadingType,
+  mountRouteLoadingType,
+  updateRouteLoadingType,
+} from './route-loading-type.js';
 
 export const ARCHIVE_LAST_CASE_KEY = 'archive:lastCase';
 
@@ -55,6 +61,35 @@ function uniqueInOrder(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+export function archiveDisplayUrls(data) {
+  return uniqueInOrder(
+    (data?.cases ?? []).flatMap((item) =>
+      (item.images ?? []).map((image) => image.displaySrc ?? image.src)),
+  );
+}
+
+function defaultCreateMediaLoader(options) {
+  if (typeof globalThis.Image === 'function') {
+    return createRouteMediaLoader(options);
+  }
+  return {
+    async load(urls = []) {
+      const snapshot = {
+        status: 'complete',
+        ready: urls.length,
+        failed: 0,
+        total: urls.length,
+      };
+      options?.onProgress?.(snapshot);
+      return snapshot;
+    },
+    async retryFailed() {
+      return { status: 'complete', ready: 0, failed: 0, total: 0 };
+    },
+    abort() {},
+  };
+}
+
 function checked(stateValues, value) {
   return selectedValues(stateValues).includes(value) ? ' checked' : '';
 }
@@ -74,7 +109,7 @@ function allTypesButton(active, count) {
 function archiveCard(item) {
   const firstImage = item.images?.[0];
   const preview = firstImage
-    ? `<img src="${escapeArchiveHtml(firstImage.src)}" alt="${escapeArchiveHtml(item.title)}案例预览" loading="lazy" decoding="async">`
+    ? `<img src="${escapeArchiveHtml(firstImage.displaySrc ?? firstImage.src)}" alt="${escapeArchiveHtml(item.title)}案例预览" loading="lazy" decoding="async">`
     : `<span class="archive-card-placeholder" aria-label="白板未附图片"><b>${String(item.index).padStart(2, '0')}</b><small>NO IMAGE</small></span>`;
   const isError = item.status === 'error';
   const errorGroup = isError ? String(item.errorGroup ?? item.errorReason ?? '未标注原因') : '';
@@ -163,9 +198,10 @@ function archiveNavigation(item, attribute, label) {
 }
 
 function detailImageMarkup(image, index, title) {
-  return `<figure class="archive-detail-image" data-archive-image-index="${index}" data-src="${escapeArchiveHtml(image.src)}">
+  const originalSrc = image.originalSrc ?? image.src;
+  return `<figure class="archive-detail-image" data-archive-image-index="${index}" data-src="${escapeArchiveHtml(originalSrc)}">
     <button type="button" data-archive-lightbox-trigger data-archive-image-index="${index}" aria-label="放大查看：${escapeArchiveHtml(image.originalRef)}">
-      <img src="${escapeArchiveHtml(image.src)}" alt="${escapeArchiveHtml(`${title} · ${image.role}`)}" loading="lazy" decoding="async">
+      <img src="${escapeArchiveHtml(originalSrc)}" alt="${escapeArchiveHtml(`${title} · ${image.role}`)}" loading="lazy" decoding="async">
     </button>
     <figcaption><span>${escapeArchiveHtml(image.role)}</span><span>${escapeArchiveHtml(image.originalRef)}</span><small>出现 ${image.occurrence}</small></figcaption>
   </figure>`;
@@ -195,7 +231,10 @@ export function buildArchiveDetail(data, id) {
   const errorState = item.status === 'error'
     ? `<aside class="archive-error-state" data-archive-error-state><strong>错误尝试</strong><span>失败原因</span><p>${escapeArchiveHtml(item.errorReason ?? item.errorGroup ?? '未标注原因')}</p>${item.errorReason && item.errorGroup && item.errorReason !== item.errorGroup ? `<small>白板分组：${escapeArchiveHtml(item.errorGroup)}</small>` : ''}</aside>`
     : '';
-  const lightboxImages = (item.images ?? []).map((image) => ({ src: image.src, alt: `${item.title} · ${image.role}` }));
+  const lightboxImages = (item.images ?? []).map((image) => ({
+    src: image.originalSrc ?? image.src,
+    alt: `${item.title} · ${image.role}`,
+  }));
 
   return `<section class="archive-detail-view app-view" aria-labelledby="archive-detail-title" data-archive-case="${escapeArchiveHtml(item.id)}">
     <a class="archive-return-after" href="#after" data-return-after>← 返回片后</a>
@@ -542,7 +581,7 @@ export function bindArchiveIndexInteractions(root, data, state, render) {
 }
 
 function loadingView() {
-  return `<section class="archive-status-view app-view" data-archive-loading><p>PROMPT & IMAGE ARCHIVE</p><h1>正在打开制作档案</h1><span>请稍候…</span></section>`;
+  return buildRouteLoadingType({ route: 'archive', ready: 0, total: 0, stage: 0 });
 }
 
 function errorView() {
@@ -557,12 +596,15 @@ export function mountArchiveRoute(app, route, {
   navigatorRef = globalThis.navigator,
   mountTunnel = mountArchiveTunnel,
   mountCaseModal = mountArchiveCaseModal,
+  createMediaLoader = defaultCreateMediaLoader,
 } = {}) {
   let active = true;
   let controller = null;
   let interactionCleanup = () => {};
   let retryButton = null;
   let retryHandler = null;
+  let mediaLoader = null;
+  let loadingInteractionCleanup = () => {};
 
   const fetchArchive = async (request) => {
     if (archiveDataCache.has(fetchImpl)) return archiveDataCache.get(fetchImpl);
@@ -583,8 +625,12 @@ export function mountArchiveRoute(app, route, {
   const load = async () => {
     interactionCleanup();
     interactionCleanup = () => {};
+    loadingInteractionCleanup();
+    loadingInteractionCleanup = () => {};
     clearRetry();
     controller?.abort();
+    mediaLoader?.abort?.();
+    mediaLoader = null;
     controller = new AbortController();
     const request = controller;
     app.innerHTML = loadingView();
@@ -593,6 +639,56 @@ export function mountArchiveRoute(app, route, {
       if (!active || request.signal.aborted || request !== controller) return;
 
       if (route.name === 'archive-index') {
+        const displayUrls = archiveDisplayUrls(data);
+        app.innerHTML = buildRouteLoadingType({
+          route: 'archive',
+          ready: 0,
+          total: displayUrls.length,
+          stage: 1,
+        });
+        loadingInteractionCleanup = mountRouteLoadingType(app, {
+          reducedMotion: windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true,
+        });
+        mediaLoader = createMediaLoader({
+          onProgress(snapshot) {
+            if (!active || request.signal.aborted || request !== controller) return;
+            updateRouteLoadingType(app, {
+              route: 'archive',
+              ready: snapshot.ready,
+              total: snapshot.total,
+              failed: snapshot.failed,
+              stage: snapshot.status === 'complete' ? 3 : snapshot.ready > 0 ? 2 : 1,
+            });
+          },
+        });
+
+        let preparation = await mediaLoader.load(displayUrls);
+        while (
+          active
+          && !request.signal.aborted
+          && request === controller
+          && preparation.failed > 0
+        ) {
+          preparation = await new Promise((resolve) => {
+            clearRetry();
+            retryButton = app.querySelector?.('[data-route-loading-retry]');
+            retryHandler = async () => {
+              clearRetry();
+              try {
+                resolve(await mediaLoader.retryFailed());
+              } catch (error) {
+                if (error?.name === 'AbortError') return;
+                resolve({ ...preparation, failed: Math.max(1, preparation.failed) });
+              }
+            };
+            retryButton?.addEventListener?.('click', retryHandler);
+          });
+        }
+        if (!active || request.signal.aborted || request !== controller) return;
+        clearRetry();
+        loadingInteractionCleanup();
+        loadingInteractionCleanup = () => {};
+
         const state = { query: '', types: [], stages: [] };
         let tunnel = null;
         let modal = null;
@@ -736,7 +832,10 @@ export function mountArchiveRoute(app, route, {
         if (resolved) {
           writeArchiveLastCase(storage, resolved.item.id);
           interactionCleanup = bindArchiveDetailInteractions(app, {
-            images: resolved.item.images.map((image) => ({ src: image.src, alt: `${resolved.item.title} · ${image.role}` })),
+            images: resolved.item.images.map((image) => ({
+              src: image.originalSrc ?? image.src,
+              alt: `${resolved.item.title} · ${image.role}`,
+            })),
             prompt: resolved.item.prompt,
             documentRef,
             navigatorRef,
@@ -758,7 +857,9 @@ export function mountArchiveRoute(app, route, {
   return () => {
     active = false;
     controller?.abort();
+    mediaLoader?.abort?.();
     clearRetry();
+    loadingInteractionCleanup();
     interactionCleanup();
   };
 }

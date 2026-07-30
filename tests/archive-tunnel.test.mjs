@@ -38,6 +38,8 @@ test("flattens every authored archive image into its immutable tunnel occurrence
     title: archiveData.cases[0].title,
     role: archiveData.cases[0].images[0].role,
     src: archiveData.cases[0].images[0].src,
+    displaySrc: archiveData.cases[0].images[0].displaySrc,
+    originalSrc: archiveData.cases[0].images[0].originalSrc,
     status: "error",
     errorGroup: archiveData.cases[0].errorGroup,
     errorReason: archiveData.cases[0].errorReason,
@@ -50,6 +52,8 @@ test("flattens every authored archive image into its immutable tunnel occurrence
     title: archiveData.cases.at(-1).title,
     role: archiveData.cases.at(-1).images[0].role,
     src: archiveData.cases.at(-1).images[0].src,
+    displaySrc: archiveData.cases.at(-1).images[0].displaySrc,
+    originalSrc: archiveData.cases.at(-1).images[0].originalSrc,
     status: "normal",
     errorGroup: null,
     errorReason: null,
@@ -508,7 +512,7 @@ test("DOM renderer mounts all ordered front-facing cards with exact entrance pos
   assert.equal(first.dataset.order, "1");
   assert.equal(first.dataset.status, "error");
   assert.equal(first.style.transform, `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale}) rotate(${pose.rotationZ}deg)`);
-  assert.equal(first.children[0].src, archiveData.cases[0].images[0].src);
+  assert.equal(first.children[0].src, archiveData.cases[0].images[0].displaySrc);
   assert.equal(first.children[0].style.opacity, undefined);
   assert.equal(first.dataset.paintReady, "ready");
   assert.equal(first.dataset.inRange, "true");
@@ -654,7 +658,7 @@ test("renderer eagerly activates only the approved visible image window and pres
   const cards = h.root.children[0].children;
   for (let index = 0; index <= 91; index += 1) {
     const image = cards[index].children[0];
-    assert.equal(image.src, archiveData.cases.flatMap(item => item.images)[index].src);
+    assert.equal(image.src, archiveData.cases.flatMap(item => item.images)[index].displaySrc);
     assert.equal(image.loading, "eager");
     assert.equal(image.decoding, "async");
     assert.equal(image.fetchPriority, "high");
@@ -667,7 +671,7 @@ test("renderer eagerly activates only the approved visible image window and pres
   }
 
   h.root.fire("wheel", { deltaY: 99999, preventDefault() {} });
-  assert.equal(cards[0].children[0].src, archiveData.cases[0].images[0].src, "leaving the range retains the decoded/cacheable source");
+  assert.equal(cards[0].children[0].src, archiveData.cases[0].images[0].displaySrc, "leaving the range retains the decoded/cacheable source");
   for (let index = 128; index < cards.length; index += 1) {
     const image = cards[index].children[0];
     assert.ok(image.src);

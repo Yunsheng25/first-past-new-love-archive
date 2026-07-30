@@ -151,7 +151,7 @@ test('mount renders a cached route synchronously without a loading write', async
   };
   Object.defineProperty(app, 'innerHTML', { set(value) { writes.push(value); }, get() { return writes.at(-1) ?? ''; } });
 
-  mountReviewRoute(app, { name: 'review-page', chapter: 'production', page: 7 }, {
+  mountReviewRoute(app, { name: 'review-page', chapter: 'origin', page: 1 }, {
     fetchImpl, storage: fakeStorage(),
     documentRef: { addEventListener() {}, removeEventListener() {} }, windowRef: { location: {} },
   });
@@ -324,6 +324,62 @@ test('every rendered page has exactly the independent source block signature', (
 
   assert.ok(expectedCount > 0);
   assert.equal(renderedCount, expectedCount);
+});
+
+test('review spread stays behind the approved loading view until its facing-page media is ready', async () => {
+  resetReviewDataCache();
+  const fetchImpl = async () => ({ ok: true, json: async () => reviewData });
+  await loadReviewData(fetchImpl);
+  let resolvePreparation;
+  const preparation = new Promise((resolve) => { resolvePreparation = resolve; });
+  let resources;
+  let aborts = 0;
+  const app = {
+    innerHTML: '',
+    querySelector() { return null; },
+    querySelectorAll() { return []; },
+    addEventListener() {},
+    removeEventListener() {},
+    focus() {},
+    style: { setProperty() {} },
+  };
+
+  const cleanup = mountReviewRoute(app, {
+    name: 'review-page',
+    chapter: 'production',
+    page: 10,
+  }, {
+    fetchImpl,
+    storage: fakeStorage(),
+    documentRef: { addEventListener() {}, removeEventListener() {} },
+    windowRef: { location: {}, matchMedia: () => ({ matches: false }) },
+    createMediaLoader({ onProgress }) {
+      return {
+        load(nextResources) {
+          resources = nextResources;
+          onProgress({ status: 'loading', ready: 0, failed: 0, total: nextResources.total });
+          return preparation;
+        },
+        retryFailed() { return preparation; },
+        abort() { aborts += 1; },
+      };
+    },
+  });
+
+  await Promise.resolve();
+  assert.match(app.innerHTML, /data-route-loading-type/);
+  assert.doesNotMatch(app.innerHTML, /data-review-spread/);
+  assert.deepEqual(resources.videos, [
+    'assets/review-media/011-“戴”戒指.mp4',
+    'assets/review-media/012-“弹”钢琴.mp4',
+  ]);
+
+  resolvePreparation({ status: 'complete', ready: 2, failed: 0, total: 2 });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.match(app.innerHTML, /data-review-spread/);
+
+  cleanup();
+  assert.equal(aborts, 1);
 });
 
 test('review spread renders facing source pages with immersive reading controls', () => {
