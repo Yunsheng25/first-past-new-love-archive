@@ -16,7 +16,7 @@
 - `scripts/build-archive-data.mjs`: attach derivative and original image URLs.
 - `assets/archive-display/`: generated route-display WebP assets.
 - `src/route-media-loader.js`: route-scoped image preload/decode state machine.
-- `src/route-loading-slate.js`: shared D “场记报码” loading screen for archive and review routes.
+- `src/route-loading-type.js`: shared B “文字苏醒” loading screen for archive and review routes.
 - `src/archive-ui.js`: full archive preparation screen and retry.
 - `src/archive-tunnel.js`: use decoded display URLs only.
 - `src/review-reader.js`: prepare target spread media before turning.
@@ -194,11 +194,11 @@ git commit -m "feat: preload and decode complete route media"
 ### Task 4: Gate the tunnel behind real completion
 
 **Files:**
-- Create: `src/route-loading-slate.js`
+- Create: `src/route-loading-type.js`
 - Modify: `src/archive-ui.js`
 - Modify: `src/archive-tunnel.js`
 - Modify: `src/preloader-ui.js`
-- Create: `tests/route-loading-slate.test.mjs`
+- Create: `tests/route-loading-type.test.mjs`
 - Modify: `tests/archive-ui.test.mjs`
 - Modify: `tests/archive-tunnel.test.mjs`
 
@@ -208,8 +208,8 @@ git commit -m "feat: preload and decode complete route media"
 test('tunnel mount remains on preparation screen until all display images decode', async () => {
   const request = deferred();
   mountArchiveRoute(app, route, { prepareImages: () => request.promise });
-  assert.match(app.innerHTML, /data-route-loading-slate/);
-  assert.match(app.innerHTML, /画面档案校准中/);
+  assert.match(app.innerHTML, /data-route-loading-type/);
+  assert.match(app.innerHTML, /画面就绪/);
   assert.doesNotMatch(app.innerHTML, /data-archive-tunnel/);
   request.resolve({ ready: 137 });
   await flush();
@@ -225,39 +225,34 @@ Expected: FAIL because the route currently mounts before decode completion.
 - [ ] **Step 3: Add the preparation view**
 
 ```js
-export function buildRouteLoadingSlate({ route, ready = 0, total, failed = 0 }) {
+export function buildRouteLoadingType({ route, ready = 0, total, failed = 0 }) {
   const review = route === 'review';
-  return `<section class="route-loading-slate" data-route-loading-slate aria-live="polite">
-    <div class="route-loading-slate-clapper" aria-hidden="true"></div>
-    <header>
-      <small>${review ? 'THE MAKING-OF NOTES' : 'PROMPT & IMAGE ARCHIVE'}</small>
-      <h1>${review ? '手记书页校准中' : '画面档案校准中'}</h1>
-      <time data-route-loading-timecode>00:00:00:00</time>
-    </header>
-    <dl>
-      <div><dt>PROJECT</dt><dd>初恋 · 旧爱 · 新欢</dd></div>
-      <div><dt>${review ? 'MANUSCRIPT' : 'ARCHIVE'}</dt><dd>${review
-        ? '正在核对正文、案例批注与互动导图'
-        : '正在核对图片、提示词与案例顺序'}</dd></div>
-    </dl>
+  const word = review ? '手记就绪' : '画面就绪';
+  return `<section class="route-loading-type" data-route-loading-type aria-live="polite">
+    <small>${review ? 'THE MAKING-OF NOTES' : 'PROMPT & IMAGE ARCHIVE'}</small>
+    <h1 aria-label="${word}">${[...word].map((character, index) =>
+      `<span style="--character-index:${index}">${character}</span>`).join('')}</h1>
     <progress max="${total}" value="${ready}"></progress>
     <strong data-route-loading-progress>${String(ready).padStart(3, '0')} / ${total}</strong>
-    ${failed ? `<button type="button" data-route-loading-retry>重新校准 ${failed} 项</button>` : ''}
+    <ol data-route-loading-stages>
+      <li>读取目录</li><li>下载素材</li><li>解码画面</li><li>准备进入</li>
+    </ol>
+    ${failed ? `<button type="button" data-route-loading-retry>重新加载失败的 ${failed} 项</button>` : ''}
   </section>`;
 }
 ```
 
-The timecode is decorative and advances independently; the count and progress element only advance after real download and decode completion. After readiness, play one short clapper-close animation and mount the tunnel with `occurrence.displaySrc`; case detail and lightbox use `occurrence.originalSrc`. On persistent failure, keep the slate visible and retry only failed URLs.
+Characters reveal from bottom to top as real overall progress advances. There is no explanatory subtitle below the four large characters. The count and progress element only advance after real download and decode completion. After readiness, briefly show the completed word and mount the tunnel with `occurrence.displaySrc`; case detail and lightbox use `occurrence.originalSrc`. On persistent failure, keep the loading screen visible and retry only failed URLs.
 
 - [ ] **Step 4: Run archive tests**
 
-Run: `node --test tests/route-loading-slate.test.mjs tests/archive-ui.test.mjs tests/archive-tunnel.test.mjs tests/preloader-ui.test.mjs`  
+Run: `node --test tests/route-loading-type.test.mjs tests/archive-ui.test.mjs tests/archive-tunnel.test.mjs tests/preloader-ui.test.mjs`  
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/route-loading-slate.js src/archive-ui.js src/archive-tunnel.js src/preloader-ui.js tests/route-loading-slate.test.mjs tests/archive-ui.test.mjs tests/archive-tunnel.test.mjs
+git add src/route-loading-type.js src/archive-ui.js src/archive-tunnel.js src/preloader-ui.js tests/route-loading-type.test.mjs tests/archive-ui.test.mjs tests/archive-tunnel.test.mjs
 git commit -m "feat: reveal tunnel only after complete preparation"
 ```
 
@@ -285,11 +280,11 @@ test('page turn waits for target spread media readiness', async () => {
   assert.deepEqual(moves, ['#review/production/5']);
 });
 
-test('cold review entry uses the manuscript slate until the first spread is ready', () => {
-  const html = buildRouteLoadingSlate({ route: 'review', ready: 0, total: 8 });
-  assert.match(html, /data-route-loading-slate/);
-  assert.match(html, /手记书页校准中/);
-  assert.match(html, /正文、案例批注与互动导图/);
+test('cold review entry uses the manuscript word reveal until the first spread is ready', () => {
+  const html = buildRouteLoadingType({ route: 'review', ready: 0, total: 8 });
+  assert.match(html, /data-route-loading-type/);
+  assert.match(html, /手记就绪/);
+  assert.doesNotMatch(html, /所有资源准备完成后/);
 });
 ```
 
@@ -311,7 +306,7 @@ export function createReviewTurnCoordinator({ prepare, navigate }) {
 }
 ```
 
-On cold review entry, show the same D slate with review-specific copy until the first spread is ready. For later turns, keep the reader visible, collect images from the target spread, decode them, fetch video metadata without downloading full video files, then run the existing paper-turn animation and route update.
+On cold review entry, show the same B word-reveal screen with review-specific copy until the first spread is ready. For later turns, keep the reader visible, collect images from the target spread, decode them, fetch video metadata without downloading full video files, then run the existing paper-turn animation and route update.
 
 - [ ] **Step 4: Run reader tests**
 
