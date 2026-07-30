@@ -23,6 +23,8 @@ test('intro view uses the optimized film as a full-screen silent looping backgro
   assert.match(html, /muted/);
   assert.match(html, /loop/);
   assert.match(html, /playsinline/);
+  assert.match(html, /preload="metadata"/);
+  assert.match(html, /data-intro-film-ready="false"/);
   assert.doesNotMatch(html, /playbackRate/i);
 });
 
@@ -98,12 +100,15 @@ test('media bindings expose failed playback and let the user retry', async () =>
   const fakeElement = () => ({
     hidden: true,
     textContent: '',
+    dataset: {},
     listeners: new Map(),
     addEventListener(type, listener) { this.listeners.set(type, listener); },
     dispatch(type) { this.listeners.get(type)?.({ type, preventDefault() {} }); },
   });
 
   const introVideo = fakeElement();
+  introVideo.dataset.introFilmReady = 'false';
+  introVideo.readyState = 0;
   introVideo.pause = () => {};
   introVideo.play = () => Promise.reject(new Error('autoplay denied'));
   let introLoads = 0;
@@ -119,6 +124,10 @@ test('media bindings expose failed playback and let the user retry', async () =>
   ]);
 
   mediaUi.bindIntroMedia({ querySelector: (selector) => introNodes.get(selector) }, { reduceMotion: false });
+  introVideo.dispatch('loadeddata');
+  assert.equal(introVideo.dataset.introFilmReady, 'true');
+  introVideo.dispatch('error');
+  assert.equal(introVideo.dataset.introFilmReady, 'false');
   await flush();
   assert.equal(introStatus.hidden, false);
   assert.match(introMessage.textContent, /未能自动播放/);
@@ -202,7 +211,8 @@ test('site shell is a module-driven, single-viewport application', async () => {
   assert.match(documentHtml, /<script type="module" src="script\.js"><\/script>/);
   assert.match(css, /height:\s*100dvh/);
   assert.match(css, /\.intro-film[\s\S]*object-fit:\s*cover/);
-  assert.match(css, /\.intro-film[\s\S]*opacity:\s*0\.6[0-8]/);
+  assert.match(css, /\.intro-film\s*{[^}]*opacity:\s*0/);
+  assert.match(css, /\.intro-film\[data-intro-film-ready="true"\]\s*{[^}]*opacity:\s*0\.64/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /@media\s*\(max-width:\s*700px\)\s*and\s*\(max-height:\s*400px\)/);

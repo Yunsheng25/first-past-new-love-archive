@@ -18,7 +18,8 @@ export function buildIntroView() {
         muted
         loop
         playsinline
-        preload="auto"
+        preload="metadata"
+        data-intro-film-ready="false"
         aria-hidden="true"
       ></video>
       <div class="intro-shade" aria-hidden="true"></div>

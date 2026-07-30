@@ -82,8 +82,13 @@ video:focus-visible {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.64;
+  opacity: 0;
   filter: saturate(0.82) contrast(0.98);
+  transition: opacity 900ms cubic-bezier(.22, .61, .36, 1);
+}
+
+.intro-film[data-intro-film-ready="true"] {
+  opacity: 0.64;
 }
 
 .intro-shade {
