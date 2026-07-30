@@ -337,6 +337,11 @@ test('review spread renders facing source pages with immersive reading controls'
   assert.match(html, /data-review-settings/);
   assert.match(html, /data-review-notebook/);
   assert.match(html, /data-review-selection-tools/);
+  assert.equal((html.match(/class="review-spread-page[^"]*\bis-current\b/g) ?? []).length, 1);
+  assert.match(html, /class="review-spread-page[^"]*\bis-current\b[^"]*"[^>]*data-review-left-page/);
+
+  const secondPage = buildReviewSpread(reviewData, normalizeReviewTarget(reviewData, 'origin', 2));
+  assert.match(secondPage, /class="review-spread-page[^"]*\bis-current\b[^"]*"[^>]*data-review-right-page/);
 
   const expected = [
     ...expectedSignature(target.chapter, 0),
@@ -1057,4 +1062,43 @@ test('interactive map surfaces prevent selection while the circular cursor stays
   assert.match(css, /\.after-cursor\s*\{[\s\S]*z-index:\s*40/);
   assert.match(css, /\.after-cursor\s*\{[\s\S]*pointer-events:\s*none/);
   assert.match(css, /\.review-return-after\s*\{[\s\S]*z-index:\s*30/);
+});
+
+test('double-page reader uses a bounded book spread with two independently scrolling pages', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  assert.match(css, /\.review-spread-layout\s*\{[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\)\s+auto/s);
+  assert.match(css, /\.review-spread\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*1fr\)[^}]*perspective:\s*2200px/s);
+  assert.match(css, /\.review-spread-page\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\)[^}]*overflow:\s*hidden/s);
+  assert.match(css, /\.review-spread-page\s+\.review-paper-scroll\s*\{[^}]*overflow-y:\s*auto/s);
+});
+
+test('immersive reader keeps an exit control and hides only the surrounding toolbar', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  assert.match(css, /\.review-exit-immersive\s*\{[^}]*display:\s*none/s);
+  assert.match(css, /\.review-reader-view\.is-immersive\s+\.review-reader-toolbar\s*\{[^}]*display:\s*none/s);
+  assert.match(css, /\.review-reader-view\.is-immersive\s+\.review-exit-immersive\s*\{[^}]*display:\s*inline-flex/s);
+  assert.match(css, /\.review-reader-view\.is-immersive\s+\.review-spread\s*\{[^}]*max-width:\s*1540px/s);
+});
+
+test('reader selection tools, notebook, settings, and authored case detail are real layered controls', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  for (const selector of [
+    '.review-selection-tools',
+    '.review-settings-panel',
+    '.review-notebook',
+    '.review-note-editor',
+    '.review-case-detail',
+  ]) {
+    assert.match(css, new RegExp(`${selector.replace('.', '\\.')}\\s*\\{[^}]*position:\\s*fixed`, 's'));
+  }
+  assert.match(css, /\.review-user-highlight\s*\{[^}]*background:\s*rgba\(196,\s*154,\s*86,\s*\.38\)/s);
+  assert.match(css, /\.review-case-detail\s+\.review-callout\s*\{[^}]*width:\s*min\(1180px,\s*100%\)/s);
+  assert.match(css, /\.review-case-detail\s+\.review-media\s+img,[\s\S]*?\.review-case-detail\s+\.review-media\s+video\s*\{[^}]*opacity:\s*1[^}]*filter:\s*none/s);
+});
+
+test('compact authored cases keep adjacent media side by side while narrow readers collapse to one page', async () => {
+  const css = await readFile(new URL('style.css', projectRoot), 'utf8');
+  assert.match(css, /\.review-callout-body:has\(>\s*\.review-media\s*\+\s*\.review-media\)\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s);
+  assert.match(css, /@media\s*\(max-width:\s*980px\)[\s\S]*?\.review-spread\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
+  assert.match(css, /@media\s*\(max-width:\s*980px\)[\s\S]*?\.review-spread-page\[data-review-right-page\]\s*\{[^}]*display:\s*none/s);
 });

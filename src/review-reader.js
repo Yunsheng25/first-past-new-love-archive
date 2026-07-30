@@ -3,6 +3,7 @@ import { mountReviewRail } from './review-rail-interaction.js';
 import { resolveReviewMap } from './review-live-map-model.js';
 import { mountReviewLiveMaps } from './review-live-map.js';
 import { resolveReviewSpread } from './review-spread.js';
+import { mountReviewReaderInteractions } from './review-reader-interactions.js';
 
 export const REVIEW_PROGRESS_KEY = 'review:progress';
 
@@ -241,7 +242,7 @@ function navigationLink(href, direction, label) {
   return `<a href="${href}" ${attribute} data-review-direction="${direction}">${label}</a>`;
 }
 
-function spreadPageArticle(data, pageReference, side) {
+function spreadPageArticle(data, pageReference, side, isCurrent = false) {
   if (!pageReference) {
     return `<article class="review-spread-page is-blank" data-review-${side}-page aria-hidden="true"></article>`;
   }
@@ -270,7 +271,7 @@ function spreadPageArticle(data, pageReference, side) {
     ? `aria-labelledby="${escapeHtml(sectionTitleId)}"`
     : `aria-label="${escapeHtml(label)}"`;
 
-  return `<article class="review-spread-page${isChapterOpener ? ' review-chapter-opener' : ''}" data-review-${side}-page data-review-page="${isChapterOpener ? 'opener' : 'continuation'}" ${articleLabel}>
+  return `<article class="review-spread-page${isChapterOpener ? ' review-chapter-opener' : ''}${isCurrent ? ' is-current' : ''}" data-review-${side}-page data-review-page="${isChapterOpener ? 'opener' : 'continuation'}" data-review-chapter="${escapeHtml(chapter.slug)}" data-review-page-number="${pageIndex + 1}" ${articleLabel}>
     <div class="review-paper-meta">
       <span>第 ${chapterIndex + 1} 章</span>
       <span>${escapeHtml(section)}</span>
@@ -305,6 +306,9 @@ export function buildReviewSpread(data, target) {
   const right = spreadPageReference(data, spread.right);
   const activeChapter = left.chapter;
   const activeChapterIndex = data.chapters.indexOf(activeChapter);
+  const isCurrentPage = (page) => Boolean(page
+    && page.chapter.slug === target.chapter.slug
+    && page.pageIndex + 1 === target.page);
 
   return `<section class="review-reader-view review-spread-view app-view" aria-label="复盘手记双页阅读" data-review-reader>
     <header class="review-reader-toolbar">
@@ -327,8 +331,8 @@ export function buildReviewSpread(data, target) {
         <nav>${chapterDirectory(data, activeChapter.slug)}</nav>
       </aside>
       <main class="review-spread" data-review-spread aria-live="polite">
-        ${spreadPageArticle(data, left, 'left')}
-        ${spreadPageArticle(data, right, 'right')}
+        ${spreadPageArticle(data, left, 'left', isCurrentPage(left))}
+        ${spreadPageArticle(data, right, 'right', isCurrentPage(right))}
         <div class="review-page-turn-sheet" data-review-turn-sheet aria-hidden="true"></div>
       </main>
       <nav class="review-page-nav review-spread-nav" aria-label="双页翻阅">
@@ -342,6 +346,7 @@ export function buildReviewSpread(data, target) {
       <button type="button" data-review-highlight>高亮</button>
       <button type="button" data-review-add-note>添加批注</button>
     </div>
+    <button type="button" class="review-exit-immersive" data-review-exit-immersive>退出沉浸阅读 ×</button>
     <aside class="review-settings-panel" data-review-settings-panel hidden>
       <h2>阅读设置</h2>
       <button type="button" data-review-theme="light">浅色</button>
@@ -525,6 +530,7 @@ export function createFocusTrap(container, { documentRef = document } = {}) {
 export function bindReviewInteractions(root, {
   documentRef = document,
   windowRef = window,
+  storage = globalThis.localStorage,
 } = {}) {
   const drawer = root.querySelector('[data-review-drawer]');
   const drawerToggle = root.querySelector('[data-toggle-review-drawer]');
@@ -537,6 +543,11 @@ export function bindReviewInteractions(root, {
   const lightboxTrap = createFocusTrap(lightbox, { documentRef });
   const cleanupLiveMaps = mountReviewLiveMaps(root, { documentRef, windowRef });
   const cleanupRail = mountReviewRail(root);
+  const cleanupReader = mountReviewReaderInteractions(root, {
+    documentRef,
+    windowRef,
+    storage,
+  });
 
   const setDrawer = (open, { moveFocus = false, restoreFocus = false } = {}) => {
     if (!drawer || !drawerToggle) return;
@@ -617,6 +628,7 @@ export function bindReviewInteractions(root, {
     lightboxTrap.deactivate({ restoreFocus: false });
     cleanupLiveMaps();
     cleanupRail();
+    cleanupReader();
     setDrawer(false);
     root.querySelectorAll?.('.review-media-video').forEach((video) => video.pause());
   };
@@ -712,7 +724,7 @@ export function mountReviewRoute(app, route, {
         if (scrollRegion) scrollRegion.scrollTop = 0;
       }
     }
-    interactionCleanup = bindReviewInteractions(app, { documentRef, windowRef });
+    interactionCleanup = bindReviewInteractions(app, { documentRef, windowRef, storage });
     app.focus?.({ preventScroll: true });
   };
 
