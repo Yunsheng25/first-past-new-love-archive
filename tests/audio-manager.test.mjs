@@ -10,21 +10,37 @@ import {
   createVolumeFade,
 } from '../src/audio-manager.js';
 
-test('uses the selected piano and strings soundtrack for the default audio player', () => {
+test('default BGM source is assigned only when enabled playback is requested', async () => {
   const originalAudio = globalThis.Audio;
-  let receivedSource;
+  const instances = [];
   try {
     globalThis.Audio = class FakeAudio {
-      constructor(source) {
-        receivedSource = source;
+      constructor() {
+        this.src = '';
+        this.preload = 'auto';
         this.paused = true;
         this.volume = 1;
+        instances.push(this);
       }
-      pause() {}
+      play() {
+        this.paused = false;
+        return Promise.resolve();
+      }
+      pause() {
+        this.paused = true;
+      }
     };
-    const manager = createAudioManager({ storage: createFakeStorage() });
+    const fade = async (player, target) => { player.volume = target; };
+    fade.cancel = () => {};
+    const manager = createAudioManager({
+      storage: createFakeStorage({ [BGM_PREFERENCE_KEY]: 'true' }),
+      fade,
+    });
     assert.equal(BGM_SOURCE, 'assets/audio/emotional-piano-and-strings.mp3');
-    assert.equal(receivedSource, BGM_SOURCE);
+    assert.equal(instances[0].src, '');
+    assert.equal(instances[0].preload, 'none');
+    await manager.startFromGesture();
+    assert.equal(instances[0].src, BGM_SOURCE);
     manager.destroy();
   } finally {
     if (originalAudio === undefined) delete globalThis.Audio;
