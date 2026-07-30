@@ -16,6 +16,7 @@
 - `scripts/build-archive-data.mjs`: attach derivative and original image URLs.
 - `assets/archive-display/`: generated route-display WebP assets.
 - `src/route-media-loader.js`: route-scoped image preload/decode state machine.
+- `src/route-loading-slate.js`: shared D “场记报码” loading screen for archive and review routes.
 - `src/archive-ui.js`: full archive preparation screen and retry.
 - `src/archive-tunnel.js`: use decoded display URLs only.
 - `src/review-reader.js`: prepare target spread media before turning.
@@ -193,9 +194,11 @@ git commit -m "feat: preload and decode complete route media"
 ### Task 4: Gate the tunnel behind real completion
 
 **Files:**
+- Create: `src/route-loading-slate.js`
 - Modify: `src/archive-ui.js`
 - Modify: `src/archive-tunnel.js`
 - Modify: `src/preloader-ui.js`
+- Create: `tests/route-loading-slate.test.mjs`
 - Modify: `tests/archive-ui.test.mjs`
 - Modify: `tests/archive-tunnel.test.mjs`
 
@@ -205,7 +208,8 @@ git commit -m "feat: preload and decode complete route media"
 test('tunnel mount remains on preparation screen until all display images decode', async () => {
   const request = deferred();
   mountArchiveRoute(app, route, { prepareImages: () => request.promise });
-  assert.match(app.innerHTML, /data-archive-preparing/);
+  assert.match(app.innerHTML, /data-route-loading-slate/);
+  assert.match(app.innerHTML, /画面档案校准中/);
   assert.doesNotMatch(app.innerHTML, /data-archive-tunnel/);
   request.resolve({ ready: 137 });
   await flush();
@@ -221,25 +225,39 @@ Expected: FAIL because the route currently mounts before decode completion.
 - [ ] **Step 3: Add the preparation view**
 
 ```js
-app.innerHTML = `<section class="archive-route-preparing" data-archive-preparing>
-  <div class="archive-preparing-orbit" aria-hidden="true"></div>
-  <p>正在整理提示词与图片</p>
-  <strong data-archive-preparing-progress>0 / ${urls.length}</strong>
-  <span>全部准备完成后进入</span>
-</section>`;
+export function buildRouteLoadingSlate({ route, ready = 0, total, failed = 0 }) {
+  const review = route === 'review';
+  return `<section class="route-loading-slate" data-route-loading-slate aria-live="polite">
+    <div class="route-loading-slate-clapper" aria-hidden="true"></div>
+    <header>
+      <small>${review ? 'THE MAKING-OF NOTES' : 'PROMPT & IMAGE ARCHIVE'}</small>
+      <h1>${review ? '手记书页校准中' : '画面档案校准中'}</h1>
+      <time data-route-loading-timecode>00:00:00:00</time>
+    </header>
+    <dl>
+      <div><dt>PROJECT</dt><dd>初恋 · 旧爱 · 新欢</dd></div>
+      <div><dt>${review ? 'MANUSCRIPT' : 'ARCHIVE'}</dt><dd>${review
+        ? '正在核对正文、案例批注与互动导图'
+        : '正在核对图片、提示词与案例顺序'}</dd></div>
+    </dl>
+    <progress max="${total}" value="${ready}"></progress>
+    <strong data-route-loading-progress>${String(ready).padStart(3, '0')} / ${total}</strong>
+    ${failed ? `<button type="button" data-route-loading-retry>重新校准 ${failed} 项</button>` : ''}
+  </section>`;
+}
 ```
 
-After readiness, mount the tunnel with `occurrence.displaySrc`; case detail and lightbox use `occurrence.originalSrc`. On persistent failure, keep the preparation screen and show a retry button.
+The timecode is decorative and advances independently; the count and progress element only advance after real download and decode completion. After readiness, play one short clapper-close animation and mount the tunnel with `occurrence.displaySrc`; case detail and lightbox use `occurrence.originalSrc`. On persistent failure, keep the slate visible and retry only failed URLs.
 
 - [ ] **Step 4: Run archive tests**
 
-Run: `node --test tests/archive-ui.test.mjs tests/archive-tunnel.test.mjs tests/preloader-ui.test.mjs`  
+Run: `node --test tests/route-loading-slate.test.mjs tests/archive-ui.test.mjs tests/archive-tunnel.test.mjs tests/preloader-ui.test.mjs`  
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/archive-ui.js src/archive-tunnel.js src/preloader-ui.js tests/archive-ui.test.mjs tests/archive-tunnel.test.mjs
+git add src/route-loading-slate.js src/archive-ui.js src/archive-tunnel.js src/preloader-ui.js tests/route-loading-slate.test.mjs tests/archive-ui.test.mjs tests/archive-tunnel.test.mjs
 git commit -m "feat: reveal tunnel only after complete preparation"
 ```
 
@@ -266,6 +284,13 @@ test('page turn waits for target spread media readiness', async () => {
   await pending;
   assert.deepEqual(moves, ['#review/production/5']);
 });
+
+test('cold review entry uses the manuscript slate until the first spread is ready', () => {
+  const html = buildRouteLoadingSlate({ route: 'review', ready: 0, total: 8 });
+  assert.match(html, /data-route-loading-slate/);
+  assert.match(html, /手记书页校准中/);
+  assert.match(html, /正文、案例批注与互动导图/);
+});
 ```
 
 - [ ] **Step 2: Run the focused test**
@@ -286,7 +311,7 @@ export function createReviewTurnCoordinator({ prepare, navigate }) {
 }
 ```
 
-Collect images from the target spread, decode them, fetch video metadata without downloading full video files, then run the existing paper-turn animation and route update.
+On cold review entry, show the same D slate with review-specific copy until the first spread is ready. For later turns, keep the reader visible, collect images from the target spread, decode them, fetch video metadata without downloading full video files, then run the existing paper-turn animation and route update.
 
 - [ ] **Step 4: Run reader tests**
 
@@ -341,4 +366,3 @@ Run: `npm run preview` and verify:
 git add tests/browser-cdp.test.mjs docs/superpowers/specs/2026-07-30-route-complete-media-design.md
 git commit -m "test: verify complete route media readiness"
 ```
-
