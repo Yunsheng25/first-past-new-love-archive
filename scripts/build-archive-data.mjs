@@ -253,6 +253,14 @@ export function writeArchiveData(options = {}) {
   validateOutputPath(outputPath, workspace, mediaOutputDir, canvasPath, obsidianRoot);
   const canvas = JSON.parse(fs.readFileSync(canvasPath, "utf8").replace(/^\uFEFF/, ""));
   const archive = parseCanvasArchive(canvas);
+  for (const item of archive.cases) {
+    for (const image of item.images) {
+      image.originalSrc = image.src;
+      const extension = path.posix.extname(image.src);
+      const basename = path.posix.basename(image.src, extension);
+      image.displaySrc = `assets/archive-display/${basename}.webp`;
+    }
+  }
   const refs = [...new Set(archive.cases.flatMap((item) => item.images.map((image) => image.originalRef)))];
   onProgress("parsed", { cases: archive.cases.length, imageOccurrences: archive.summary.imageOccurrences });
   const sources = resolveImageSources(refs, obsidianRoot);

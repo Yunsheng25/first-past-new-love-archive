@@ -60,6 +60,20 @@ test("resolves all 137 real source images with no missing or ambiguous names", (
   assert.ok([...sources.values()].every((source) => fs.existsSync(source)));
 });
 
+test("every committed tunnel image keeps its original and has a WebP display derivative", () => {
+  const archive = JSON.parse(fs.readFileSync("data/archive.json", "utf8"));
+  const images = archive.cases.flatMap((item) => item.images);
+
+  assert.equal(images.length, 138);
+  assert.equal(new Set(images.map((image) => image.displaySrc)).size, 137);
+  for (const image of images) {
+    assert.equal(image.originalSrc, image.src);
+    assert.match(image.originalSrc, /^assets\/canvas-images\/.+/);
+    assert.match(image.displaySrc, /^assets\/archive-display\/.+\.webp$/);
+    assert.ok(fs.existsSync(image.displaySrc), image.displaySrc);
+  }
+});
+
 test("uses exact vault-relative paths and rejects ambiguous bare basenames", () => {
   const writeArchiveData = required(archiveModule, "writeArchiveData");
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-ambiguous-"));

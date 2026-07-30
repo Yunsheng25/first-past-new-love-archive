@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-22T05:53:44.991Z",
+  "generatedAt": "2026-07-30T14:35:02.638Z",
   "source": {
     "canvas": "《初恋旧爱新欢》视频制作.canvas",
     "visualOrder": "y, x, nodeId"
@@ -59,13 +59,17 @@
           "occurrence": 1,
           "originalRef": "2.png",
           "src": "assets/canvas-images/001-2.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/001-2.png",
+          "displaySrc": "assets/archive-display/001-2.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "3.png",
           "src": "assets/canvas-images/002-3.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/002-3.png",
+          "displaySrc": "assets/archive-display/002-3.webp"
         }
       ],
       "source": {
@@ -108,7 +112,9 @@
           "occurrence": 1,
           "originalRef": "ChatGPT Image 2026年5月1日 17_17_59.png",
           "src": "assets/canvas-images/003-chatgpt-image-2026年5月1日-17-17-59.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/003-chatgpt-image-2026年5月1日-17-17-59.png",
+          "displaySrc": "assets/archive-display/003-chatgpt-image-2026年5月1日-17-17-59.webp"
         }
       ],
       "source": {
@@ -151,13 +157,17 @@
           "occurrence": 1,
           "originalRef": "1 1.png",
           "src": "assets/canvas-images/004-1-1.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/004-1-1.png",
+          "displaySrc": "assets/archive-display/004-1-1.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "ChatGPT Image 2026年5月1日 23_36_41 1.png",
           "src": "assets/canvas-images/005-chatgpt-image-2026年5月1日-23-36-41-1.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/005-chatgpt-image-2026年5月1日-23-36-41-1.png",
+          "displaySrc": "assets/archive-display/005-chatgpt-image-2026年5月1日-23-36-41-1.webp"
         }
       ],
       "source": {
@@ -202,13 +212,17 @@
           "occurrence": 1,
           "originalRef": "ChatGPT Image 2026年5月1日 09_52_56 (2).png",
           "src": "assets/canvas-images/006-chatgpt-image-2026年5月1日-09-52-56-2.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/006-chatgpt-image-2026年5月1日-09-52-56-2.png",
+          "displaySrc": "assets/archive-display/006-chatgpt-image-2026年5月1日-09-52-56-2.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "ChatGPT Image 2026年5月1日 17_36_07.png",
           "src": "assets/canvas-images/007-chatgpt-image-2026年5月1日-17-36-07.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/007-chatgpt-image-2026年5月1日-17-36-07.png",
+          "displaySrc": "assets/archive-display/007-chatgpt-image-2026年5月1日-17-36-07.webp"
         }
       ],
       "source": {
@@ -246,13 +260,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609182142.png",
           "src": "assets/canvas-images/008-pasted-image-20260609182142.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/008-pasted-image-20260609182142.png",
+          "displaySrc": "assets/archive-display/008-pasted-image-20260609182142.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260609182155.png",
           "src": "assets/canvas-images/009-pasted-image-20260609182155.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/009-pasted-image-20260609182155.png",
+          "displaySrc": "assets/archive-display/009-pasted-image-20260609182155.webp"
         }
       ],
       "source": {
@@ -290,13 +308,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609182234.png",
           "src": "assets/canvas-images/010-pasted-image-20260609182234.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/010-pasted-image-20260609182234.png",
+          "displaySrc": "assets/archive-display/010-pasted-image-20260609182234.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260609182241.png",
           "src": "assets/canvas-images/011-pasted-image-20260609182241.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/011-pasted-image-20260609182241.png",
+          "displaySrc": "assets/archive-display/011-pasted-image-20260609182241.webp"
         }
       ],
       "source": {
@@ -334,7 +356,9 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609182304.png",
           "src": "assets/canvas-images/012-pasted-image-20260609182304.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/012-pasted-image-20260609182304.png",
+          "displaySrc": "assets/archive-display/012-pasted-image-20260609182304.webp"
         }
       ],
       "source": {
@@ -372,13 +396,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609182439.png",
           "src": "assets/canvas-images/013-pasted-image-20260609182439.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/013-pasted-image-20260609182439.png",
+          "displaySrc": "assets/archive-display/013-pasted-image-20260609182439.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260609182358.png",
           "src": "assets/canvas-images/014-pasted-image-20260609182358.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/014-pasted-image-20260609182358.png",
+          "displaySrc": "assets/archive-display/014-pasted-image-20260609182358.webp"
         }
       ],
       "source": {
@@ -416,7 +444,9 @@
           "occurrence": 1,
           "originalRef": "ChatGPT Image 2026年5月8日 22_53_11.png",
           "src": "assets/canvas-images/015-chatgpt-image-2026年5月8日-22-53-11.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/015-chatgpt-image-2026年5月8日-22-53-11.png",
+          "displaySrc": "assets/archive-display/015-chatgpt-image-2026年5月8日-22-53-11.webp"
         }
       ],
       "source": {
@@ -454,13 +484,17 @@
           "occurrence": 1,
           "originalRef": "4.png",
           "src": "assets/canvas-images/016-4.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/016-4.png",
+          "displaySrc": "assets/archive-display/016-4.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "fe0efbc4-3df0-4491-9fd4-e0059b5cceee.png",
           "src": "assets/canvas-images/017-fe0efbc4-3df0-4491-9fd4-e0059b5cceee.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/017-fe0efbc4-3df0-4491-9fd4-e0059b5cceee.png",
+          "displaySrc": "assets/archive-display/017-fe0efbc4-3df0-4491-9fd4-e0059b5cceee.webp"
         }
       ],
       "source": {
@@ -498,13 +532,17 @@
           "occurrence": 1,
           "originalRef": "fe0efbc4-3df0-4491-9fd4-e0059b5cceee 1.png",
           "src": "assets/canvas-images/018-fe0efbc4-3df0-4491-9fd4-e0059b5cceee-1.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/018-fe0efbc4-3df0-4491-9fd4-e0059b5cceee-1.png",
+          "displaySrc": "assets/archive-display/018-fe0efbc4-3df0-4491-9fd4-e0059b5cceee-1.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "f996380c-1bad-47b8-95fd-dc920c9d9877.png",
           "src": "assets/canvas-images/019-f996380c-1bad-47b8-95fd-dc920c9d9877.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/019-f996380c-1bad-47b8-95fd-dc920c9d9877.png",
+          "displaySrc": "assets/archive-display/019-f996380c-1bad-47b8-95fd-dc920c9d9877.webp"
         }
       ],
       "source": {
@@ -547,13 +585,17 @@
           "occurrence": 1,
           "originalRef": "6.png",
           "src": "assets/canvas-images/020-6.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/020-6.png",
+          "displaySrc": "assets/archive-display/020-6.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "43ad8411-585b-47b1-83cb-122ae6d429b2.png",
           "src": "assets/canvas-images/021-43ad8411-585b-47b1-83cb-122ae6d429b2.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/021-43ad8411-585b-47b1-83cb-122ae6d429b2.png",
+          "displaySrc": "assets/archive-display/021-43ad8411-585b-47b1-83cb-122ae6d429b2.webp"
         }
       ],
       "source": {
@@ -596,13 +638,17 @@
           "occurrence": 1,
           "originalRef": "7.png",
           "src": "assets/canvas-images/022-7.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/022-7.png",
+          "displaySrc": "assets/archive-display/022-7.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "9.png",
           "src": "assets/canvas-images/023-9.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/023-9.png",
+          "displaySrc": "assets/archive-display/023-9.webp"
         }
       ],
       "source": {
@@ -645,13 +691,17 @@
           "occurrence": 1,
           "originalRef": "8a407b6b-a1af-4dce-89c9-4906c7e76d90.png",
           "src": "assets/canvas-images/024-8a407b6b-a1af-4dce-89c9-4906c7e76d90.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/024-8a407b6b-a1af-4dce-89c9-4906c7e76d90.png",
+          "displaySrc": "assets/archive-display/024-8a407b6b-a1af-4dce-89c9-4906c7e76d90.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "9 1.png",
           "src": "assets/canvas-images/025-9-1.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/025-9-1.png",
+          "displaySrc": "assets/archive-display/025-9-1.webp"
         }
       ],
       "source": {
@@ -694,13 +744,17 @@
           "occurrence": 1,
           "originalRef": "11.png",
           "src": "assets/canvas-images/026-11.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/026-11.png",
+          "displaySrc": "assets/archive-display/026-11.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "12.png",
           "src": "assets/canvas-images/027-12.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/027-12.png",
+          "displaySrc": "assets/archive-display/027-12.webp"
         }
       ],
       "source": {
@@ -738,13 +792,17 @@
           "occurrence": 1,
           "originalRef": "13 1.png",
           "src": "assets/canvas-images/028-13-1.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/028-13-1.png",
+          "displaySrc": "assets/archive-display/028-13-1.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "3789431f-f263-45d4-961e-9eeaf77d40cc.png",
           "src": "assets/canvas-images/029-3789431f-f263-45d4-961e-9eeaf77d40cc.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/029-3789431f-f263-45d4-961e-9eeaf77d40cc.png",
+          "displaySrc": "assets/archive-display/029-3789431f-f263-45d4-961e-9eeaf77d40cc.webp"
         }
       ],
       "source": {
@@ -782,13 +840,17 @@
           "occurrence": 1,
           "originalRef": "12 2.png",
           "src": "assets/canvas-images/030-12-2.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/030-12-2.png",
+          "displaySrc": "assets/archive-display/030-12-2.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "13.png",
           "src": "assets/canvas-images/031-13.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/031-13.png",
+          "displaySrc": "assets/archive-display/031-13.webp"
         }
       ],
       "source": {
@@ -826,13 +888,17 @@
           "occurrence": 1,
           "originalRef": "e9bbd6d6-3c54-4c5c-babc-d0129f1230b9 1.png",
           "src": "assets/canvas-images/032-e9bbd6d6-3c54-4c5c-babc-d0129f1230b9-1.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/032-e9bbd6d6-3c54-4c5c-babc-d0129f1230b9-1.png",
+          "displaySrc": "assets/archive-display/032-e9bbd6d6-3c54-4c5c-babc-d0129f1230b9-1.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "e0b89da6-6266-43e4-8186-4b97a747dbc1.png",
           "src": "assets/canvas-images/033-e0b89da6-6266-43e4-8186-4b97a747dbc1.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/033-e0b89da6-6266-43e4-8186-4b97a747dbc1.png",
+          "displaySrc": "assets/archive-display/033-e0b89da6-6266-43e4-8186-4b97a747dbc1.webp"
         }
       ],
       "source": {
@@ -870,13 +936,17 @@
           "occurrence": 1,
           "originalRef": "fe0efbc4-3df0-4491-9fd4-e0059b5cceee 2.png",
           "src": "assets/canvas-images/034-fe0efbc4-3df0-4491-9fd4-e0059b5cceee-2.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/034-fe0efbc4-3df0-4491-9fd4-e0059b5cceee-2.png",
+          "displaySrc": "assets/archive-display/034-fe0efbc4-3df0-4491-9fd4-e0059b5cceee-2.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "e9bbd6d6-3c54-4c5c-babc-d0129f1230b9.png",
           "src": "assets/canvas-images/035-e9bbd6d6-3c54-4c5c-babc-d0129f1230b9.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/035-e9bbd6d6-3c54-4c5c-babc-d0129f1230b9.png",
+          "displaySrc": "assets/archive-display/035-e9bbd6d6-3c54-4c5c-babc-d0129f1230b9.webp"
         }
       ],
       "source": {
@@ -914,7 +984,9 @@
           "occurrence": 1,
           "originalRef": "16.png",
           "src": "assets/canvas-images/036-16.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/036-16.png",
+          "displaySrc": "assets/archive-display/036-16.webp"
         }
       ],
       "source": {
@@ -952,13 +1024,17 @@
           "occurrence": 1,
           "originalRef": "17.png",
           "src": "assets/canvas-images/037-17.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/037-17.png",
+          "displaySrc": "assets/archive-display/037-17.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "18.png",
           "src": "assets/canvas-images/038-18.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/038-18.png",
+          "displaySrc": "assets/archive-display/038-18.webp"
         }
       ],
       "source": {
@@ -996,13 +1072,17 @@
           "occurrence": 1,
           "originalRef": "18.png",
           "src": "assets/canvas-images/038-18.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/038-18.png",
+          "displaySrc": "assets/archive-display/038-18.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "2b835cf1-678a-4fbb-9027-50d38d2659d9.png",
           "src": "assets/canvas-images/039-2b835cf1-678a-4fbb-9027-50d38d2659d9.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/039-2b835cf1-678a-4fbb-9027-50d38d2659d9.png",
+          "displaySrc": "assets/archive-display/039-2b835cf1-678a-4fbb-9027-50d38d2659d9.webp"
         }
       ],
       "source": {
@@ -1040,13 +1120,17 @@
           "occurrence": 1,
           "originalRef": "2b835cf1-678a-4fbb-9027-50d38d2659d9 1.png",
           "src": "assets/canvas-images/040-2b835cf1-678a-4fbb-9027-50d38d2659d9-1.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/040-2b835cf1-678a-4fbb-9027-50d38d2659d9-1.png",
+          "displaySrc": "assets/archive-display/040-2b835cf1-678a-4fbb-9027-50d38d2659d9-1.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "94a42591-1530-4c08-bcef-1bd978fa2609.png",
           "src": "assets/canvas-images/041-94a42591-1530-4c08-bcef-1bd978fa2609.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/041-94a42591-1530-4c08-bcef-1bd978fa2609.png",
+          "displaySrc": "assets/archive-display/041-94a42591-1530-4c08-bcef-1bd978fa2609.webp"
         }
       ],
       "source": {
@@ -1084,7 +1168,9 @@
           "occurrence": 1,
           "originalRef": "image.png",
           "src": "assets/canvas-images/042-image.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/042-image.png",
+          "displaySrc": "assets/archive-display/042-image.webp"
         }
       ],
       "source": {
@@ -1122,13 +1208,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260519175115.png",
           "src": "assets/canvas-images/043-pasted-image-20260519175115.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/043-pasted-image-20260519175115.png",
+          "displaySrc": "assets/archive-display/043-pasted-image-20260519175115.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260519175121.png",
           "src": "assets/canvas-images/044-pasted-image-20260519175121.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/044-pasted-image-20260519175121.png",
+          "displaySrc": "assets/archive-display/044-pasted-image-20260519175121.webp"
         }
       ],
       "source": {
@@ -1166,13 +1256,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260519175009.png",
           "src": "assets/canvas-images/045-pasted-image-20260519175009.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/045-pasted-image-20260519175009.png",
+          "displaySrc": "assets/archive-display/045-pasted-image-20260519175009.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260519175017.png",
           "src": "assets/canvas-images/046-pasted-image-20260519175017.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/046-pasted-image-20260519175017.png",
+          "displaySrc": "assets/archive-display/046-pasted-image-20260519175017.webp"
         }
       ],
       "source": {
@@ -1210,7 +1304,9 @@
           "occurrence": 1,
           "originalRef": "image (2).png",
           "src": "assets/canvas-images/047-image-2.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/047-image-2.png",
+          "displaySrc": "assets/archive-display/047-image-2.webp"
         }
       ],
       "source": {
@@ -1248,13 +1344,17 @@
           "occurrence": 1,
           "originalRef": "21 1.png",
           "src": "assets/canvas-images/048-21-1.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/048-21-1.png",
+          "displaySrc": "assets/archive-display/048-21-1.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "0161f01a-6101-47ff-acc1-a1e688254a85.png",
           "src": "assets/canvas-images/049-0161f01a-6101-47ff-acc1-a1e688254a85.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/049-0161f01a-6101-47ff-acc1-a1e688254a85.png",
+          "displaySrc": "assets/archive-display/049-0161f01a-6101-47ff-acc1-a1e688254a85.webp"
         }
       ],
       "source": {
@@ -1292,13 +1392,17 @@
           "occurrence": 1,
           "originalRef": "20.png",
           "src": "assets/canvas-images/050-20.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/050-20.png",
+          "displaySrc": "assets/archive-display/050-20.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "21.png",
           "src": "assets/canvas-images/051-21.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/051-21.png",
+          "displaySrc": "assets/archive-display/051-21.webp"
         }
       ],
       "source": {
@@ -1336,13 +1440,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260519175224.png",
           "src": "assets/canvas-images/052-pasted-image-20260519175224.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/052-pasted-image-20260519175224.png",
+          "displaySrc": "assets/archive-display/052-pasted-image-20260519175224.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260519175236.png",
           "src": "assets/canvas-images/053-pasted-image-20260519175236.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/053-pasted-image-20260519175236.png",
+          "displaySrc": "assets/archive-display/053-pasted-image-20260519175236.webp"
         }
       ],
       "source": {
@@ -1380,13 +1488,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260519175326.png",
           "src": "assets/canvas-images/054-pasted-image-20260519175326.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/054-pasted-image-20260519175326.png",
+          "displaySrc": "assets/archive-display/054-pasted-image-20260519175326.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "27.png",
           "src": "assets/canvas-images/055-27.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/055-27.png",
+          "displaySrc": "assets/archive-display/055-27.webp"
         }
       ],
       "source": {
@@ -1424,13 +1536,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260523140721.png",
           "src": "assets/canvas-images/056-pasted-image-20260523140721.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/056-pasted-image-20260523140721.png",
+          "displaySrc": "assets/archive-display/056-pasted-image-20260523140721.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260523140735.png",
           "src": "assets/canvas-images/057-pasted-image-20260523140735.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/057-pasted-image-20260523140735.png",
+          "displaySrc": "assets/archive-display/057-pasted-image-20260523140735.webp"
         }
       ],
       "source": {
@@ -1468,13 +1584,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260523140905.png",
           "src": "assets/canvas-images/058-pasted-image-20260523140905.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/058-pasted-image-20260523140905.png",
+          "displaySrc": "assets/archive-display/058-pasted-image-20260523140905.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260523140928.png",
           "src": "assets/canvas-images/059-pasted-image-20260523140928.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/059-pasted-image-20260523140928.png",
+          "displaySrc": "assets/archive-display/059-pasted-image-20260523140928.webp"
         }
       ],
       "source": {
@@ -1512,13 +1632,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260523141012.png",
           "src": "assets/canvas-images/060-pasted-image-20260523141012.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/060-pasted-image-20260523141012.png",
+          "displaySrc": "assets/archive-display/060-pasted-image-20260523141012.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260523141036.png",
           "src": "assets/canvas-images/061-pasted-image-20260523141036.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/061-pasted-image-20260523141036.png",
+          "displaySrc": "assets/archive-display/061-pasted-image-20260523141036.webp"
         }
       ],
       "source": {
@@ -1556,7 +1680,9 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524152155.png",
           "src": "assets/canvas-images/062-pasted-image-20260524152155.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/062-pasted-image-20260524152155.png",
+          "displaySrc": "assets/archive-display/062-pasted-image-20260524152155.webp"
         }
       ],
       "source": {
@@ -1594,13 +1720,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260523141113.png",
           "src": "assets/canvas-images/063-pasted-image-20260523141113.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/063-pasted-image-20260523141113.png",
+          "displaySrc": "assets/archive-display/063-pasted-image-20260523141113.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260523141127.png",
           "src": "assets/canvas-images/064-pasted-image-20260523141127.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/064-pasted-image-20260523141127.png",
+          "displaySrc": "assets/archive-display/064-pasted-image-20260523141127.webp"
         }
       ],
       "source": {
@@ -1638,13 +1768,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524152652.png",
           "src": "assets/canvas-images/065-pasted-image-20260524152652.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/065-pasted-image-20260524152652.png",
+          "displaySrc": "assets/archive-display/065-pasted-image-20260524152652.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260524152658.png",
           "src": "assets/canvas-images/066-pasted-image-20260524152658.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/066-pasted-image-20260524152658.png",
+          "displaySrc": "assets/archive-display/066-pasted-image-20260524152658.webp"
         }
       ],
       "source": {
@@ -1682,13 +1816,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524152533.png",
           "src": "assets/canvas-images/067-pasted-image-20260524152533.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/067-pasted-image-20260524152533.png",
+          "displaySrc": "assets/archive-display/067-pasted-image-20260524152533.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260524152543.png",
           "src": "assets/canvas-images/068-pasted-image-20260524152543.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/068-pasted-image-20260524152543.png",
+          "displaySrc": "assets/archive-display/068-pasted-image-20260524152543.webp"
         }
       ],
       "source": {
@@ -1726,13 +1864,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524152319.png",
           "src": "assets/canvas-images/069-pasted-image-20260524152319.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/069-pasted-image-20260524152319.png",
+          "displaySrc": "assets/archive-display/069-pasted-image-20260524152319.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260524152413.png",
           "src": "assets/canvas-images/070-pasted-image-20260524152413.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/070-pasted-image-20260524152413.png",
+          "displaySrc": "assets/archive-display/070-pasted-image-20260524152413.webp"
         }
       ],
       "source": {
@@ -1770,13 +1912,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524152735.png",
           "src": "assets/canvas-images/071-pasted-image-20260524152735.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/071-pasted-image-20260524152735.png",
+          "displaySrc": "assets/archive-display/071-pasted-image-20260524152735.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260524152741.png",
           "src": "assets/canvas-images/072-pasted-image-20260524152741.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/072-pasted-image-20260524152741.png",
+          "displaySrc": "assets/archive-display/072-pasted-image-20260524152741.webp"
         }
       ],
       "source": {
@@ -1814,13 +1960,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524152830.png",
           "src": "assets/canvas-images/073-pasted-image-20260524152830.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/073-pasted-image-20260524152830.png",
+          "displaySrc": "assets/archive-display/073-pasted-image-20260524152830.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260524152838.png",
           "src": "assets/canvas-images/074-pasted-image-20260524152838.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/074-pasted-image-20260524152838.png",
+          "displaySrc": "assets/archive-display/074-pasted-image-20260524152838.webp"
         }
       ],
       "source": {
@@ -1858,13 +2008,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524152919.png",
           "src": "assets/canvas-images/075-pasted-image-20260524152919.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/075-pasted-image-20260524152919.png",
+          "displaySrc": "assets/archive-display/075-pasted-image-20260524152919.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260524152926.png",
           "src": "assets/canvas-images/076-pasted-image-20260524152926.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/076-pasted-image-20260524152926.png",
+          "displaySrc": "assets/archive-display/076-pasted-image-20260524152926.webp"
         }
       ],
       "source": {
@@ -1902,13 +2056,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524154507.png",
           "src": "assets/canvas-images/077-pasted-image-20260524154507.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/077-pasted-image-20260524154507.png",
+          "displaySrc": "assets/archive-display/077-pasted-image-20260524154507.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260524154517.png",
           "src": "assets/canvas-images/078-pasted-image-20260524154517.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/078-pasted-image-20260524154517.png",
+          "displaySrc": "assets/archive-display/078-pasted-image-20260524154517.webp"
         }
       ],
       "source": {
@@ -1946,13 +2104,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524222152.png",
           "src": "assets/canvas-images/079-pasted-image-20260524222152.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/079-pasted-image-20260524222152.png",
+          "displaySrc": "assets/archive-display/079-pasted-image-20260524222152.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260524222200.png",
           "src": "assets/canvas-images/080-pasted-image-20260524222200.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/080-pasted-image-20260524222200.png",
+          "displaySrc": "assets/archive-display/080-pasted-image-20260524222200.webp"
         }
       ],
       "source": {
@@ -1990,7 +2152,9 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260529183859.png",
           "src": "assets/canvas-images/081-pasted-image-20260529183859.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/081-pasted-image-20260529183859.png",
+          "displaySrc": "assets/archive-display/081-pasted-image-20260529183859.webp"
         }
       ],
       "source": {
@@ -2030,55 +2194,73 @@
           "occurrence": 1,
           "originalRef": "3e40b3e5-88c6-4314-a7db-5b742fda4898.png",
           "src": "assets/canvas-images/082-3e40b3e5-88c6-4314-a7db-5b742fda4898.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/082-3e40b3e5-88c6-4314-a7db-5b742fda4898.png",
+          "displaySrc": "assets/archive-display/082-3e40b3e5-88c6-4314-a7db-5b742fda4898.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "96b3a407-bf74-4003-b9d0-dd4788c0559e.png",
           "src": "assets/canvas-images/083-96b3a407-bf74-4003-b9d0-dd4788c0559e.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/083-96b3a407-bf74-4003-b9d0-dd4788c0559e.png",
+          "displaySrc": "assets/archive-display/083-96b3a407-bf74-4003-b9d0-dd4788c0559e.webp"
         },
         {
           "occurrence": 3,
           "originalRef": "97bd6f5f-bb4b-49a4-8e4e-1ef8a95c753a.png",
           "src": "assets/canvas-images/084-97bd6f5f-bb4b-49a4-8e4e-1ef8a95c753a.png",
-          "role": "图 3"
+          "role": "图 3",
+          "originalSrc": "assets/canvas-images/084-97bd6f5f-bb4b-49a4-8e4e-1ef8a95c753a.png",
+          "displaySrc": "assets/archive-display/084-97bd6f5f-bb4b-49a4-8e4e-1ef8a95c753a.webp"
         },
         {
           "occurrence": 4,
           "originalRef": "325bf83e-12ed-4975-a8bb-d0463e995bf5.png",
           "src": "assets/canvas-images/085-325bf83e-12ed-4975-a8bb-d0463e995bf5.png",
-          "role": "图 4"
+          "role": "图 4",
+          "originalSrc": "assets/canvas-images/085-325bf83e-12ed-4975-a8bb-d0463e995bf5.png",
+          "displaySrc": "assets/archive-display/085-325bf83e-12ed-4975-a8bb-d0463e995bf5.webp"
         },
         {
           "occurrence": 5,
           "originalRef": "b46bf088-012a-4117-a694-0b4346e2f2d6.png",
           "src": "assets/canvas-images/086-b46bf088-012a-4117-a694-0b4346e2f2d6.png",
-          "role": "图 5"
+          "role": "图 5",
+          "originalSrc": "assets/canvas-images/086-b46bf088-012a-4117-a694-0b4346e2f2d6.png",
+          "displaySrc": "assets/archive-display/086-b46bf088-012a-4117-a694-0b4346e2f2d6.webp"
         },
         {
           "occurrence": 6,
           "originalRef": "bbfc4a23-44fe-4c9c-85a4-badb14ae6794.png",
           "src": "assets/canvas-images/087-bbfc4a23-44fe-4c9c-85a4-badb14ae6794.png",
-          "role": "图 6"
+          "role": "图 6",
+          "originalSrc": "assets/canvas-images/087-bbfc4a23-44fe-4c9c-85a4-badb14ae6794.png",
+          "displaySrc": "assets/archive-display/087-bbfc4a23-44fe-4c9c-85a4-badb14ae6794.webp"
         },
         {
           "occurrence": 7,
           "originalRef": "c3836c92-f91f-48b8-9eff-53d90c52f7de.png",
           "src": "assets/canvas-images/088-c3836c92-f91f-48b8-9eff-53d90c52f7de.png",
-          "role": "图 7"
+          "role": "图 7",
+          "originalSrc": "assets/canvas-images/088-c3836c92-f91f-48b8-9eff-53d90c52f7de.png",
+          "displaySrc": "assets/archive-display/088-c3836c92-f91f-48b8-9eff-53d90c52f7de.webp"
         },
         {
           "occurrence": 8,
           "originalRef": "da042f67-e168-4967-842a-2edfb9c9a028.png",
           "src": "assets/canvas-images/089-da042f67-e168-4967-842a-2edfb9c9a028.png",
-          "role": "图 8"
+          "role": "图 8",
+          "originalSrc": "assets/canvas-images/089-da042f67-e168-4967-842a-2edfb9c9a028.png",
+          "displaySrc": "assets/archive-display/089-da042f67-e168-4967-842a-2edfb9c9a028.webp"
         },
         {
           "occurrence": 9,
           "originalRef": "dce52d1d-d8a2-44de-ac7d-abd18d4588d1.png",
           "src": "assets/canvas-images/090-dce52d1d-d8a2-44de-ac7d-abd18d4588d1.png",
-          "role": "图 9"
+          "role": "图 9",
+          "originalSrc": "assets/canvas-images/090-dce52d1d-d8a2-44de-ac7d-abd18d4588d1.png",
+          "displaySrc": "assets/archive-display/090-dce52d1d-d8a2-44de-ac7d-abd18d4588d1.webp"
         }
       ],
       "source": {
@@ -2116,13 +2298,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260527230947.png",
           "src": "assets/canvas-images/091-pasted-image-20260527230947.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/091-pasted-image-20260527230947.png",
+          "displaySrc": "assets/archive-display/091-pasted-image-20260527230947.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260527230954.png",
           "src": "assets/canvas-images/092-pasted-image-20260527230954.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/092-pasted-image-20260527230954.png",
+          "displaySrc": "assets/archive-display/092-pasted-image-20260527230954.webp"
         }
       ],
       "source": {
@@ -2160,13 +2346,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524223407.png",
           "src": "assets/canvas-images/093-pasted-image-20260524223407.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/093-pasted-image-20260524223407.png",
+          "displaySrc": "assets/archive-display/093-pasted-image-20260524223407.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260524223415.png",
           "src": "assets/canvas-images/094-pasted-image-20260524223415.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/094-pasted-image-20260524223415.png",
+          "displaySrc": "assets/archive-display/094-pasted-image-20260524223415.webp"
         }
       ],
       "source": {
@@ -2204,13 +2394,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260524223236.png",
           "src": "assets/canvas-images/095-pasted-image-20260524223236.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/095-pasted-image-20260524223236.png",
+          "displaySrc": "assets/archive-display/095-pasted-image-20260524223236.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260524223247.png",
           "src": "assets/canvas-images/096-pasted-image-20260524223247.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/096-pasted-image-20260524223247.png",
+          "displaySrc": "assets/archive-display/096-pasted-image-20260524223247.webp"
         }
       ],
       "source": {
@@ -2248,13 +2442,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260529183940.png",
           "src": "assets/canvas-images/097-pasted-image-20260529183940.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/097-pasted-image-20260529183940.png",
+          "displaySrc": "assets/archive-display/097-pasted-image-20260529183940.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260529183947.png",
           "src": "assets/canvas-images/098-pasted-image-20260529183947.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/098-pasted-image-20260529183947.png",
+          "displaySrc": "assets/archive-display/098-pasted-image-20260529183947.webp"
         }
       ],
       "source": {
@@ -2292,13 +2490,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260529184040.png",
           "src": "assets/canvas-images/099-pasted-image-20260529184040.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/099-pasted-image-20260529184040.png",
+          "displaySrc": "assets/archive-display/099-pasted-image-20260529184040.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260529184046.png",
           "src": "assets/canvas-images/100-pasted-image-20260529184046.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/100-pasted-image-20260529184046.png",
+          "displaySrc": "assets/archive-display/100-pasted-image-20260529184046.webp"
         }
       ],
       "source": {
@@ -2336,7 +2538,9 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260531134853.png",
           "src": "assets/canvas-images/101-pasted-image-20260531134853.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/101-pasted-image-20260531134853.png",
+          "displaySrc": "assets/archive-display/101-pasted-image-20260531134853.webp"
         }
       ],
       "source": {
@@ -2374,13 +2578,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260531134947.png",
           "src": "assets/canvas-images/102-pasted-image-20260531134947.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/102-pasted-image-20260531134947.png",
+          "displaySrc": "assets/archive-display/102-pasted-image-20260531134947.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260531134953.png",
           "src": "assets/canvas-images/103-pasted-image-20260531134953.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/103-pasted-image-20260531134953.png",
+          "displaySrc": "assets/archive-display/103-pasted-image-20260531134953.webp"
         }
       ],
       "source": {
@@ -2418,13 +2626,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260531135028.png",
           "src": "assets/canvas-images/104-pasted-image-20260531135028.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/104-pasted-image-20260531135028.png",
+          "displaySrc": "assets/archive-display/104-pasted-image-20260531135028.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260531135036.png",
           "src": "assets/canvas-images/105-pasted-image-20260531135036.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/105-pasted-image-20260531135036.png",
+          "displaySrc": "assets/archive-display/105-pasted-image-20260531135036.webp"
         }
       ],
       "source": {
@@ -2462,7 +2674,9 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260531135402.png",
           "src": "assets/canvas-images/106-pasted-image-20260531135402.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/106-pasted-image-20260531135402.png",
+          "displaySrc": "assets/archive-display/106-pasted-image-20260531135402.webp"
         }
       ],
       "source": {
@@ -2500,7 +2714,9 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260531135332.png",
           "src": "assets/canvas-images/107-pasted-image-20260531135332.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/107-pasted-image-20260531135332.png",
+          "displaySrc": "assets/archive-display/107-pasted-image-20260531135332.webp"
         }
       ],
       "source": {
@@ -2538,13 +2754,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260531135248.png",
           "src": "assets/canvas-images/108-pasted-image-20260531135248.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/108-pasted-image-20260531135248.png",
+          "displaySrc": "assets/archive-display/108-pasted-image-20260531135248.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260531135252.png",
           "src": "assets/canvas-images/109-pasted-image-20260531135252.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/109-pasted-image-20260531135252.png",
+          "displaySrc": "assets/archive-display/109-pasted-image-20260531135252.webp"
         }
       ],
       "source": {
@@ -2582,13 +2802,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260531135206.png",
           "src": "assets/canvas-images/110-pasted-image-20260531135206.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/110-pasted-image-20260531135206.png",
+          "displaySrc": "assets/archive-display/110-pasted-image-20260531135206.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260531135212.png",
           "src": "assets/canvas-images/111-pasted-image-20260531135212.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/111-pasted-image-20260531135212.png",
+          "displaySrc": "assets/archive-display/111-pasted-image-20260531135212.webp"
         }
       ],
       "source": {
@@ -2626,13 +2850,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260531135115.png",
           "src": "assets/canvas-images/112-pasted-image-20260531135115.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/112-pasted-image-20260531135115.png",
+          "displaySrc": "assets/archive-display/112-pasted-image-20260531135115.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260531135119.png",
           "src": "assets/canvas-images/113-pasted-image-20260531135119.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/113-pasted-image-20260531135119.png",
+          "displaySrc": "assets/archive-display/113-pasted-image-20260531135119.webp"
         }
       ],
       "source": {
@@ -2670,13 +2898,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260531135427.png",
           "src": "assets/canvas-images/114-pasted-image-20260531135427.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/114-pasted-image-20260531135427.png",
+          "displaySrc": "assets/archive-display/114-pasted-image-20260531135427.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260531135432.png",
           "src": "assets/canvas-images/115-pasted-image-20260531135432.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/115-pasted-image-20260531135432.png",
+          "displaySrc": "assets/archive-display/115-pasted-image-20260531135432.webp"
         }
       ],
       "source": {
@@ -2714,13 +2946,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260608195352.png",
           "src": "assets/canvas-images/116-pasted-image-20260608195352.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/116-pasted-image-20260608195352.png",
+          "displaySrc": "assets/archive-display/116-pasted-image-20260608195352.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260608195359.png",
           "src": "assets/canvas-images/117-pasted-image-20260608195359.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/117-pasted-image-20260608195359.png",
+          "displaySrc": "assets/archive-display/117-pasted-image-20260608195359.webp"
         }
       ],
       "source": {
@@ -2758,13 +2994,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260608195440.png",
           "src": "assets/canvas-images/118-pasted-image-20260608195440.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/118-pasted-image-20260608195440.png",
+          "displaySrc": "assets/archive-display/118-pasted-image-20260608195440.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260608195448.png",
           "src": "assets/canvas-images/119-pasted-image-20260608195448.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/119-pasted-image-20260608195448.png",
+          "displaySrc": "assets/archive-display/119-pasted-image-20260608195448.webp"
         }
       ],
       "source": {
@@ -2802,13 +3042,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260608195541.png",
           "src": "assets/canvas-images/120-pasted-image-20260608195541.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/120-pasted-image-20260608195541.png",
+          "displaySrc": "assets/archive-display/120-pasted-image-20260608195541.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260608195547.png",
           "src": "assets/canvas-images/121-pasted-image-20260608195547.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/121-pasted-image-20260608195547.png",
+          "displaySrc": "assets/archive-display/121-pasted-image-20260608195547.webp"
         }
       ],
       "source": {
@@ -2846,7 +3090,9 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609181105.png",
           "src": "assets/canvas-images/122-pasted-image-20260609181105.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/122-pasted-image-20260609181105.png",
+          "displaySrc": "assets/archive-display/122-pasted-image-20260609181105.webp"
         }
       ],
       "source": {
@@ -2884,13 +3130,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609181224.png",
           "src": "assets/canvas-images/123-pasted-image-20260609181224.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/123-pasted-image-20260609181224.png",
+          "displaySrc": "assets/archive-display/123-pasted-image-20260609181224.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260609181231.png",
           "src": "assets/canvas-images/124-pasted-image-20260609181231.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/124-pasted-image-20260609181231.png",
+          "displaySrc": "assets/archive-display/124-pasted-image-20260609181231.webp"
         }
       ],
       "source": {
@@ -2928,13 +3178,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260608195722.png",
           "src": "assets/canvas-images/125-pasted-image-20260608195722.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/125-pasted-image-20260608195722.png",
+          "displaySrc": "assets/archive-display/125-pasted-image-20260608195722.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260608195731.png",
           "src": "assets/canvas-images/126-pasted-image-20260608195731.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/126-pasted-image-20260608195731.png",
+          "displaySrc": "assets/archive-display/126-pasted-image-20260608195731.webp"
         }
       ],
       "source": {
@@ -2972,13 +3226,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609181321.png",
           "src": "assets/canvas-images/127-pasted-image-20260609181321.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/127-pasted-image-20260609181321.png",
+          "displaySrc": "assets/archive-display/127-pasted-image-20260609181321.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260609181330.png",
           "src": "assets/canvas-images/128-pasted-image-20260609181330.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/128-pasted-image-20260609181330.png",
+          "displaySrc": "assets/archive-display/128-pasted-image-20260609181330.webp"
         }
       ],
       "source": {
@@ -3016,13 +3274,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609181420.png",
           "src": "assets/canvas-images/129-pasted-image-20260609181420.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/129-pasted-image-20260609181420.png",
+          "displaySrc": "assets/archive-display/129-pasted-image-20260609181420.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260609181426.png",
           "src": "assets/canvas-images/130-pasted-image-20260609181426.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/130-pasted-image-20260609181426.png",
+          "displaySrc": "assets/archive-display/130-pasted-image-20260609181426.webp"
         }
       ],
       "source": {
@@ -3060,13 +3322,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609181840.png",
           "src": "assets/canvas-images/131-pasted-image-20260609181840.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/131-pasted-image-20260609181840.png",
+          "displaySrc": "assets/archive-display/131-pasted-image-20260609181840.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260609181846.png",
           "src": "assets/canvas-images/132-pasted-image-20260609181846.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/132-pasted-image-20260609181846.png",
+          "displaySrc": "assets/archive-display/132-pasted-image-20260609181846.webp"
         }
       ],
       "source": {
@@ -3104,13 +3370,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609181519.png",
           "src": "assets/canvas-images/133-pasted-image-20260609181519.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/133-pasted-image-20260609181519.png",
+          "displaySrc": "assets/archive-display/133-pasted-image-20260609181519.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260609181525.png",
           "src": "assets/canvas-images/134-pasted-image-20260609181525.png",
-          "role": "图 2"
+          "role": "图 2",
+          "originalSrc": "assets/canvas-images/134-pasted-image-20260609181525.png",
+          "displaySrc": "assets/archive-display/134-pasted-image-20260609181525.webp"
         }
       ],
       "source": {
@@ -3148,13 +3418,17 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609181552.png",
           "src": "assets/canvas-images/135-pasted-image-20260609181552.png",
-          "role": "首帧"
+          "role": "首帧",
+          "originalSrc": "assets/canvas-images/135-pasted-image-20260609181552.png",
+          "displaySrc": "assets/archive-display/135-pasted-image-20260609181552.webp"
         },
         {
           "occurrence": 2,
           "originalRef": "Pasted image 20260609181602.png",
           "src": "assets/canvas-images/136-pasted-image-20260609181602.png",
-          "role": "尾帧"
+          "role": "尾帧",
+          "originalSrc": "assets/canvas-images/136-pasted-image-20260609181602.png",
+          "displaySrc": "assets/archive-display/136-pasted-image-20260609181602.webp"
         }
       ],
       "source": {
@@ -3192,7 +3466,9 @@
           "occurrence": 1,
           "originalRef": "Pasted image 20260609181639.png",
           "src": "assets/canvas-images/137-pasted-image-20260609181639.png",
-          "role": "图 1"
+          "role": "图 1",
+          "originalSrc": "assets/canvas-images/137-pasted-image-20260609181639.png",
+          "displaySrc": "assets/archive-display/137-pasted-image-20260609181639.webp"
         }
       ],
       "source": {
