@@ -25,3 +25,10 @@ python -m http.server 8080
 - “恢复原样”返回最近阅读节点；
 - “全部收起”重新从起点开始；
 - 点击“查看内容”打开完整图片、提示词和批注。
+
+## Loading model
+
+The site reveals its application shell before large media is ready. The background
+film, BGM, full film, review media, and archive images load progressively from
+visitor intent and the current visible window. The application must not preload
+the full media archive.
