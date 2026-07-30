@@ -7,6 +7,7 @@ import {
   bindReviewInteractions,
   buildReviewIndex,
   buildReviewPage,
+  buildReviewSpread,
   createFocusTrap,
   estimateReadingMinutes,
   mountReviewRoute,
@@ -323,6 +324,38 @@ test('every rendered page has exactly the independent source block signature', (
 
   assert.ok(expectedCount > 0);
   assert.equal(renderedCount, expectedCount);
+});
+
+test('review spread renders facing source pages with immersive reading controls', () => {
+  const target = normalizeReviewTarget(reviewData, 'origin', 1);
+  const html = buildReviewSpread(reviewData, target);
+
+  assert.match(html, /data-review-spread/);
+  assert.match(html, /data-review-left-page/);
+  assert.match(html, /data-review-right-page/);
+  assert.match(html, /data-review-immersive/);
+  assert.match(html, /data-review-settings/);
+  assert.match(html, /data-review-notebook/);
+  assert.match(html, /data-review-selection-tools/);
+
+  const expected = [
+    ...expectedSignature(target.chapter, 0),
+    ...expectedSignature(target.chapter, 1),
+  ];
+  assert.deepEqual(renderedSignature(html), expected);
+});
+
+test('authored callouts keep their children together and expose a whole-case detail action', () => {
+  const chapter = reviewData.chapters.find((item) => item.slug === 'production');
+  const pageIndex = chapter.pages.findIndex((blocks) => blocks.some((block) => block.type === 'callout'));
+  const html = buildReviewPage(reviewData, normalizeReviewTarget(reviewData, chapter.slug, pageIndex + 1));
+
+  assert.ok(pageIndex >= 0);
+  assert.match(html, /class="review-block review-callout/);
+  assert.match(html, /review-callout-label">批注/);
+  assert.match(html, /data-review-callout-detail/);
+  assert.match(html, /查看案例详情/);
+  assert.deepEqual(renderedSignature(html), expectedSignature(chapter, pageIndex));
 });
 
 test('all 51 media occurrences render in place and both duplicate occurrences remain', () => {

@@ -2,6 +2,7 @@ import { buildReviewRail, reviewRailMarkup } from './review-rail.js';
 import { mountReviewRail } from './review-rail-interaction.js';
 import { resolveReviewMap } from './review-live-map-model.js';
 import { mountReviewLiveMaps } from './review-live-map.js';
+import { resolveReviewSpread } from './review-spread.js';
 
 export const REVIEW_PROGRESS_KEY = 'review:progress';
 
@@ -188,6 +189,9 @@ function blockMarkup(block, blockIndex, chapterSlug, page, { sectionTitle = fals
       </header>
       ${contextHeading}
       <div class="review-callout-body"${bodyAccessibility}>${children}</div>
+      <div class="review-callout-actions">
+        <button type="button" data-review-callout-detail data-callout-id="${escapeHtml(occurrence)}">查看案例详情 <span aria-hidden="true">↗</span></button>
+      </div>
     </aside>`;
   }
 
@@ -235,6 +239,139 @@ function navigationLink(href, direction, label) {
   if (!href) return `<span class="review-page-nav-disabled">${label}</span>`;
   const attribute = direction === 'previous' ? 'data-review-prev' : 'data-review-next';
   return `<a href="${href}" ${attribute} data-review-direction="${direction}">${label}</a>`;
+}
+
+function spreadPageArticle(data, pageReference, side) {
+  if (!pageReference) {
+    return `<article class="review-spread-page is-blank" data-review-${side}-page aria-hidden="true"></article>`;
+  }
+
+  const { chapter, pageIndex, blocks } = pageReference;
+  const chapterIndex = data.chapters.indexOf(chapter);
+  const section = blocks.find((block) => block.section)?.section || chapter.title;
+  const isChapterOpener = pageIndex === 0;
+  const firstHeadingIndex = !isChapterOpener && blocks[0]?.type === 'heading' ? 0 : -1;
+  const hasSectionTitle = firstHeadingIndex >= 0;
+  const sectionTitleId = hasSectionTitle
+    ? `review-section-title-${chapter.slug}-${pageIndex + 1}`
+    : '';
+  const renderedBlocks = blocks
+    .map((block, blockIndex) => {
+      const rendered = blockMarkup(block, blockIndex, chapter.slug, pageIndex + 1, {
+        sectionTitle: blockIndex === firstHeadingIndex,
+      });
+      return sectionTitleId && blockIndex === firstHeadingIndex
+        ? rendered.replace('id="review-section-title"', `id="${escapeHtml(sectionTitleId)}"`)
+        : rendered;
+    })
+    .join('\n');
+  const label = `复盘阅读：${chapter.title} · ${section}`;
+  const articleLabel = sectionTitleId
+    ? `aria-labelledby="${escapeHtml(sectionTitleId)}"`
+    : `aria-label="${escapeHtml(label)}"`;
+
+  return `<article class="review-spread-page${isChapterOpener ? ' review-chapter-opener' : ''}" data-review-${side}-page data-review-page="${isChapterOpener ? 'opener' : 'continuation'}" ${articleLabel}>
+    <div class="review-paper-meta">
+      <span>第 ${chapterIndex + 1} 章</span>
+      <span>${escapeHtml(section)}</span>
+      <span>全篇 ${pageReference.overallPage} / ${pageReference.totalPages}</span>
+    </div>
+    <div class="review-paper-scroll" data-review-scroll tabindex="0">
+      <div class="review-paper-content">
+        ${isChapterOpener ? `<p class="review-paper-kicker">CHAPTER ${String(chapterIndex + 1).padStart(2, '0')}</p>
+        <h1>${escapeHtml(chapter.title)}</h1>` : ''}
+        <div class="review-blocks"${sectionTitleId ? ` aria-labelledby="${escapeHtml(sectionTitleId)}"` : ''}>${renderedBlocks}</div>
+      </div>
+    </div>
+  </article>`;
+}
+
+function spreadPageReference(data, page) {
+  if (!page) return null;
+  const completedPages = data.chapters
+    .slice(0, data.chapters.indexOf(page.chapter))
+    .reduce((sum, chapter) => sum + chapter.pages.length, 0);
+  return {
+    ...page,
+    overallPage: completedPages + page.pageIndex + 1,
+    totalPages: data.chapters.reduce((sum, chapter) => sum + chapter.pages.length, 0),
+  };
+}
+
+export function buildReviewSpread(data, target) {
+  const spread = resolveReviewSpread(data, target.chapter.slug, target.page);
+  if (!spread) return '';
+  const left = spreadPageReference(data, spread.left);
+  const right = spreadPageReference(data, spread.right);
+  const activeChapter = left.chapter;
+  const activeChapterIndex = data.chapters.indexOf(activeChapter);
+
+  return `<section class="review-reader-view review-spread-view app-view" aria-label="复盘手记双页阅读" data-review-reader>
+    <header class="review-reader-toolbar">
+      <a class="review-return-after" href="#after" data-return-after>← 返回片后</a>
+      <a class="review-wordmark" href="#">初恋 · 旧爱 · 新欢</a>
+      <span>REVIEW NOTES · ${String(activeChapterIndex + 1).padStart(2, '0')}</span>
+      <button type="button" data-review-immersive aria-pressed="false">全屏沉浸阅读</button>
+      <button type="button" data-review-settings aria-expanded="false">阅读设置</button>
+      <button type="button" data-review-notebook aria-expanded="false">我的笔记</button>
+      <button type="button" class="review-drawer-toggle" data-toggle-review-drawer aria-expanded="false" aria-controls="review-chapter-drawer">章节目录</button>
+    </header>
+    <div class="review-reader-layout review-spread-layout">
+      ${reviewRailMarkup(buildReviewRail(data, {
+        ...target,
+        chapter: activeChapter,
+        pageIndex: left.pageIndex,
+      }))}
+      <aside class="review-chapter-sidebar" aria-label="复盘章节">
+        <div class="review-chapter-drawer-title"><span>章节目录</span></div>
+        <nav>${chapterDirectory(data, activeChapter.slug)}</nav>
+      </aside>
+      <main class="review-spread" data-review-spread aria-live="polite">
+        ${spreadPageArticle(data, left, 'left')}
+        ${spreadPageArticle(data, right, 'right')}
+        <div class="review-page-turn-sheet" data-review-turn-sheet aria-hidden="true"></div>
+      </main>
+      <nav class="review-page-nav review-spread-nav" aria-label="双页翻阅">
+        ${navigationLink(spread.previousHref, 'previous', '← 上一页')}
+        <span>滚轮翻页</span>
+        <a href="#review" class="review-page-directory">目录</a>
+        ${navigationLink(spread.nextHref, 'next', '下一页 →')}
+      </nav>
+    </div>
+    <div class="review-selection-tools" data-review-selection-tools hidden>
+      <button type="button" data-review-highlight>高亮</button>
+      <button type="button" data-review-add-note>添加批注</button>
+    </div>
+    <aside class="review-settings-panel" data-review-settings-panel hidden>
+      <h2>阅读设置</h2>
+      <button type="button" data-review-theme="light">浅色</button>
+      <button type="button" data-review-theme="dark">深色</button>
+      <label>正文字号<input type="range" min="16" max="23" value="18" data-review-font-size></label>
+    </aside>
+    <aside class="review-notebook" data-review-notebook-panel hidden>
+      <header><h2>我的笔记</h2><button type="button" data-review-notebook-close>关闭</button></header>
+      <nav><button type="button" data-review-note-filter="all">全部</button><button type="button" data-review-note-filter="highlight">仅高亮</button><button type="button" data-review-note-filter="note">有批注</button></nav>
+      <div data-review-notebook-list></div>
+    </aside>
+    <aside class="review-note-editor" data-review-note-editor hidden>
+      <h2>添加批注</h2><blockquote data-review-note-quote></blockquote>
+      <textarea data-review-note-text aria-label="批注内容"></textarea>
+      <button type="button" data-review-note-save>保存到我的笔记</button>
+      <button type="button" data-review-note-cancel>取消</button>
+    </aside>
+    <aside id="review-chapter-drawer" class="review-chapter-drawer" data-review-drawer role="dialog" aria-modal="true" aria-label="移动端复盘章节" aria-hidden="true" hidden>
+      <div class="review-chapter-drawer-title"><span>章节目录</span><button type="button" data-close-review-drawer aria-label="关闭章节目录">×</button></div>
+      <nav>${chapterDirectory(data, activeChapter.slug)}</nav>
+    </aside>
+    <div class="review-case-detail" data-review-case-detail role="dialog" aria-modal="true" aria-label="案例批注详情" hidden>
+      <button type="button" data-review-case-detail-close>关闭详情 ×</button>
+      <div data-review-case-detail-content></div>
+    </div>
+    <div class="review-lightbox" data-review-lightbox role="dialog" aria-modal="true" aria-label="案例图片预览" hidden>
+      <button type="button" class="review-lightbox-close" data-close-lightbox aria-label="关闭图片预览">×</button>
+      <img alt="">
+    </div>
+  </section>`;
 }
 
 export function buildReviewPage(data, target) {
@@ -569,7 +706,7 @@ export function mountReviewRoute(app, route, {
       if (!target) {
         app.innerHTML = missingChapterView();
       } else {
-        app.innerHTML = buildReviewPage(data, target);
+        app.innerHTML = buildReviewSpread(data, target);
         writeReviewProgress(storage, { chapter: target.chapter.slug, page: target.page });
         const scrollRegion = app.querySelector?.('[data-review-scroll]');
         if (scrollRegion) scrollRegion.scrollTop = 0;
